@@ -77,11 +77,15 @@ function MapView({ bikes, onBikeClick }) {
         position: { lat: bike.lat, lng: bike.lng },
         map,
         title: bike.id,
-        icon: {
-          url: `https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=${bike.battery}%25|${color}|ffffff`,
-          scaledSize: new google.maps.Size(40, 40),
-        }
-      });
+        icon: icon: {
+  path: google.maps.SymbolPath.CIRCLE,
+  scale: 12,
+  fillColor: `#${color}`,
+  fillOpacity: 1,
+  strokeColor: "#ffffff",
+  strokeWeight 2,
+}
+      );
       const infoWindow = new google.maps.InfoWindow({
         content: `
           <div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:150px">
