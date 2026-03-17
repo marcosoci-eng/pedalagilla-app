@@ -7,13 +7,11 @@
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBfgaG8lGRp7P8XGI-powaYfKufeLPebx8"></script>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #023047; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 ::-webkit-scrollbar { width: 0; }
-#map { width: 100%; height: 100%; border-radius: 16px; }
 </style>
 </head>
 <body>
@@ -26,18 +24,18 @@ const C = {
 };
 
 const bikes = [
-{ id:"PA-021", battery:88, status:"Disponibile", odometer:386.9, zone:"Passignano", model:"City Comfort", range:52, lat:43.1876, lng:12.1978 },
-{ id:"PA-033", battery:100, status:"Disponibile", odometer:265, zone:"Castiglione", model:"City Comfort", range:60, lat:43.1208, lng:11.9847 },
-{ id:"PA-035", battery:43, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"Trail Explorer", range:26, lat:43.2041, lng:12.0731 },
-{ id:"PA-012", battery:89, status:"Disponibile", odometer:346.7, zone:"Magione", model:"Trail Explorer", range:53, lat:43.1394, lng:12.2056 },
-{ id:"PA-005", battery:76, status:"Disponibile", odometer:220.7, zone:"Passignano", model:"City Comfort", range:46, lat:43.1856, lng:12.1950 },
-{ id:"PA-020", battery:74, status:"Disponibile", odometer:380.4, zone:"Panicale", model:"Trail Explorer", range:44, lat:43.0278, lng:12.1044 },
-{ id:"PA-029", battery:80, status:"Disponibile", odometer:234.6, zone:"Castiglione", model:"City Comfort", range:48, lat:43.1228, lng:11.9820 },
-{ id:"PA-039", battery:78, status:"Disponibile", odometer:561.8, zone:"Tuoro", model:"Trail Explorer", range:47, lat:43.2061, lng:12.0780 },
-{ id:"PA-034", battery:100, status:"Manutenzione", odometer:157.5, zone:"Magione", model:"City Comfort", range:60, lat:43.1414, lng:12.2080 },
-{ id:"PA-003", battery:77, status:"Disponibile", odometer:351.3, zone:"Passignano", model:"City Comfort", range:46, lat:43.1896, lng:12.1990 },
-{ id:"PA-016", battery:96, status:"Disponibile", odometer:502.8, zone:"Panicale", model:"Trail Explorer", range:58, lat:43.0298, lng:12.1020 },
-{ id:"PA-015", battery:30, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"City Comfort", range:18, lat:43.2021, lng:12.0750 },
+  { id:"PA-021", battery:88, status:"Disponibile", odometer:386.9, zone:"Passignano", model:"City Comfort", range:52, lat:43.1876, lng:12.1978 },
+  { id:"PA-033", battery:100, status:"Disponibile", odometer:265, zone:"Castiglione", model:"City Comfort", range:60, lat:43.1208, lng:11.9847 },
+  { id:"PA-035", battery:43, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"Trail Explorer", range:26, lat:43.2041, lng:12.0731 },
+  { id:"PA-012", battery:89, status:"Disponibile", odometer:346.7, zone:"Magione", model:"Trail Explorer", range:53, lat:43.1394, lng:12.2056 },
+  { id:"PA-005", battery:76, status:"Disponibile", odometer:220.7, zone:"Passignano", model:"City Comfort", range:46, lat:43.1856, lng:12.1950 },
+  { id:"PA-020", battery:74, status:"Disponibile", odometer:380.4, zone:"Panicale", model:"Trail Explorer", range:44, lat:43.0278, lng:12.1044 },
+  { id:"PA-029", battery:80, status:"Disponibile", odometer:234.6, zone:"Castiglione", model:"City Comfort", range:48, lat:43.1228, lng:11.9820 },
+  { id:"PA-039", battery:78, status:"Disponibile", odometer:561.8, zone:"Tuoro", model:"Trail Explorer", range:47, lat:43.2061, lng:12.0780 },
+  { id:"PA-034", battery:100, status:"Manutenzione", odometer:157.5, zone:"Magione", model:"City Comfort", range:60, lat:43.1414, lng:12.2080 },
+  { id:"PA-003", battery:77, status:"Disponibile", odometer:351.3, zone:"Passignano", model:"City Comfort", range:46, lat:43.1896, lng:12.1990 },
+  { id:"PA-016", battery:96, status:"Disponibile", odometer:502.8, zone:"Panicale", model:"Trail Explorer", range:58, lat:43.0298, lng:12.1020 },
+  { id:"PA-015", battery:30, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"City Comfort", range:18, lat:43.2021, lng:12.0750 },
 ];
 
 const workOrders = [
@@ -52,56 +50,71 @@ const getStatusColor = (s) => s === "Disponibile" ? C.blueGreen : C.warmOrange;
 const getWOColor = (s) => s === "Completato" ? C.blueGreen : s === "In corso" ? C.blueGreen : C.sunYellow;
 const getPrioColor = (p) => p === "Alta" ? C.warmOrange : p === "Media" ? C.sunYellow : C.blueGreen;
 
+// Mappa con marker emoji
 function MapView({ bikes, onBikeClick }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
 
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
-    const map = new google.maps.Map(mapRef.current, {
-      center: { lat: 43.1500, lng: 12.1000 },
-      zoom: 12,
-      mapTypeId: "roadmap",
-      styles: [
-        { featureType:"water", elementType:"geometry", stylers:[{ color:"#8ECAE6" }] },
-        { featureType:"landscape", elementType:"geometry", stylers:[{ color:"#e8f4f8" }] },
-        { featureType:"road", elementType:"geometry", stylers:[{ color:"#ffffff" }] },
-        { featureType:"poi", stylers:[{ visibility:"off" }] },
-      ]
-    });
-    mapInstanceRef.current = map;
 
-    bikes.forEach(bike => {
-      const color = bike.battery >= 80 ? "219EBC" : bike.battery >= 50 ? "FFB703" : "FB8500";
-      const marker = new google.maps.Marker({
-        position: { lat: bike.lat, lng: bike.lng },
-        map,
-        title: bike.id,
-        icon: {
-  path: 0,
-  scale: 10,
-  fillColor: bike.battery >= 80 ? "#219EBC" : bike.battery >= 50 ? "#FFB703" : "#FB8500",
-  fillOpacity: 1,
-  strokeColor: "#ffffff",
-  strokeWeight: 2,
-}
-      );
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:150px">
-            <h3 style="color:#023047;margin:0 0 4px;font-size:15px">${bike.id}</h3>
-            <p style="margin:2px 0;font-size:12px;color:#666">📍 ${bike.zone}</p>
-            <p style="margin:2px 0;font-size:12px;color:${bike.battery>=80?'#219EBC':bike.battery>=50?'#FFB703':'#FB8500'}">⚡ ${bike.battery}%</p>
-            <p style="margin:2px 0;font-size:12px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</p>
-            <p style="margin:4px 0 0;font-size:11px;color:#999">🛣️ ~${bike.range} km autonomia</p>
-          </div>
-        `
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBfgaG8lGRp7P8XGI-powaYfKufeLPebx8&callback=initMap`;
+    script.async = true;
+    window.initMap = () => {
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: { lat: 43.1500, lng: 12.1000 },
+        zoom: 12,
+        mapTypeId: "roadmap",
+        styles: [
+          { featureType:"water", elementType:"geometry", stylers:[{ color:"#8ECAE6" }] },
+          { featureType:"landscape", elementType:"geometry", stylers:[{ color:"#e8f4f8" }] },
+          { featureType:"road", elementType:"geometry", stylers:[{ color:"#ffffff" }] },
+          { featureType:"poi", stylers:[{ visibility:"off" }] },
+        ]
       });
-      marker.addListener("click", () => {
-        infoWindow.open(map, marker);
-        onBikeClick(bike);
+      mapInstanceRef.current = map;
+
+      bikes.forEach(bike => {
+        const marker = new window.google.maps.Marker({
+          position: { lat: bike.lat, lng: bike.lng },
+          map,
+          title: bike.id,
+          label: {
+            text: `${bike.battery}%`,
+            color: "#ffffff",
+            fontSize: "10px",
+            fontWeight: "bold",
+          },
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 14,
+            fillColor: bike.battery >= 80 ? "#219EBC" : bike.battery >= 50 ? "#FFB703" : "#FB8500",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2,
+          }
+        });
+
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:150px">
+              <h3 style="color:#023047;margin:0 0 4px;font-size:15px">${bike.id}</h3>
+              <p style="margin:2px 0;font-size:12px;color:#666">📍 ${bike.zone}</p>
+              <p style="margin:2px 0;font-size:12px;color:${bike.battery>=80?'#219EBC':bike.battery>=50?'#FFB703':'#FB8500'}">⚡ ${bike.battery}%</p>
+              <p style="margin:2px 0;font-size:12px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:#999">🛣️ ~${bike.range} km autonomia</p>
+            </div>
+          `
+        });
+
+        marker.addListener("click", () => {
+          infoWindow.open(map, marker);
+          onBikeClick(bike);
+        });
       });
-    });
+    };
+    document.head.appendChild(script);
   }, []);
 
   return <div ref={mapRef} style={{ width:"100%", height:"100%", borderRadius:16 }} />;
@@ -312,11 +325,10 @@ function App() {
         {/* CONTENT */}
         <div style={{ flex:1, overflowY:"auto", paddingBottom:80 }}>
 
-          {/* DASHBOARD */}
           {tab==="dashboard" && (
             <div className="slide" style={{ padding:"18px 18px 0" }}>
               <div className="card" onClick={() => { setShowBooking(true); setBookingStep(1); }}
-                style={{ background:`linear-gradient(135deg, ${C.blueGreen}, ${C.deepBlue})`, borderRadius:20, padding:20, marginBottom:16, position:"relative", overflow:"hidden" }}>
+                style={{ background:`linear-gradient(135deg, ${C.blueGreen}, ${C.deepBlue})`, borderRadius:20, padding:20, marginBottom:16 }}>
                 <p style={{ color:"rgba(255,255,255,0.7)", fontSize:11, margin:"0 0 6px", ...ds, letterSpacing:2 }}>INIZIA SUBITO</p>
                 <h2 style={{ color:C.white, fontSize:20, fontWeight:700, margin:"0 0 4px", fontFamily:"Lora" }}>Prenota la tua e-bike</h2>
                 <p style={{ color:C.skyBlue, fontSize:12, margin:"0 0 14px", ...ds }}>{available} bici disponibili · da €3/ora</p>
@@ -378,7 +390,6 @@ function App() {
             </div>
           )}
 
-          {/* MAPPA REALE */}
           {tab==="mappa" && (
             <div className="slide" style={{ padding:"18px 18px 0" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
@@ -422,7 +433,6 @@ function App() {
             </div>
           )}
 
-          {/* BICI */}
           {tab==="bici" && (
             <div className="slide" style={{ padding:"18px 18px 0" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
@@ -462,7 +472,6 @@ function App() {
             </div>
           )}
 
-          {/* DETTAGLIO */}
           {tab==="dettaglio" && selectedBike && (
             <div className="slide" style={{ padding:"16px 18px 0" }}>
               <button className="btn" onClick={() => setTab("bici")} style={{ background:"none", border:"none", color:C.blueGreen, fontSize:14, cursor:"pointer", padding:"0 0 12px", ...ds, fontWeight:600 }}>← Torna</button>
@@ -490,7 +499,6 @@ function App() {
             </div>
           )}
 
-          {/* ORDINI */}
           {tab==="ordini" && (
             <div className="slide" style={{ padding:"18px 18px 0" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
@@ -517,7 +525,6 @@ function App() {
             </div>
           )}
 
-          {/* STATS */}
           {tab==="stats" && (
             <div className="slide" style={{ padding:"18px 18px 0" }}>
               <p style={{ color:C.deepBlue, fontSize:11, letterSpacing:1.5, textTransform:"uppercase", margin:"0 0 14px", ...ds, opacity:0.5 }}>Statistiche flotta</p>
