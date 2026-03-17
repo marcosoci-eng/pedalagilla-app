@@ -78,12 +78,12 @@ function MapView({ bikes, onBikeClick }) {
         map,
         title: bike.id,
         icon: {
-  path: google.maps.SymbolPath.CIRCLE,
-  scale: 12,
-  fillColor: `#${color}`,
+  path: 0,
+  scale: 10,
+  fillColor: bike.battery >= 80 ? "#219EBC" : bike.battery >= 50 ? "#FFB703" : "#FB8500",
   fillOpacity: 1,
   strokeColor: "#ffffff",
-  strokeWeight 2,
+  strokeWeight: 2,
 }
       );
       const infoWindow = new google.maps.InfoWindow({
