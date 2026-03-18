@@ -241,7 +241,7 @@ function AuthScreen({ onLogin }) {
 
   const handleRegister = async () => {
     if (!nome || !cognome || !email || !password || !telefono) { setError("Compila tutti i campi"); return; }
-    if (!docFile) { setError("Carica la foto del documento"); return; }
+    // foto opzionale
     if (password.length < 6) { setError("Password minimo 6 caratteri"); return; }
     setLoading(true); setError(null);
     try {
