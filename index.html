@@ -103,7 +103,7 @@ function FullMapView({ bikes, onBikeClick }) {
     script.async = true;
     window.initMap = () => {
       const map = new window.google.maps.Map(mapRef.current, {
-        center:{lat:43.1500,lng:12.1000}, zoom:12, mapTypeId:"roadmap",
+        center:{lat:43.1500,lng:12.0500}, zoom:11, mapTypeId:"roadmap",
         disableDefaultUI:true, zoomControl:true,
         styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]},{featureType:"transit",stylers:[{visibility:"off"}]}]
       });
