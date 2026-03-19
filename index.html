@@ -498,8 +498,8 @@ function ClienteApp({ user, onLogout }) {
       const {collection,addDoc} = window.firebaseFunctions;
       const rideDoc = await addDoc(collection(window.firebaseDb,"rides"),{
         bikeId:selectedBike.id, userId:user.uid,
-        userName:`${user.nome} ${user.cognome}`,
-        userEmail:user.email, zone:selectedBike.zone,
+        userName:`${user.nome||""} ${user.cognome||""}`.trim()||"Cliente",
+        userEmail:user.email||user.userEmail||"", zone:selectedBike.zone,
         plan, status:"In corso",
         startTime:new Date().toISOString(), track:[], cost:0
       });
