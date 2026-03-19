@@ -484,7 +484,7 @@ function ClienteApp({ user, onLogout }) {
   const [showSummary, setShowSummary] = React.useState(false);
   const [rideSummary, setRideSummary] = React.useState(null);
 
-  const payAmount = plan==="giornata" ? TARIFFA_GIORNATA : SBLOCCO + 10*TARIFFA_MIN;
+  const payAmount = plan==="giornata" ? TARIFFA_GIORNATA : SBLOCCO;
   const plans = [
     {id:"minuti",label:"Al minuto",icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)} sblocco + €${TARIFFA_MIN}/min · pausa €${TARIFFA_PAUSA}/min`},
     {id:"giornata",label:"Giornata intera",icon:"☀️",desc:`€${TARIFFA_GIORNATA.toFixed(2)} tutto il giorno · pausa gratuita`},
@@ -586,7 +586,7 @@ function ClienteApp({ user, onLogout }) {
                   ))}
                   <button onClick={()=>setShowPayment(true)}
                     style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
-                    💳 Continua — €{payAmount.toFixed(2)}
+                   💳 Continua — €{plan==="giornata"?payAmount.toFixed(2):`€${SBLOCCO.toFixed(2)} sblocco`}
                   </button>
                 </div>
               </>
