@@ -586,7 +586,7 @@ function ClienteApp({ user, onLogout }) {
                   ))}
                   <button onClick={()=>setShowPayment(true)}
                     style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
-                   💳 Continua — €{plan==="giornata"?payAmount.toFixed(2):`€${SBLOCCO.toFixed(2)} sblocco`}
+                   💳 Continua — {plan==="giornata"?`€${payAmount.toFixed(2)}`:`€${SBLOCCO.toFixed(2)} sblocco`}
                   </button>
                 </div>
               </>
