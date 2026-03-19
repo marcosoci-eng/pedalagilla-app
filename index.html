@@ -9,6 +9,7 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -488,6 +489,46 @@ function ClienteApp({ user, onLogout }) {
   const [showSummary, setShowSummary] = React.useState(false);
   const [rideSummary, setRideSummary] = React.useState(null);
 const [showQRScanner, setShowQRScanner] = React.useState(false);
+const qrIntervalRef = React.useRef(null);
+
+React.useEffect(() => {
+  if (!showQRScanner) {
+    clearInterval(qrIntervalRef.current);
+    const video = document.getElementById("qrVideo");
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach(t=>t.stop());
+      video.srcObject = null;
+    }
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(stream=>{
+    const video = document.getElementById("qrVideo");
+    if (video) { video.srcObject = stream; video.play(); }
+    qrIntervalRef.current = setInterval(()=>{
+      const video = document.getElementById("qrVideo");
+      const canvas = document.getElementById("qrCanvas");
+      if (!video||!canvas||!window.jsQR) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video,0,0);
+      const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const code = window.jsQR(imageData.data,imageData.width,imageData.height);
+      if (code) {
+        const url = new URL(code.data);
+        const bikeId = url.searchParams.get("bike");
+        if (bikeId) {
+          const bike = bikes.find(b=>b.id===bikeId);
+          clearInterval(qrIntervalRef.current);
+          stream.getTracks().forEach(t=>t.stop());
+          setShowQRScanner(false);
+          if (bike) { setSelectedBike(bike); setShowPlan(true); }
+          else alert(`Bici ${bikeId} non disponibile`);
+        }
+      }
+    },500);
+  }).catch(()=>alert("Fotocamera non accessibile"));
+}, [showQRScanner]);
   const payAmount = plan==="giornata" ? TARIFFA_GIORNATA : SBLOCCO;
   const plans = [
     {id:"minuti",label:"Al minuto",icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)} sblocco + €${TARIFFA_MIN}/min · pausa €${TARIFFA_PAUSA}/min`},
@@ -551,9 +592,8 @@ React.useEffect(() => {
         }}
       />
     </div>
-    <p style={{color:"rgba(255,255,255,0.4)",fontSize:11,...ds,textAlign:"center",padding:"0 40px"}}>
-      La scansione automatica richiede un browser aggiornato
-    </p>
+    <video id="qrVideo" style={{width:260,height:260,borderRadius:16,objectFit:"cover",border:`3px solid ${C.blueGreen}`}} autoPlay playsInline muted/>
+<canvas id="qrCanvas" style={{display:"none"}}/>
   </div>
 )}
         {riding&&confirmed&&<RideTimer bike={confirmed} plan={plan} user={user} rideId={currentRideId} onEnd={handleEndRide}/>}
