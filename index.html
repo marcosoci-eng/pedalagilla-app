@@ -83,7 +83,11 @@ const getStatusColor = (s) => s==="Disponibile" ? C.blueGreen : C.warmOrange;
 const getRange = (battery) => Math.round((battery/100)*80);
 const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
 const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
-
+// Leggi parametro bici dall'URL (da QR code)
+const getUrlBike = () => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("bike");
+};
 // ── MAPPA ─────────────────────────────────────────────
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }) {
   const mapRef = React.useRef(null);
@@ -491,6 +495,17 @@ function ClienteApp({ user, onLogout }) {
   ];
 
   const handleBikeClick = (bike) => { setSelectedBike(bike); setShowPlan(true); };
+  // Auto-apri prenotazione se arrivi da QR code
+React.useEffect(() => {
+  const bikeId = getUrlBike();
+  if (bikeId) {
+    const bike = bikes.find(b=>b.id===bikeId);
+    if (bike) { setSelectedBike(bike); setShowPlan(true); }
+    else alert(`Bici ${bikeId} non disponibile al momento`);
+    // Pulisci URL
+    window.history.replaceState({}, "", "/");
+  }
+}, []);
   const handlePaySuccess = async () => {
     setShowPayment(false); setShowPlan(false);
     try {
