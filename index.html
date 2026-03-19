@@ -768,13 +768,17 @@ function AdminApp({ user, onLogout }) {
   const saveBike = () => { setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b)); setShowBikeDetail(false); };
   const toggleStatus = (bikeId) => { setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b)); };
 
-  const forceEndRide = async (ride) => {
-    if (!window.confirm(`Terminare la corsa di ${ride.user}?`)) return;
+ const forceEndRide = async (ride) => {
+    const importoStr = window.prompt(`Corsa di ${ride.user}\nCosto calcolato: €${(ride.cost||0).toFixed(2)}\n\nInserisci importo da fatturare (o lascia vuoto per €${(ride.cost||0).toFixed(2)}):`, (ride.cost||0).toFixed(2));
+    if (importoStr===null) return;
+    const importoForced = parseFloat(importoStr)||0;
     try {
       await waitFB();
       const {doc,updateDoc} = window.firebaseFunctions;
       await updateDoc(doc(window.firebaseDb,"rides",ride.id),{
-        status:"Terminata (Admin)", endTime:new Date().toISOString()
+        status:"Completata", endTime:new Date().toISOString(),
+        cost:importoForced, duration:ride.duration||0,
+        closedByAdmin:true
       });
     } catch(e) { alert("Errore: "+e.message); }
   };
