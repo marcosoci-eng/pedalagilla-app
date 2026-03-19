@@ -11,7 +11,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
   const firebaseConfig = {
@@ -27,7 +27,7 @@
   window.firebaseAuth = getAuth(app);
   window.firebaseDb = getFirestore(app);
   window.firebaseStorage = getStorage(app);
-  window.firebaseFunctions = { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, setDoc, getDoc, ref, uploadBytes, getDownloadURL };
+  window.firebaseFunctions = { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, doc, setDoc, getDoc, collection, addDoc, getDocs, query, orderBy, ref, uploadBytes, getDownloadURL };
   window.firebaseReady = true;
   window.dispatchEvent(new Event("firebaseReady"));
 </script>
@@ -36,7 +36,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #023047; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 ::-webkit-scrollbar { width: 0; }
-input:focus { outline: none; border-color: #219EBC !important; }
+input:focus, textarea:focus { outline: none; border-color: #219EBC !important; }
 </style>
 </head>
 <body>
@@ -52,42 +52,49 @@ const ds = { fontFamily:"'DM Sans', sans-serif" };
 const MARCO_TEL = "+393495240422";
 const MARCO_WA = "393495240422";
 
-const allBikes = [
-  { id:"PA-021", battery:88, status:"Disponibile", odometer:386.9, zone:"Passignano", model:"City Comfort", range:52, lat:43.1876, lng:12.1978 },
-  { id:"PA-033", battery:100, status:"Disponibile", odometer:265, zone:"Castiglione", model:"City Comfort", range:60, lat:43.1208, lng:11.9847 },
-  { id:"PA-035", battery:43, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"Trail Explorer", range:26, lat:43.2041, lng:12.0731 },
-  { id:"PA-012", battery:89, status:"Disponibile", odometer:346.7, zone:"Magione", model:"Trail Explorer", range:53, lat:43.1394, lng:12.2056 },
-  { id:"PA-005", battery:76, status:"Disponibile", odometer:220.7, zone:"Passignano", model:"City Comfort", range:46, lat:43.1856, lng:12.1950 },
-  { id:"PA-020", battery:74, status:"Disponibile", odometer:380.4, zone:"Panicale", model:"Trail Explorer", range:44, lat:43.0278, lng:12.1044 },
-  { id:"PA-029", battery:80, status:"Disponibile", odometer:234.6, zone:"Castiglione", model:"City Comfort", range:48, lat:43.1228, lng:11.9820 },
-  { id:"PA-039", battery:78, status:"Disponibile", odometer:561.8, zone:"Tuoro", model:"Trail Explorer", range:47, lat:43.2061, lng:12.0780 },
-  { id:"PA-034", battery:100, status:"Manutenzione", odometer:157.5, zone:"Magione", model:"City Comfort", range:60, lat:43.1414, lng:12.2080 },
-  { id:"PA-003", battery:77, status:"Disponibile", odometer:351.3, zone:"Passignano", model:"City Comfort", range:46, lat:43.1896, lng:12.1990 },
-  { id:"PA-016", battery:96, status:"Disponibile", odometer:502.8, zone:"Panicale", model:"Trail Explorer", range:58, lat:43.0298, lng:12.1020 },
-  { id:"PA-015", battery:30, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"City Comfort", range:18, lat:43.2021, lng:12.0750 },
+const SBLOCCO = 1.00;
+const TARIFFA_MIN = 0.19;
+const TARIFFA_GIORNATA = 19.90;
+
+const checklist = ["🔗 Lubrificazione catena","🦶 Controllo pedali","🧹 Pulizia veicolo","🔋 Controllo batteria","🛞 Pressione pneumatici","🛑 Test freni","⚙️ Controllo cambio"];
+
+const initBikes = [
+  { id:"PA-021", battery:88, status:"Disponibile", odometer:386.9, zone:"Passignano", model:"City Comfort", lat:43.1876, lng:12.1978, note:"", lastMaint:"15/03/2026", checks:{} },
+  { id:"PA-033", battery:100, status:"Disponibile", odometer:265, zone:"Castiglione", model:"City Comfort", lat:43.1208, lng:11.9847, note:"", lastMaint:"14/03/2026", checks:{} },
+  { id:"PA-035", battery:43, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"Trail Explorer", lat:43.2041, lng:12.0731, note:"Batteria scarica", lastMaint:"10/03/2026", checks:{} },
+  { id:"PA-012", battery:89, status:"Disponibile", odometer:346.7, zone:"Magione", model:"Trail Explorer", lat:43.1394, lng:12.2056, note:"", lastMaint:"16/03/2026", checks:{} },
+  { id:"PA-005", battery:76, status:"Disponibile", odometer:220.7, zone:"Passignano", model:"City Comfort", lat:43.1856, lng:12.1950, note:"", lastMaint:"15/03/2026", checks:{} },
+  { id:"PA-020", battery:74, status:"Disponibile", odometer:380.4, zone:"Panicale", model:"Trail Explorer", lat:43.0278, lng:12.1044, note:"", lastMaint:"13/03/2026", checks:{} },
+  { id:"PA-029", battery:80, status:"Disponibile", odometer:234.6, zone:"Castiglione", model:"City Comfort", lat:43.1228, lng:11.9820, note:"", lastMaint:"16/03/2026", checks:{} },
+  { id:"PA-039", battery:78, status:"Disponibile", odometer:561.8, zone:"Tuoro", model:"Trail Explorer", lat:43.2061, lng:12.0780, note:"", lastMaint:"12/03/2026", checks:{} },
+  { id:"PA-034", battery:100, status:"Manutenzione", odometer:157.5, zone:"Magione", model:"City Comfort", lat:43.1414, lng:12.2080, note:"Pick up programmato", lastMaint:"11/03/2026", checks:{} },
+  { id:"PA-003", battery:77, status:"Disponibile", odometer:351.3, zone:"Passignano", model:"City Comfort", lat:43.1896, lng:12.1990, note:"", lastMaint:"15/03/2026", checks:{} },
+  { id:"PA-016", battery:96, status:"Disponibile", odometer:502.8, zone:"Panicale", model:"Trail Explorer", lat:43.0298, lng:12.1020, note:"", lastMaint:"16/03/2026", checks:{} },
+  { id:"PA-015", battery:30, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"City Comfort", lat:43.2021, lng:12.0750, note:"Sostituzione batteria", lastMaint:"09/03/2026", checks:{} },
 ];
 
-const workOrders = [
-  { id:"OL-001", bike:"PA-035", type:"Batteria scarica", priority:"Alta", date:"18/03/2026", tech:"Marco R.", status:"Aperto", zone:"Tuoro" },
-  { id:"OL-002", bike:"PA-015", type:"Sostituzione batteria", priority:"Alta", date:"18/03/2026", tech:"Luigi B.", status:"In corso", zone:"Tuoro" },
-  { id:"OL-003", bike:"PA-034", type:"Pick Up", priority:"Media", date:"17/03/2026", tech:"Sara V.", status:"Completato", zone:"Magione" },
-  { id:"OL-004", bike:"PA-022", type:"Ispezione", priority:"Bassa", date:"19/03/2026", tech:"Marco R.", status:"Aperto", zone:"Castiglione" },
+const sampleRides = [
+  { id:"C001", bike:"PA-021", user:"Mario Rossi", zone:"Passignano", plan:"minuti", duration:23, cost:5.37, date:"19/03/2026 09:14", status:"Completata" },
+  { id:"C002", bike:"PA-033", user:"Giulia Bianchi", zone:"Castiglione", plan:"giornata", duration:480, cost:19.90, date:"19/03/2026 10:02", status:"In corso" },
+  { id:"C003", bike:"PA-012", user:"Luca Verdi", zone:"Magione", plan:"minuti", duration:41, cost:8.79, date:"18/03/2026 15:30", status:"Completata" },
+  { id:"C004", bike:"PA-005", user:"Anna Ferrari", zone:"Passignano", plan:"minuti", duration:18, cost:4.42, date:"18/03/2026 11:20", status:"Completata" },
+  { id:"C005", bike:"PA-016", user:"Roberto Conti", zone:"Panicale", plan:"giornata", duration:480, cost:19.90, date:"17/03/2026 09:00", status:"Completata" },
 ];
 
 const getBattColor = (b) => b>=80 ? C.blueGreen : b>=50 ? C.sunYellow : C.warmOrange;
 const getStatusColor = (s) => s==="Disponibile" ? C.blueGreen : C.warmOrange;
-const getWOColor = (s) => s==="Completato" ? C.blueGreen : s==="In corso" ? C.blueGreen : C.sunYellow;
-const getPrioColor = (p) => p==="Alta" ? C.warmOrange : p==="Media" ? C.sunYellow : C.blueGreen;
+const getRange = (battery) => Math.round((battery/100)*80);
+const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
 
-function MapView({ bikes, onBikeClick }) {
+function MapView({ bikes, onBikeClick, height=300 }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
+  const markersRef = React.useRef([]);
+
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBfgaG8lGRp7P8XGI-powaYfKufeLPebx8&callback=initMap`;
-    script.async = true;
-    window.initMap = () => {
+    const tryInit = () => {
+      if (!window.google) { setTimeout(tryInit, 200); return; }
       const map = new window.google.maps.Map(mapRef.current, {
         center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
         styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
@@ -99,13 +106,20 @@ function MapView({ bikes, onBikeClick }) {
           label:{text:`${bike.battery}%`,color:"#ffffff",fontSize:"10px",fontWeight:"bold"},
           icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:14,fillColor:bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500",fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2}
         });
-        const iw = new window.google.maps.InfoWindow({content:`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:130px"><h3 style="color:#023047;margin:0 0 4px;font-size:14px">${bike.id}</h3><p style="margin:2px 0;font-size:11px;color:#666">📍 ${bike.zone}</p><p style="margin:2px 0;font-size:11px">⚡ ${bike.battery}% · ${bike.status}</p></div>`});
-        marker.addListener("click",()=>{iw.open(map,marker);onBikeClick(bike);});
+        marker.addListener("click",()=>onBikeClick(bike));
+        markersRef.current.push(marker);
       });
     };
-    document.head.appendChild(script);
+    if (!document.querySelector('script[src*="maps.googleapis"]')) {
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBfgaG8lGRp7P8XGI-powaYfKufeLPebx8`;
+      script.async = true;
+      script.onload = tryInit;
+      document.head.appendChild(script);
+    } else tryInit();
   }, []);
-  return <div ref={mapRef} style={{width:"100%",height:"100%",borderRadius:16}} />;
+
+  return <div ref={mapRef} style={{width:"100%",height:height,borderRadius:16}} />;
 }
 
 function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
@@ -130,25 +144,25 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
   };
   return (
     <div style={{padding:"20px 18px"}}>
-      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:20,textAlign:"center"}}>
+      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:16,textAlign:"center"}}>
         <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>TOTALE</p>
-        <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{amount}</p>
+        <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{amount.toFixed(2)}</p>
         <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,margin:0,...ds}}>{bike.id} · {plan} · {bike.zone}</p>
       </div>
-      <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:12,marginBottom:16}}>
-        <p style={{color:C.blueGreen,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>🧪 Test: 4242 4242 4242 4242 · 12/28 · 123</p>
+      <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:10,marginBottom:14}}>
+        <p style={{color:C.blueGreen,fontSize:11,fontWeight:600,margin:0,...ds}}>🧪 Test: 4242 4242 4242 4242 · 12/28 · 123</p>
       </div>
-      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 6px",...ds}}>Nome</p>
+      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>Nome</p>
       <input value={nome} onChange={e=>setNome(e.target.value)} placeholder="Mario Rossi"
-        style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,marginBottom:14,background:C.white}} />
-      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 6px",...ds}}>Carta</p>
-      <div ref={cardRef} style={{background:C.white,padding:14,borderRadius:10,border:`1.5px solid ${C.skyBlue}`,marginBottom:14}} />
-      {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 12px",...ds}}>⚠️ {error}</p>}
+        style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,marginBottom:12,background:C.white}} />
+      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>Carta</p>
+      <div ref={cardRef} style={{background:C.white,padding:14,borderRadius:10,border:`1.5px solid ${C.skyBlue}`,marginBottom:12}} />
+      {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
       <button onClick={handlePay} disabled={loading}
-        style={{width:"100%",background:loading?`${C.blueGreen}80`:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
-        {loading?"⏳ Elaborazione...":`💳 Paga €${amount}`}
+        style={{width:"100%",background:loading?`${C.blueGreen}80`:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:8}}>
+        {loading?"⏳ Elaborazione...":`💳 Paga €${amount.toFixed(2)}`}
       </button>
-      <button onClick={onCancel} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:12,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>Annulla</button>
+      <button onClick={onCancel} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>Annulla</button>
     </div>
   );
 }
@@ -168,17 +182,14 @@ function AuthScreen({ onLogin }) {
   const [adminPass, setAdminPass] = React.useState("");
 
   const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
-
   const handleDocChange = (e) => {
     const file = e.target.files[0];
     if (file) { setDocFile(file); const r=new FileReader(); r.onload=ev=>setDocPreview(ev.target.result); r.readAsDataURL(file); }
   };
-
   const handleAdminLogin = () => {
     if (adminUser==="marco" && adminPass==="pedalagilla2026") onLogin({type:"admin",nome:"Marco",email:"marco@pedalagilla.it"});
     else setError("Credenziali errate");
   };
-
   const handleLogin = async () => {
     if (!email||!password) { setError("Inserisci email e password"); return; }
     setLoading(true); setError(null);
@@ -191,7 +202,6 @@ function AuthScreen({ onLogin }) {
     } catch(e) { setError("Email o password errati"); }
     setLoading(false);
   };
-
   const handleRegister = async () => {
     if (!nome||!cognome||!email||!password||!telefono) { setError("Compila tutti i campi"); return; }
     if (password.length<6) { setError("Password minimo 6 caratteri"); return; }
@@ -208,89 +218,72 @@ function AuthScreen({ onLogin }) {
       }
       await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString()});
       onLogin({type:"cliente",nome,cognome,email,telefono,uid:cred.user.uid});
-    } catch(e) {
-      setError(e.code==="auth/email-already-in-use"?"Email già registrata":"Errore: "+e.message);
-    }
+    } catch(e) { setError(e.code==="auth/email-already-in-use"?"Email già registrata":"Errore: "+e.message); }
     setLoading(false);
   };
-
-  const inputStyle = {width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10};
+  const inp = {width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10};
 
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{width:390,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
-        <div style={{background:C.deepBlue,padding:"30px 24px 24px",textAlign:"center"}}>
-          <div style={{fontSize:50,marginBottom:8}}>🚲</div>
+        <div style={{background:C.deepBlue,padding:"28px 24px 22px",textAlign:"center"}}>
+          <div style={{fontSize:48,marginBottom:6}}>🚲</div>
           <h1 style={{color:C.white,fontSize:26,fontWeight:700,margin:0,fontFamily:"Lora"}}>PedalAgilla</h1>
           <p style={{color:C.skyBlue,fontSize:12,margin:"4px 0 0",...ds}}>E-BIKE SHARING · Lago Trasimeno</p>
         </div>
-        <div style={{padding:"24px 20px",maxHeight:"75vh",overflowY:"auto"}}>
+        <div style={{padding:"22px 20px",maxHeight:"75vh",overflowY:"auto"}}>
           {mode!=="adminLogin" && (
-            <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:20}}>
+            <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:18}}>
               {[["login","Accedi"],["register","Registrati"]].map(([m,l])=>(
                 <button key={m} onClick={()=>{setMode(m);setError(null);}}
                   style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
           )}
-
           {mode==="login" && <>
-            <p style={{color:C.deepBlue,fontSize:13,marginBottom:16,...ds,opacity:0.7,textAlign:"center"}}>Bentornato! Accedi per prenotare 🚲</p>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>📧 Email</p>
-            <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="mario@example.com" style={inputStyle} />
+            <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="mario@example.com" style={inp} />
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>🔑 Password</p>
-            <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="••••••••" style={inputStyle} />
-            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 12px",...ds}}>⚠️ {error}</p>}
+            <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="••••••••" style={inp} />
+            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             <button onClick={handleLogin} disabled={loading}
-              style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:12}}>
+              style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
               {loading?"⏳ Accesso...":"Accedi 🚲"}
             </button>
             <button onClick={()=>{setMode("adminLogin");setError(null);}}
-              style={{width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:10,color:"#aaa",fontSize:12,...ds,cursor:"pointer"}}>
+              style={{width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer"}}>
               🔐 Accesso amministratore
             </button>
           </>}
-
           {mode==="register" && <>
-            <p style={{color:C.deepBlue,fontSize:13,marginBottom:16,...ds,opacity:0.7,textAlign:"center"}}>Crea il tuo account 🌊</p>
-            {[["👤 Nome",nome,setNome,"text","Mario"],["👤 Cognome",cognome,setCognome,"text","Rossi"],
-              ["📧 Email",email,setEmail,"email","mario@example.com"],
-              ["📱 Telefono",telefono,setTelefono,"tel","+39 333 1234567"],
-              ["🔑 Password",password,setPassword,"password","Minimo 6 caratteri"]].map(([label,val,setter,type,ph])=>(
+            {[["👤 Nome",nome,setNome,"text","Mario"],["👤 Cognome",cognome,setCognome,"text","Rossi"],["📧 Email",email,setEmail,"email","mario@example.com"],["📱 Telefono",telefono,setTelefono,"tel","+39 333 1234567"],["🔑 Password",password,setPassword,"password","Minimo 6 caratteri"]].map(([label,val,setter,type,ph])=>(
               <div key={label}>
                 <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{label}</p>
-                <input value={val} onChange={e=>setter(e.target.value)} type={type} placeholder={ph} style={inputStyle} />
+                <input value={val} onChange={e=>setter(e.target.value)} type={type} placeholder={ph} style={inp} />
               </div>
             ))}
-            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"6px 0 6px",...ds}}>📷 Foto documento <span style={{color:"#aaa",fontWeight:400}}>(opzionale)</span></p>
-            <div style={{border:`1.5px dashed ${C.blueGreen}`,borderRadius:12,padding:16,textAlign:"center",marginBottom:12,background:`${C.blueGreen}05`,cursor:"pointer"}}
+            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"4px 0 6px",...ds}}>📷 Documento <span style={{color:"#aaa",fontWeight:400}}>(opzionale)</span></p>
+            <div style={{border:`1.5px dashed ${C.blueGreen}`,borderRadius:12,padding:14,textAlign:"center",marginBottom:12,cursor:"pointer"}}
               onClick={()=>document.getElementById("docInput").click()}>
-              {docPreview
-                ? <img src={docPreview} style={{width:"100%",borderRadius:8,maxHeight:120,objectFit:"cover"}} />
-                : <div><div style={{fontSize:32,marginBottom:6}}>📄</div>
-                    <p style={{color:C.blueGreen,fontSize:13,...ds,fontWeight:600,margin:0}}>Tocca per caricare</p>
-                    <p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0"}}>Opzionale — puoi mandarla dopo via WhatsApp</p>
-                  </div>
-              }
+              {docPreview ? <img src={docPreview} style={{width:"100%",borderRadius:8,maxHeight:100,objectFit:"cover"}} />
+                : <div><div style={{fontSize:28,marginBottom:4}}>📄</div><p style={{color:C.blueGreen,fontSize:12,...ds,margin:0}}>Tocca per caricare</p></div>}
               <input id="docInput" type="file" accept="image/*" onChange={handleDocChange} style={{display:"none"}} />
             </div>
-            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 12px",...ds}}>⚠️ {error}</p>}
+            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             <button onClick={handleRegister} disabled={loading}
-              style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+              style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
               {loading?"⏳ Registrazione...":"Crea account 🌊"}
             </button>
           </>}
-
           {mode==="adminLogin" && <>
-            <button onClick={()=>{setMode("login");setError(null);}} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,cursor:"pointer",...ds,fontWeight:600,marginBottom:16}}>← Torna</button>
-            <p style={{color:C.deepBlue,fontSize:13,marginBottom:16,...ds,opacity:0.7,textAlign:"center"}}>🔐 Accesso amministratore</p>
+            <button onClick={()=>{setMode("login");setError(null);}} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,cursor:"pointer",...ds,fontWeight:600,marginBottom:14}}>← Torna</button>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>👤 Username</p>
-            <input value={adminUser} onChange={e=>setAdminUser(e.target.value)} type="text" placeholder="marco" style={inputStyle} />
+            <input value={adminUser} onChange={e=>setAdminUser(e.target.value)} type="text" placeholder="marco" style={inp} />
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>🔑 Password</p>
-            <input value={adminPass} onChange={e=>setAdminPass(e.target.value)} type="password" placeholder="••••••••" style={inputStyle} />
-            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 12px",...ds}}>⚠️ {error}</p>}
+            <input value={adminPass} onChange={e=>setAdminPass(e.target.value)} type="password" placeholder="••••••••" style={inp} />
+            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             <button onClick={handleAdminLogin}
-              style={{width:"100%",background:`linear-gradient(90deg,${C.deepBlue},#034a6e)`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+              style={{width:"100%",background:`linear-gradient(90deg,${C.deepBlue},#034a6e)`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
               Accedi come Admin 🔐
             </button>
           </>}
@@ -300,161 +293,196 @@ function AuthScreen({ onLogin }) {
   );
 }
 
-function ClienteApp({ user, onLogout }) {
-  const bikes = allBikes.filter(b=>b.status==="Disponibile");
-  const [tab, setTab] = React.useState("mappa");
-  const [mapBike, setMapBike] = React.useState(null);
-  const [showBooking, setShowBooking] = React.useState(false);
-  const [step, setStep] = React.useState(1);
-  const [zone, setZone] = React.useState(null);
-  const [bookedBike, setBookedBike] = React.useState(null);
-  const [plan, setPlan] = React.useState("orario");
-  const [duration, setDuration] = React.useState(2);
-  const [showPayment, setShowPayment] = React.useState(false);
-  const [confirmed, setConfirmed] = React.useState(null);
+// ── TIMER CORSA ─────────────────────────────────────
+function RideTimer({ bike, plan, onEnd }) {
+  const [seconds, setSeconds] = React.useState(0);
+  const [paused, setPaused] = React.useState(false);
+  const intervalRef = React.useRef(null);
 
-  const zones = ["Passignano","Castiglione","Tuoro","Magione","Panicale"];
-  const zoneIcons = {Passignano:"🏛️",Castiglione:"🏰",Tuoro:"⛵",Magione:"🌿",Panicale:"🍷"};
-  const plans = [{id:"orario",label:"Orario",price:3,unit:"€/ora",icon:"⏱️"},{id:"mezza",label:"Mezza giornata",price:10,unit:"4h",icon:"🌤️"},{id:"giornata",label:"Giornata intera",price:18,unit:"8h",icon:"☀️"}];
-  const selPlan = plans.find(p=>p.id===plan);
-  const total = plan==="orario" ? duration*3 : selPlan.price;
-  const zoneBikes = bikes.filter(b=>b.zone===zone);
-  const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
+  React.useEffect(() => {
+    if (!paused) {
+      intervalRef.current = setInterval(()=>setSeconds(s=>s+1), 1000);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [paused]);
+
+  const mins = Math.floor(seconds/60);
+  const secs = seconds%60;
+  const cost = plan==="giornata" ? TARIFFA_GIORNATA : SBLOCCO + (seconds/60)*TARIFFA_MIN;
+
+  return (
+    <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,display:"flex",flexDirection:"column"}}>
+      <div style={{background:C.deepBlue,padding:"16px 22px"}}>
+        <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>CORSA IN CORSO</p>
+        <h2 style={{color:C.white,fontSize:20,fontWeight:700,margin:"4px 0 0",fontFamily:"Lora"}}>{bike.id} · {bike.zone}</h2>
+      </div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:24,padding:32,textAlign:"center",marginBottom:24,width:"100%"}}>
+          <p style={{color:C.skyBlue,fontSize:12,margin:"0 0 8px",...ds,letterSpacing:2}}>TEMPO</p>
+          <p style={{color:C.white,fontSize:52,fontWeight:700,margin:"0 0 16px",...ds,fontFamily:"monospace"}}>
+            {String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
+          </p>
+          <p style={{color:C.skyBlue,fontSize:12,margin:"0 0 4px",...ds}}>Costo attuale</p>
+          <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:0,...ds}}>€{cost.toFixed(2)}</p>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,width:"100%",marginBottom:16}}>
+          {[["🔓 Sblocco",`€${SBLOCCO.toFixed(2)}`],["⏱️ Tariffa",`€${TARIFFA_MIN}/min`],[" 🛣️ Autonomia",`${getRange(bike.battery)} km`],["📍 Zona",bike.zone]].map(([k,v])=>(
+            <div key={k} style={{background:C.white,borderRadius:12,padding:"10px 14px",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+              <p style={{color:"#aaa",fontSize:10,...ds,margin:"0 0 2px"}}>{k}</p>
+              <p style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:700,margin:0}}>{v}</p>
+            </div>
+          ))}
+        </div>
+        <button onClick={()=>setPaused(p=>!p)}
+          style={{width:"100%",background:paused?C.blueGreen:`${C.sunYellow}`,border:"none",borderRadius:14,padding:14,color:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
+          {paused?"▶️ Riprendi":"⏸️ Pausa"}
+        </button>
+        <button onClick={()=>onEnd(seconds,cost)}
+          style={{width:"100%",background:C.warmOrange,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+          🏁 Termina corsa
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── APP CLIENTE ─────────────────────────────────────
+function ClienteApp({ user, onLogout }) {
+  const bikes = initBikes.filter(b=>b.status==="Disponibile");
+  const [tab, setTab] = React.useState("mappa");
+  const [selectedBike, setSelectedBike] = React.useState(null);
+  const [showPlan, setShowPlan] = React.useState(false);
+  const [plan, setPlan] = React.useState("minuti");
+  const [showPayment, setShowPayment] = React.useState(false);
+  const [riding, setRiding] = React.useState(false);
+  const [confirmed, setConfirmed] = React.useState(null);
+  const [showSummary, setShowSummary] = React.useState(false);
+  const [rideSummary, setRideSummary] = React.useState(null);
+
+  const payAmount = plan==="giornata" ? TARIFFA_GIORNATA : SBLOCCO + 10*TARIFFA_MIN;
+
+  const handleBikeClick = (bike) => { setSelectedBike(bike); setShowPlan(true); };
+  const handlePaySuccess = () => { setShowPayment(false); setShowPlan(false); setRiding(true); setConfirmed(selectedBike); };
+  const handleEndRide = (secs, cost) => {
+    setRiding(false);
+    setRideSummary({bike:confirmed, secs, cost});
+    setShowSummary(true);
+  };
+
+  const plans = [
+    { id:"minuti", label:"Al minuto", icon:"⏱️", desc:`€${SBLOCCO.toFixed(2)} sblocco + €${TARIFFA_MIN}/min`, color:C.blueGreen },
+    { id:"giornata", label:"Giornata intera", icon:"☀️", desc:`€${TARIFFA_GIORNATA.toFixed(2)} tutto il giorno`, color:C.sunYellow },
+  ];
 
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <style>{css}</style>
       <div style={{width:390,minHeight:844,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
 
-        {showPayment && bookedBike && (
-          <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:200,display:"flex",flexDirection:"column",overflowY:"auto"}}>
-            <div style={{background:C.deepBlue,padding:"12px 20px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <button onClick={()=>setShowPayment(false)} style={{background:"none",border:"none",color:C.skyBlue,fontSize:22,cursor:"pointer"}}>←</button>
-              <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>💳 Pagamento</p>
-              <div style={{width:30}}/>
+        {/* TIMER CORSA */}
+        {riding && confirmed && <RideTimer bike={confirmed} plan={plan} onEnd={handleEndRide} />}
+
+        {/* RIEPILOGO FINE CORSA */}
+        {showSummary && rideSummary && (
+          <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,overflowY:"auto",padding:24}}>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{width:80,height:80,borderRadius:40,background:`linear-gradient(135deg,${C.blueGreen},${C.deepBlue})`,margin:"0 auto 16px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🏁</div>
+              <h2 style={{color:C.deepBlue,fontSize:22,fontWeight:700,fontFamily:"Lora",margin:"0 0 4px"}}>Corsa completata!</h2>
+              <p style={{color:"#888",fontSize:13,...ds}}>Grazie per aver scelto PedalAgilla 🌊</p>
             </div>
-            <PaymentForm amount={total} bike={bookedBike} plan={selPlan.label}
-              onSuccess={()=>{setShowPayment(false);setStep(5);setConfirmed(bookedBike);}}
-              onCancel={()=>setShowPayment(false)} />
+            <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:20,marginBottom:16,textAlign:"center"}}>
+              <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>TOTALE PAGATO</p>
+              <p style={{color:C.sunYellow,fontSize:40,fontWeight:700,margin:0,...ds}}>€{rideSummary.cost.toFixed(2)}</p>
+            </div>
+            {[["🚲 Bici",rideSummary.bike.id],["📍 Zona",rideSummary.bike.zone],["⏱️ Durata",`${Math.floor(rideSummary.secs/60)}min ${rideSummary.secs%60}sec`]].map(([k,v])=>(
+              <div key={k} style={{display:"flex",justifyContent:"space-between",borderBottom:`1px solid ${C.skyBlue}20`,paddingBottom:10,marginBottom:10}}>
+                <span style={{color:"#888",fontSize:13,...ds}}>{k}</span>
+                <span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{v}</span>
+              </div>
+            ))}
+            <button onClick={()=>{setShowSummary(false);setRideSummary(null);setConfirmed(null);setTab("mappa");}}
+              style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
+              Torna alla mappa 🌊
+            </button>
+            <p style={{color:"#aaa",fontSize:11,...ds,fontStyle:"italic",textAlign:"center",marginTop:16}}>Ogni curva racconta una storia. Scrivila con noi.</p>
           </div>
         )}
 
-        {showBooking && (
-          <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:100,display:"flex",flexDirection:"column",overflowY:"auto"}}>
-            <div style={{background:C.deepBlue,padding:"12px 20px 16px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <button className="btn" onClick={()=>step>1&&step<5?setStep(s=>s-1):setShowBooking(false)}
-                  style={{background:"none",border:"none",color:C.skyBlue,fontSize:22,cursor:"pointer"}}>{step>1&&step<5?"←":"✕"}</button>
-                <div style={{textAlign:"center"}}>
-                  <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>PRENOTA</p>
-                  <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>
-                    {step===1?"Scegli zona":step===2?"Scegli bici":step===3?"Piano":step===4?"Riepilogo":"Confermata! 🎉"}
-                  </p>
+        {/* SELEZIONE PIANO */}
+        {showPlan && selectedBike && !riding && !showSummary && (
+          <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:200,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+            {showPayment ? (
+              <>
+                <div style={{background:C.deepBlue,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <button onClick={()=>setShowPayment(false)} style={{background:"none",border:"none",color:C.skyBlue,fontSize:22,cursor:"pointer"}}>←</button>
+                  <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>💳 Pagamento</p>
+                  <div style={{width:30}}/>
                 </div>
-                <div style={{width:30}}/>
-              </div>
-              {step<5 && <div style={{height:4,background:"rgba(255,255,255,0.15)",borderRadius:2,overflow:"hidden"}}><div style={{width:`${(step/4)*100}%`,height:"100%",background:C.blueGreen,borderRadius:2,transition:"width 0.4s"}}/></div>}
-            </div>
-            <div style={{flex:1,padding:"20px 18px"}}>
-              {step===1 && <div className="slide">{zones.map(z=>{
-                const cnt=bikes.filter(b=>b.zone===z).length;
-                return <div key={z} className="card" onClick={()=>{setZone(z);setStep(2);}}
-                  style={{background:C.white,borderRadius:16,padding:16,marginBottom:10,display:"flex",alignItems:"center",gap:14,boxShadow:"0 2px 12px rgba(2,48,71,0.08)",opacity:cnt===0?0.4:1}}>
-                  <div style={{width:50,height:50,borderRadius:25,background:`${C.blueGreen}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>{zoneIcons[z]}</div>
-                  <div style={{flex:1}}>
-                    <p style={{color:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{z}</p>
-                    <p style={{color:cnt>0?C.blueGreen:C.warmOrange,fontSize:11,margin:"4px 0 0",...ds,fontWeight:600}}>🚲 {cnt>0?`${cnt} disponibili`:"Nessuna bici"}</p>
+                <PaymentForm amount={payAmount} bike={selectedBike} plan={plan==="giornata"?"Giornata intera":"Al minuto"}
+                  onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} />
+              </>
+            ) : (
+              <>
+                <div style={{background:C.deepBlue,padding:"12px 20px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                    <button onClick={()=>setShowPlan(false)} style={{background:"none",border:"none",color:C.skyBlue,fontSize:22,cursor:"pointer"}}>✕</button>
+                    <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>🚲 Prenota {selectedBike.id}</p>
+                    <div style={{width:30}}/>
                   </div>
-                  <span style={{color:C.blueGreen,fontSize:20}}>›</span>
-                </div>;
-              })}</div>}
-
-              {step===2 && <div className="slide">{zoneBikes.length===0
-                ? <p style={{color:C.warmOrange,...ds,textAlign:"center"}}>Nessuna bici disponibile</p>
-                : zoneBikes.map(bike=><div key={bike.id} className="card" onClick={()=>{setBookedBike(bike);setStep(3);}}
-                    style={{background:C.white,borderRadius:16,padding:16,marginBottom:10,boxShadow:"0 2px 12px rgba(2,48,71,0.08)"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <div style={{width:52,height:52,borderRadius:26,background:`${C.blueGreen}12`,border:`2px solid ${C.blueGreen}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>🚲</div>
-                    <div style={{flex:1}}>
-                      <div style={{display:"flex",justifyContent:"space-between"}}>
-                        <span style={{color:C.deepBlue,fontWeight:700,fontSize:15,fontFamily:"Lora"}}>{bike.id}</span>
-                        <span style={{color:getBattColor(bike.battery),fontWeight:700,...ds}}>{bike.battery}% ⚡</span>
-                      </div>
-                      <p style={{color:"#aaa",fontSize:11,margin:"2px 0 6px",...ds}}>{bike.model} · ~{bike.range} km</p>
-                      <div style={{height:5,background:"#eee",borderRadius:3,overflow:"hidden"}}>
-                        <div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/>
+                </div>
+                <div style={{padding:20}}>
+                  {/* Info bici */}
+                  <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:16,display:"flex",gap:14,alignItems:"center"}}>
+                    <div style={{fontSize:40}}>🚲</div>
+                    <div>
+                      <p style={{color:C.white,fontSize:18,fontWeight:700,margin:0,fontFamily:"Lora"}}>{selectedBike.id}</p>
+                      <p style={{color:C.skyBlue,fontSize:12,margin:"2px 0 0",...ds}}>📍 {selectedBike.zone} · {selectedBike.model}</p>
+                      <div style={{display:"flex",gap:12,marginTop:6}}>
+                        <span style={{color:getBattColor(selectedBike.battery),fontSize:12,...ds,fontWeight:600}}>⚡ {selectedBike.battery}%</span>
+                        <span style={{color:C.skyBlue,fontSize:12,...ds}}>🛣️ ~{getRange(selectedBike.battery)} km</span>
                       </div>
                     </div>
-                    <span style={{color:C.blueGreen,fontSize:20}}>›</span>
                   </div>
-                </div>)
-              }</div>}
 
-              {step===3 && bookedBike && <div className="slide">
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:20}}>
-                  {plans.map(p=><div key={p.id} onClick={()=>setPlan(p.id)}
-                    style={{background:plan===p.id?C.deepBlue:C.white,border:`1.5px solid ${plan===p.id?C.deepBlue:C.skyBlue+"50"}`,borderRadius:14,padding:"14px 10px",textAlign:"center",cursor:"pointer"}}>
-                    <div style={{fontSize:20,marginBottom:6}}>{p.icon}</div>
-                    <p style={{color:plan===p.id?C.skyBlue:"#aaa",fontSize:10,margin:"0 0 4px",...ds}}>{p.unit}</p>
-                    <p style={{color:plan===p.id?C.sunYellow:C.deepBlue,fontSize:16,fontWeight:700,margin:"0 0 2px",...ds}}>€{p.price}</p>
-                    <p style={{color:plan===p.id?C.white:C.deepBlue,fontSize:11,margin:0,fontWeight:600,...ds}}>{p.label}</p>
-                  </div>)}
-                </div>
-                {plan==="orario" && <div style={{background:C.white,borderRadius:16,padding:18,marginBottom:16,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-                    <span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>⏱️ Ore</span>
-                    <span style={{color:C.blueGreen,fontWeight:700,fontSize:18,...ds}}>{duration}h — €{duration*3}</span>
+                  {/* Piani */}
+                  <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 10px",...ds,opacity:0.6,letterSpacing:1,textTransform:"uppercase"}}>Scegli il piano</p>
+                  {plans.map(p=>(
+                    <div key={p.id} onClick={()=>setPlan(p.id)}
+                      style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"14px 16px",marginBottom:10,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14}}>
+                      <div style={{fontSize:28}}>{p.icon}</div>
+                      <div style={{flex:1}}>
+                        <p style={{color:plan===p.id?C.white:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{p.label}</p>
+                        <p style={{color:plan===p.id?C.skyBlue:"#aaa",fontSize:12,margin:"2px 0 0",...ds}}>{p.desc}</p>
+                      </div>
+                      {plan===p.id && <div style={{width:20,height:20,borderRadius:10,background:C.blueGreen,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:12}}>✓</div>}
+                    </div>
+                  ))}
+
+                  <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:12,marginBottom:16}}>
+                    <p style={{color:C.deepBlue,fontSize:12,...ds,margin:0}}>
+                      {plan==="minuti"
+                        ? `💡 Paghi €${SBLOCCO.toFixed(2)} ora per sbloccare + €${TARIFFA_MIN}/min durante la corsa`
+                        : `💡 Paghi €${TARIFFA_GIORNATA.toFixed(2)} per tutta la giornata — illimitato!`}
+                    </p>
                   </div>
-                  <input type="range" min="1" max="8" value={duration} onChange={e=>setDuration(+e.target.value)} style={{width:"100%",accentColor:C.blueGreen}}/>
-                </div>}
-                <button className="btn" onClick={()=>setStep(4)}
-                  style={{width:"100%",background:C.blueGreen,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>Continua →</button>
-              </div>}
 
-              {step===4 && bookedBike && <div className="slide">
-                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:20,marginBottom:16,textAlign:"center"}}>
-                  <div style={{fontSize:50,marginBottom:8}}>🚲</div>
-                  <h2 style={{color:C.white,fontSize:24,fontWeight:700,margin:0,fontFamily:"Lora"}}>{bookedBike.id}</h2>
-                  <p style={{color:C.skyBlue,fontSize:12,margin:"4px 0 0",...ds}}>📍 {bookedBike.zone}</p>
+                  <button onClick={()=>setShowPayment(true)}
+                    style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+                    💳 Continua al pagamento — €{payAmount.toFixed(2)}
+                  </button>
                 </div>
-                {[["👤 Cliente",`${user.nome} ${user.cognome}`],["📍 Zona",bookedBike.zone],["⚡ Batteria",`${bookedBike.battery}%`],["⏱️ Piano",selPlan.label],["💶 Totale",`€${total}`]].map(([k,v])=>(
-                  <div key={k} style={{display:"flex",justifyContent:"space-between",borderBottom:`1px solid ${C.skyBlue}20`,paddingBottom:10,marginBottom:10}}>
-                    <span style={{color:"#888",fontSize:13,...ds}}>{k}</span>
-                    <span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{v}</span>
-                  </div>
-                ))}
-                <button className="btn" onClick={()=>setShowPayment(true)}
-                  style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
-                  💳 Paga €{total} e conferma
-                </button>
-              </div>}
-
-              {step===5 && confirmed && <div className="slide" style={{textAlign:"center",paddingTop:20}}>
-                <div style={{width:100,height:100,borderRadius:50,background:`linear-gradient(135deg,${C.blueGreen},${C.deepBlue})`,margin:"0 auto 20px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:44}}>✓</div>
-                <h2 style={{color:C.deepBlue,fontSize:22,fontWeight:700,marginBottom:6,fontFamily:"Lora"}}>Pagamento confermato!</h2>
-                <p style={{color:"#888",fontSize:14,...ds,marginBottom:6}}>La tua e-bike è pronta a <strong style={{color:C.blueGreen}}>{confirmed.zone}</strong></p>
-                <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,...ds,marginBottom:20}}>💶 €{total} pagati</p>
-                <div style={{background:C.white,borderRadius:20,padding:20,marginBottom:20,boxShadow:"0 4px 20px rgba(2,48,71,0.1)"}}>
-                  <p style={{color:C.deepBlue,fontWeight:700,fontSize:20,...ds,margin:"0 0 4px",letterSpacing:3}}>{confirmed.id}</p>
-                  <p style={{color:"#aaa",fontSize:12,...ds}}>Scansiona il QR sulla bici</p>
-                  <div style={{width:80,height:80,margin:"12px auto 0",background:`${C.deepBlue}15`,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>📱</div>
-                </div>
-                <button className="btn" onClick={()=>{setShowBooking(false);setStep(1);setTab("mappa");}}
-                  style={{width:"100%",background:C.deepBlue,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
-                  Torna alla mappa 🌊
-                </button>
-                <p style={{color:"#aaa",fontSize:11,...ds,fontStyle:"italic",marginTop:16}}>Ogni curva racconta una storia. Scrivila con noi.</p>
-              </div>}
-            </div>
+              </>
+            )}
           </div>
         )}
 
+        {/* HEADER */}
         <div style={{background:C.deepBlue,padding:"10px 24px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{color:C.skyBlue,fontSize:12,...ds,fontWeight:600}}>{new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</span>
           <div style={{width:110,height:18,background:"rgba(0,0,0,0.4)",borderRadius:10}}/>
           <span style={{color:C.skyBlue,fontSize:11,...ds}}>⚡ 98%</span>
         </div>
-        <div style={{background:C.deepBlue,padding:"12px 22px 16px"}}>
+        <div style={{background:C.deepBlue,padding:"10px 22px 14px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
               <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>CIAO {user.nome?.toUpperCase()}!</p>
@@ -465,316 +493,34 @@ function ClienteApp({ user, onLogout }) {
         </div>
 
         <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
-          {tab==="mappa" && <div className="slide" style={{padding:"16px 18px 0"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          {tab==="mappa" && <div className="slide" style={{padding:"14px 18px 0"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>Lago Trasimeno — Live</p>
-              <button className="btn" onClick={()=>{setShowBooking(true);setStep(1);}}
-                style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"8px 16px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🚲 Prenota</button>
+              <p style={{color:C.blueGreen,fontSize:11,...ds,fontWeight:600}}>{bikes.length} bici disponibili</p>
             </div>
-            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:14,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
-              <MapView bikes={bikes} onBikeClick={b=>setMapBike(b)} />
+            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
+              <MapView bikes={bikes} onBikeClick={handleBikeClick} height={300} />
             </div>
-            <div style={{display:"flex",gap:14,marginBottom:12}}>
-              {[[C.blueGreen,"OK (≥80%)"],[C.sunYellow,"Medio"],[C.warmOrange,"Critico"]].map(([c,l])=>(
-                <div key={l} style={{display:"flex",alignItems:"center",gap:5}}>
+            <div style={{display:"flex",gap:10,marginBottom:12}}>
+              {[[C.blueGreen,"≥80%"],[C.sunYellow,"50-79%"],[C.warmOrange,"<50%"]].map(([c,l])=>(
+                <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
                   <div style={{width:8,height:8,borderRadius:4,background:c}}/>
                   <span style={{color:C.deepBlue,fontSize:10,...ds,opacity:0.7}}>{l}</span>
                 </div>
               ))}
             </div>
-            {mapBike && <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",border:`2px solid ${C.blueGreen}30`}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                <span style={{color:C.deepBlue,fontWeight:700,fontSize:15,fontFamily:"Lora"}}>{mapBike.id}</span>
-                <span style={{color:getBattColor(mapBike.battery),fontWeight:700,...ds}}>{mapBike.battery}% ⚡</span>
-              </div>
-              <p style={{color:"#aaa",fontSize:12,margin:"0 0 10px",...ds}}>📍 {mapBike.zone} · {mapBike.model} · ~{mapBike.range} km</p>
-              <button className="btn" onClick={()=>{setShowBooking(true);setStep(1);}}
-                style={{width:"100%",background:C.blueGreen,border:"none",borderRadius:10,padding:10,color:C.white,fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>🚲 Prenota questa bici</button>
-            </div>}
-          </div>}
-
-          {tab==="profilo" && <div className="slide" style={{padding:"18px 18px 0"}}>
-            <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:20,marginBottom:16,textAlign:"center"}}>
-              <div style={{width:70,height:70,borderRadius:35,background:C.blueGreen,margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>👤</div>
-              <h2 style={{color:C.white,fontSize:20,fontWeight:700,margin:0,fontFamily:"Lora"}}>{user.nome} {user.cognome}</h2>
-              <p style={{color:C.skyBlue,fontSize:12,margin:"4px 0 0",...ds}}>{user.email}</p>
-            </div>
-            {[["📱 Telefono",user.telefono||"—"],["📧 Email",user.email],["📅 Membro dal","Marzo 2026"]].map(([k,v])=>(
-              <div key={k} style={{background:C.white,borderRadius:14,padding:"14px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-                <span style={{color:"#888",fontSize:13,...ds}}>{k}</span>
-                <span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{v}</span>
-              </div>
-            ))}
-            <div style={{background:`${C.warmOrange}10`,border:`1px solid ${C.warmOrange}30`,borderRadius:14,padding:16,marginTop:8}}>
-              <p style={{color:C.warmOrange,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🆘 Hai bisogno di aiuto?</p>
-              <a href={`tel:${MARCO_TEL}`} style={{display:"block",background:C.warmOrange,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>
-                📞 Chiama Marco: {MARCO_TEL}
-              </a>
-              <a href={`https://wa.me/${MARCO_WA}`} style={{display:"block",background:"#25D366",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>
-                💬 WhatsApp Marco
-              </a>
-            </div>
-          </div>}
-        </div>
-
-        <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"10px 0 18px"}}>
-          {[["mappa","🗺️","Mappa"],["profilo","👤","Profilo"]].map(([id,icon,label])=>(
-            <button key={id} className="btn" onClick={()=>setTab(id)}
-              style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-              <span style={{fontSize:24}}>{icon}</span>
-              <span style={{color:tab===id?C.blueGreen:"#bbb",fontSize:11,...ds,fontWeight:tab===id?600:400}}>{label}</span>
-              {tab===id && <div style={{width:20,height:3,borderRadius:2,background:C.blueGreen}}/>}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AdminApp({ user, onLogout }) {
-  const [tab, setTab] = React.useState("dashboard");
-  const [selBike, setSelBike] = React.useState(null);
-  const [filter, setFilter] = React.useState("Tutti");
-  const [mapBike, setMapBike] = React.useState(null);
-
-  const available = allBikes.filter(b=>b.status==="Disponibile").length;
-  const low = allBikes.filter(b=>b.battery<50).length;
-  const maint = allBikes.filter(b=>b.status==="Manutenzione").length;
-  const avg = Math.round(allBikes.reduce((a,b)=>a+b.battery,0)/allBikes.length);
-  const openOrd = workOrders.filter(w=>w.status!=="Completato").length;
-  const filtered = filter==="Tutti"?allBikes:filter==="Batteria Bassa"?allBikes.filter(b=>b.battery<50):allBikes.filter(b=>b.status===filter);
-  const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
-
-  return (
-    <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <style>{css}</style>
-      <div style={{width:390,minHeight:844,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
-
-        <div style={{background:C.deepBlue,padding:"10px 24px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{color:C.skyBlue,fontSize:12,...ds,fontWeight:600}}>{new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</span>
-          <div style={{width:110,height:18,background:"rgba(0,0,0,0.4)",borderRadius:10}}/>
-          <span style={{color:C.skyBlue,fontSize:11,...ds}}>⚡ 98%</span>
-        </div>
-        <div style={{background:C.deepBlue,padding:"12px 22px 16px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <p style={{color:C.sunYellow,fontSize:10,margin:0,letterSpacing:2,...ds}}>🔐 ADMIN</p>
-              <h1 style={{color:C.white,fontSize:18,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>PedalAgilla 🌊</h1>
-            </div>
-            <div style={{display:"flex",gap:8,alignItems:"center"}}>
-              <p style={{color:C.sunYellow,fontSize:11,...ds,fontWeight:500,margin:0}}>● {available} libere</p>
-              <button onClick={onLogout} style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:10,padding:"6px 12px",color:C.skyBlue,fontSize:11,...ds,cursor:"pointer"}}>Esci</button>
-            </div>
-          </div>
-        </div>
-
-        <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
-          {tab==="dashboard" && <div className="slide" style={{padding:"18px 18px 0"}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-              {[{label:"Flotta totale",value:allBikes.length,icon:"🚲",accent:C.blueGreen},{label:"Batteria media",value:`${avg}%`,icon:"⚡",accent:C.blueGreen},{label:"Critiche",value:low,icon:"🔴",accent:C.warmOrange},{label:"Manutenzione",value:maint,icon:"🔧",accent:C.sunYellow}].map((k,i)=>(
-                <div key={i} style={{background:C.white,borderRadius:16,padding:"14px 16px",boxShadow:"0 2px 12px rgba(2,48,71,0.08)",borderLeft:`3px solid ${k.accent}`}}>
-                  <div style={{fontSize:20,marginBottom:6}}>{k.icon}</div>
-                  <div style={{color:k.accent,fontSize:26,fontWeight:700}}>{k.value}</div>
-                  <div style={{color:C.deepBlue,fontSize:12,marginTop:4,...ds}}>{k.label}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:14,padding:"14px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div>
-                <p style={{color:C.skyBlue,fontSize:11,margin:0,...ds}}>ORDINI DI LAVORO</p>
-                <p style={{color:C.white,fontSize:14,fontWeight:600,margin:"3px 0 0",...ds}}>{openOrd} ordini aperti</p>
-              </div>
-              <button className="btn" onClick={()=>setTab("ordini")} style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"8px 14px",color:C.white,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>Vedi →</button>
-            </div>
-            <div style={{background:`${C.sunYellow}10`,border:`1px solid ${C.sunYellow}40`,borderRadius:14,padding:"13px 16px",marginBottom:14}}>
-              <p style={{color:C.sunYellow,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>🔧 Solo tu vedi — Bici in manutenzione</p>
-              {allBikes.filter(b=>b.status==="Manutenzione").map(bike=>(
-                <div key={bike.id} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                  <span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{bike.id}</span>
-                  <span style={{color:"#888",fontSize:12,...ds}}>📍 {bike.zone} · {bike.battery}% ⚡</span>
-                </div>
-              ))}
-            </div>
-            {allBikes.slice(0,4).map(bike=>(
-              <div key={bike.id} className="card" onClick={()=>{setSelBike(bike);setTab("dettaglio");}}
-                style={{background:C.white,borderRadius:14,padding:"13px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
+            <p style={{color:C.deepBlue,fontSize:11,...ds,opacity:0.5,margin:"0 0 8px"}}>👆 Tocca una bici sulla mappa per prenotarla</p>
+            {bikes.map(bike=>(
+              <div key={bike.id} className="card" onClick={()=>handleBikeClick(bike)}
+                style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
                 <div style={{width:40,height:40,borderRadius:20,background:`${getBattColor(bike.battery)}20`,border:`2px solid ${getBattColor(bike.battery)}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🚲</div>
                 <div style={{flex:1}}>
                   <div style={{display:"flex",justifyContent:"space-between"}}>
-                    <span style={{color:C.deepBlue,fontWeight:700,fontSize:15,fontFamily:"Lora"}}>{bike.id}</span>
-                    <span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}%</span>
+                    <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span>
+                    <span style={{color:getBattColor(bike.battery),fontSize:12,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span>
                   </div>
-                  <div style={{height:3,background:"#eee",borderRadius:2,margin:"5px 0",overflow:"hidden"}}>
-                    <div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:2}}/>
-                  </div>
-                  <div style={{display:"flex",gap:10}}>
-                    <span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span>
-                    <span style={{color:"#aaa",fontSize:11,...ds}}>📍 {bike.zone}</span>
-                  </div>
+                  <span style={{color:"#aaa",fontSize:11,...ds}}>📍 {bike.zone} · {bike.model}</span>
                 </div>
                 <span style={{color:C.blueGreen,fontSize:18}}>›</span>
               </div>
             ))}
-          </div>}
-
-          {tab==="mappa" && <div className="slide" style={{padding:"18px 18px 0"}}>
-            <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Tutte le bici — Admin</p>
-            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:14,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
-              <MapView bikes={allBikes} onBikeClick={b=>setMapBike(b)} />
-            </div>
-            {mapBike && <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                <span style={{color:C.deepBlue,fontWeight:700,fontSize:15,fontFamily:"Lora"}}>{mapBike.id}</span>
-                <span style={{color:getBattColor(mapBike.battery),fontWeight:700,...ds}}>{mapBike.battery}% ⚡</span>
-              </div>
-              <p style={{color:getStatusColor(mapBike.status),fontSize:12,margin:0,...ds}}>● {mapBike.status} · {mapBike.zone}</p>
-            </div>}
-            {allBikes.filter(b=>b.battery<50).map(bike=>(
-              <div key={bike.id} className="card" onClick={()=>setMapBike(bike)}
-                style={{background:C.white,border:`1px solid ${C.warmOrange}30`,borderRadius:12,padding:"11px 14px",marginBottom:8,display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id} · {bike.zone}</span>
-                <span style={{color:C.warmOrange,fontWeight:700,fontSize:13,...ds}}>{bike.battery}% ⚡</span>
-              </div>
-            ))}
-          </div>}
-
-          {tab==="bici" && <div className="slide" style={{padding:"18px 18px 0"}}>
-            <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Tutte le e-bike ({allBikes.length})</p>
-            <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto",paddingBottom:4}}>
-              {["Tutti","Disponibile","Manutenzione","Batteria Bassa"].map(f=>(
-                <button key={f} className="btn" onClick={()=>setFilter(f)}
-                  style={{background:filter===f?C.deepBlue:C.white,border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:filter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>
-                  {f}
-                </button>
-              ))}
-            </div>
-            {filtered.map(bike=>(
-              <div key={bike.id} className="card" onClick={()=>{setSelBike(bike);setTab("dettaglio");}}
-                style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getStatusColor(bike.status)}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <div style={{width:46,height:46,borderRadius:23,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>🚲</div>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",justifyContent:"space-between"}}>
-                      <span style={{color:C.deepBlue,fontWeight:700,fontSize:15,fontFamily:"Lora"}}>{bike.id}</span>
-                      <span style={{color:getBattColor(bike.battery),fontSize:14,fontWeight:700,...ds}}>{bike.battery}%</span>
-                    </div>
-                    <div style={{height:5,background:"#eee",borderRadius:3,margin:"6px 0",overflow:"hidden"}}>
-                      <div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/>
-                    </div>
-                    <div style={{display:"flex",justifyContent:"space-between"}}>
-                      <span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span>
-                      <span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone}</span>
-                    </div>
-                  </div>
-                  <span style={{color:C.blueGreen,fontSize:20}}>›</span>
-                </div>
-              </div>
-            ))}
-          </div>}
-
-          {tab==="dettaglio" && selBike && <div className="slide" style={{padding:"16px 18px 0"}}>
-            <button className="btn" onClick={()=>setTab("bici")} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,cursor:"pointer",padding:"0 0 12px",...ds,fontWeight:600}}>← Torna</button>
-            <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:20,marginBottom:16,textAlign:"center"}}>
-              <div style={{fontSize:50,marginBottom:8}}>🚲</div>
-              <h2 style={{color:C.white,fontSize:26,fontWeight:700,margin:0,fontFamily:"Lora"}}>{selBike.id}</h2>
-              <p style={{color:C.skyBlue,fontSize:12,margin:"4px 0 8px",...ds}}>📍 {selBike.zone}</p>
-              <span style={{color:getStatusColor(selBike.status),fontSize:12,background:`${getStatusColor(selBike.status)}20`,padding:"4px 14px",borderRadius:20,...ds}}>● {selBike.status}</span>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-              {[["⚡","Batteria",`${selBike.battery}%`,getBattColor(selBike.battery)],["🛣️","Km",`${selBike.odometer.toFixed(0)}`,C.blueGreen],["📍","Zona",selBike.zone.substring(0,6),C.deepBlue]].map(([icon,label,value,color],i)=>(
-                <div key={i} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-                  <div style={{fontSize:18,marginBottom:4}}>{icon}</div>
-                  <div style={{color,fontSize:14,fontWeight:700,...ds}}>{value}</div>
-                  <div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div>
-                </div>
-              ))}
-            </div>
-          </div>}
-
-          {tab==="ordini" && <div className="slide" style={{padding:"18px 18px 0"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>Ordini di lavoro</p>
-              <button className="btn" style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"7px 16px",color:C.white,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>+ Nuovo</button>
-            </div>
-            {workOrders.map(order=>(
-              <div key={order.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getWOColor(order.status)}`}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                  <div>
-                    <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{order.id}</span>
-                    <span style={{color:"#bbb",fontSize:12,marginLeft:8,...ds}}>— {order.bike}</span>
-                  </div>
-                  <span style={{color:getWOColor(order.status),fontSize:11,background:`${getWOColor(order.status)}15`,padding:"3px 10px",borderRadius:20,...ds}}>● {order.status}</span>
-                </div>
-                <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                  <span style={{color:"#888",fontSize:11,...ds}}>🔧 {order.type}</span>
-                  <span style={{color:getPrioColor(order.priority),fontSize:11,...ds}}>▲ {order.priority}</span>
-                  <span style={{color:"#bbb",fontSize:11,...ds}}>👤 {order.tech}</span>
-                  <span style={{color:"#bbb",fontSize:11,...ds}}>📍 {order.zone}</span>
-                </div>
-              </div>
-            ))}
-          </div>}
-
-          {tab==="stats" && <div className="slide" style={{padding:"18px 18px 0"}}>
-            <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 14px",...ds,opacity:0.5}}>Statistiche flotta</p>
-            <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-              <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 14px",fontFamily:"Lora"}}>⚡ Distribuzione batteria</p>
-              {[["80-100%",allBikes.filter(b=>b.battery>=80).length,C.blueGreen],["50-79%",allBikes.filter(b=>b.battery>=50&&b.battery<80).length,C.sunYellow],["0-49%",allBikes.filter(b=>b.battery<50).length,C.warmOrange]].map(([range,count,color])=>(
-                <div key={range} style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{color:"#888",fontSize:12,...ds}}>{range}</span>
-                    <span style={{color,fontSize:12,...ds,fontWeight:700}}>{count} bici</span>
-                  </div>
-                  <div style={{height:8,background:"#eee",borderRadius:4,overflow:"hidden"}}>
-                    <div style={{width:`${(count/allBikes.length)*100}%`,height:"100%",background:color,borderRadius:4}}/>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:18,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-              <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 14px",fontFamily:"Lora"}}>🛣️ Top km percorsi</p>
-              {[...allBikes].sort((a,b)=>b.odometer-a.odometer).slice(0,5).map((bike,i)=>(
-                <div key={bike.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{color:i===0?C.sunYellow:"#ccc",fontSize:13,...ds,fontWeight:700}}>#{i+1}</span>
-                    <span style={{color:C.deepBlue,fontSize:13,...ds}}>{bike.id}</span>
-                  </div>
-                  <span style={{color:C.blueGreen,fontSize:13,fontWeight:700,...ds}}>{bike.odometer.toFixed(0)} km</span>
-                </div>
-              ))}
-            </div>
-          </div>}
-        </div>
-
-        <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"10px 0 18px"}}>
-          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["ordini","🔧","Ordini"],["stats","📊","Stats"]].map(([id,icon,label])=>(
-            <button key={id} className="btn" onClick={()=>setTab(id)}
-              style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-              <span style={{fontSize:20}}>{icon}</span>
-              <span style={{color:tab===id?C.blueGreen:"#bbb",fontSize:10,...ds,fontWeight:tab===id?600:400}}>{label}</span>
-              {tab===id && <div style={{width:20,height:3,borderRadius:2,background:C.blueGreen}}/>}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Main() {
-  const [user, setUser] = React.useState(null);
-  const handleLogin = (u) => setUser(u);
-  const handleLogout = () => {
-    if (window.firebaseAuth) window.firebaseFunctions.signOut(window.firebaseAuth).catch(()=>{});
-    setUser(null);
-  };
-  if (!user) return <AuthScreen onLogin={handleLogin} />;
-  if (user.type==="admin") return <AdminApp user={user} onLogout={handleLogout} />;
-  return <ClienteApp user={user} onLogout={handleLogout} />;
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<Main />);
-</script>
-</body>
-</html>
