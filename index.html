@@ -728,7 +728,7 @@ function AdminApp({ user, onLogout }) {
     const load = async () => {
       await waitFB();
       const {collection,onSnapshot,query,orderBy} = window.firebaseFunctions;
-      const q = query(collection(window.firebaseDb,"rides"),orderBy("startTime","desc"));
+      const q = collection(window.firebaseDb,"rides");
       onSnapshot(q, snap => {
         const data = snap.docs.map(d=>{
           const dd = d.data();
