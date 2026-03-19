@@ -1149,7 +1149,39 @@ function AdminApp({ user, onLogout }) {
               </div>
             ))}
           </div>}
-
+{tab==="qr"&&<div className="slide" style={{padding:"16px 18px 0"}}>
+  <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 14px",...ds,opacity:0.5}}>QR Code bici</p>
+  <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:14,padding:14,marginBottom:16}}>
+    <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>💡 Come usare</p>
+    <p style={{color:"#888",fontSize:12,...ds,margin:0}}>Stampa il QR di ogni bici e attaccalo al telaio. Il cliente lo scansiona per sbloccarla.</p>
+  </div>
+  {bikes.map(bike=>(
+    <div key={bike.id} style={{background:C.white,borderRadius:14,padding:16,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div>
+          <p style={{color:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{bike.id}</p>
+          <p style={{color:"#aaa",fontSize:12,...ds,margin:"2px 0 0"}}>📍 {bike.zone} · {bike.model}</p>
+          <p style={{color:getStatusColor(bike.status),fontSize:11,...ds,margin:"2px 0 0"}}>● {bike.status}</p>
+        </div>
+        <div style={{textAlign:"center"}}>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=1`}
+            style={{width:100,height:100,borderRadius:8,border:`2px solid ${C.skyBlue}30`}}
+            alt={`QR ${bike.id}`}
+          />
+        </div>
+      </div>
+      <a href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=2`}
+        target="_blank"
+        style={{display:"block",background:C.deepBlue,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>
+        🖨️ Stampa QR {bike.id}
+      </a>
+      <div style={{background:"#f5f5f5",borderRadius:8,padding:"8px 12px"}}>
+        <p style={{color:"#aaa",fontSize:10,...ds,margin:0,wordBreak:"break-all"}}>{QR_BASE_URL+bike.id}</p>
+      </div>
+    </div>
+  ))}
+</div>}
           {tab==="stats"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>⚡ Batteria flotta</p>
@@ -1199,7 +1231,7 @@ function AdminApp({ user, onLogout }) {
 
         {/* BOTTOM NAV ADMIN */}
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"8px 0 16px",zIndex:20}}>
-          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["stats","📊","Stats"]].map(([id,icon,label])=>(
+          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["qr","🔲","QR"],["stats","📊","Stats"]].map(([id,icon,label])=>(
             <button key={id} className="btn" onClick={()=>setTab(id)}
               style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <span style={{fontSize:18}}>{icon}</span>
