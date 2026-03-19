@@ -1077,7 +1077,11 @@ function AdminApp({ user, onLogout }) {
                     </button>
                   </div>
                   <p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p>
-                  <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 8px"}}>⏰ {ride.date} · {ride.plan}</p>
+                  <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ Iniziata: {ride.startTime ? new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}) : ride.date}</p>
+<p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>
+  💶 Costo stimato: €{ride.startTime ? (SBLOCCO + (Math.floor((Date.now() - new Date(ride.startTime).getTime())/60000)) * TARIFFA_MIN).toFixed(2) : "0.00"}
+  {" "}· ⏱️ {ride.startTime ? Math.floor((Date.now() - new Date(ride.startTime).getTime())/60000) : 0} min in corso
+</p>
                   <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}}
                     style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
                     🗺️ Vedi percorso
