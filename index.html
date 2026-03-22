@@ -15,7 +15,6 @@
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc, onSnapshot, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
-
   const firebaseConfig = {
     apiKey: "AIzaSyA_iALG1PiWQBT2xsQiRuKNd3pR7ZE-f5w",
     authDomain: "pedalagilla.firebaseapp.com",
@@ -24,7 +23,6 @@
     messagingSenderId: "764367697851",
     appId: "1:764367697851:web:cb0447eb0c240e92cdf69e"
   };
-
   const app = initializeApp(firebaseConfig);
   window.firebaseAuth = getAuth(app);
   window.firebaseDb = getFirestore(app);
@@ -37,7 +35,7 @@
   window.firebaseReady = true;
   window.dispatchEvent(new Event("firebaseReady"));
 </script>
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBfgaG8lGRp7P8XGI-powaYfKufeLPebx8&libraries=drawing,geometry,visualization"></script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBfgaG8lGRp7P8XGI-powaYfKufeLPebx8&libraries=drawing,geometry,visualization"></script>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -53,7 +51,6 @@ input:focus, textarea:focus { outline: none; border-color: #219EBC !important; }
 const STRIPE_KEY = "pk_test_51Sx6QaIBfjLC7EABk7FoZen16MfAD8XhsofJ2mKaGsJLd116YlERXuYp3VTwrOsUJM9WjcUpQhzMJd7fbudZmkNG00y2uZJk7X";
 const stripeInstance = Stripe(STRIPE_KEY);
 const stripeElements = stripeInstance.elements();
-
 const C = { blueGreen:"#219EBC", deepBlue:"#023047", skyBlue:"#8ECAE6", sunYellow:"#FFB703", warmOrange:"#FB8500", white:"#FFFFFF", bgLight:"#F5F9FB" };
 const ds = { fontFamily:"'DM Sans', sans-serif" };
 const MARCO_TEL = "+393495240422";
@@ -64,9 +61,7 @@ const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
 const QR_BASE_URL = "https://pedalagilla-app-k3zm.vercel.app/?bike=";
 const APP_URL = "https://pedalagilla-app-k3zm.vercel.app";
-
 const checklist = ["🔗 Lubrificazione catena","🦶 Controllo pedali","🧹 Pulizia veicolo","🔋 Controllo batteria","🛞 Pressione pneumatici","🛑 Test freni","⚙️ Controllo cambio"];
-
 const initBikes = [
   { id:"PA-021", battery:88, status:"Disponibile", odometer:386.9, zone:"Passignano", model:"City Comfort", lat:43.1876, lng:12.1978, note:"", lastMaint:"15/03/2026", checks:{} },
   { id:"PA-033", battery:100, status:"Disponibile", odometer:265, zone:"Castiglione", model:"City Comfort", lat:43.1208, lng:11.9847, note:"", lastMaint:"14/03/2026", checks:{} },
@@ -81,7 +76,6 @@ const initBikes = [
   { id:"PA-016", battery:96, status:"Disponibile", odometer:502.8, zone:"Panicale", model:"Trail Explorer", lat:43.0298, lng:12.1020, note:"", lastMaint:"16/03/2026", checks:{} },
   { id:"PA-015", battery:30, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"City Comfort", lat:43.2021, lng:12.0750, note:"Sostituzione batteria", lastMaint:"09/03/2026", checks:{} },
 ];
-
 const getBattColor = (b) => b>=80 ? C.blueGreen : b>=50 ? C.sunYellow : C.warmOrange;
 const getStatusColor = (s) => s==="Disponibile" ? C.blueGreen : C.warmOrange;
 const getRange = (battery) => Math.round((battery/100)*80);
@@ -89,6 +83,7 @@ const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:tran
 const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
 const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
 
+// ── MAPPA ─────────────────────────────────────────────
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
@@ -118,93 +113,92 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }
         }
       });
     };
-  tryInit();
+    tryInit();
   }, []);
   const style = fullscreen ? {position:"absolute",inset:0,width:"100%",height:"100%"} : {width:"100%",height,borderRadius:16};
   return <div ref={mapRef} style={style} />;
 }
 
-function ZoneMapEditor({ bikes, zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
+// ── ZONE MAP EDITOR ───────────────────────────────────
+function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const drawingManagerRef = React.useRef(null);
+  const shapesRef = React.useRef([]);
   const zoneColors = { operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500" };
 
-  const shapesRef = React.useRef([]);
-
-  React.useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    // Rimuovi zone vecchie
-    shapesRef.current.forEach(s=>s.setMap(null));
-    shapesRef.current = [];
-    // Ridisegna zone aggiornate
-    zones.forEach(zone => {
-      let shape;
-      if (zone.shape==="circle"&&zone.center) {
-        shape = new window.google.maps.Circle({map:mapInstanceRef.current,center:zone.center,radius:zone.radius||200,fillColor:zone.color,fillOpacity:0.25,strokeColor:zone.color,strokeWeight:2});
-      } else if (zone.path) {
-        shape = new window.google.maps.Polygon({map:mapInstanceRef.current,paths:zone.path,fillColor:zone.color,fillOpacity:0.25,strokeColor:zone.color,strokeWeight:2});
-      }
-      if (shape) shapesRef.current.push(shape);
-    });
-  }, [zones]);
-
+  // Init mappa una sola volta
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
-      if (!window.google||!window.google.maps.drawing) { setTimeout(tryInit,200); return; }
-    if (!mapRef.current || mapInstanceRef.current) return;
-    const tryInit = () => {
-      if (!window.google||!window.google.maps.drawing) { setTimeout(tryInit,200); return; }
+      if (!window.google || !window.google.maps.drawing) { setTimeout(tryInit,200); return; }
       const map = new window.google.maps.Map(mapRef.current, {
         center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
         styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       mapInstanceRef.current = map;
-      zones.forEach(zone => {
-        if (zone.shape==="circle"&&zone.center) {
-          new window.google.maps.Circle({map,center:zone.center,radius:zone.radius||200,fillColor:zone.color,fillOpacity:0.25,strokeColor:zone.color,strokeWeight:2});
-        } else if (zone.path) {
-          new window.google.maps.Polygon({map,paths:zone.path,fillColor:zone.color,fillOpacity:0.25,strokeColor:zone.color,strokeWeight:2});
-        }
-      });
       const dm = new window.google.maps.drawing.DrawingManager({
         drawingMode:null, drawingControl:false,
-        circleOptions:{fillColor:"#219EBC",fillOpacity:0.25,strokeColor:"#219EBC",strokeWeight:2,editable:true},
-        polygonOptions:{fillColor:"#219EBC",fillOpacity:0.25,strokeColor:"#219EBC",strokeWeight:2,editable:true}
+        circleOptions:{fillColor:"#219EBC",fillOpacity:0.3,strokeColor:"#219EBC",strokeWeight:2,editable:false},
+        polygonOptions:{fillColor:"#219EBC",fillOpacity:0.3,strokeColor:"#219EBC",strokeWeight:2,editable:false}
       });
       dm.setMap(map);
       drawingManagerRef.current = dm;
       window.google.maps.event.addListener(dm,"circlecomplete",circle=>{
         dm.setDrawingMode(null);
         const color = zoneColors[zoneType]||"#219EBC";
-        circle.setOptions({fillColor:color,strokeColor:color});
+        circle.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.3});
         onZoneSaved({name:zoneName||"Nuova zona",type:zoneType,shape:"circle",color,center:{lat:circle.getCenter().lat(),lng:circle.getCenter().lng()},radius:circle.getRadius()});
-        circle.setMap(null);
       });
       window.google.maps.event.addListener(dm,"polygoncomplete",polygon=>{
         dm.setDrawingMode(null);
         const color = zoneColors[zoneType]||"#219EBC";
-        polygon.setOptions({fillColor:color,strokeColor:color});
+        polygon.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.3});
         const path = polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
         onZoneSaved({name:zoneName||"Nuova zona",type:zoneType,shape:"polygon",color,path});
-        polygon.setMap(null);
       });
     };
     tryInit();
   }, []);
 
+  // Aggiorna zone sulla mappa quando cambiano
+  React.useEffect(() => {
+    if (!mapInstanceRef.current || !window.google) return;
+    shapesRef.current.forEach(s=>s.setMap(null));
+    shapesRef.current = [];
+    zones.forEach(zone => {
+      let shape;
+      if (zone.shape==="circle" && zone.center) {
+        shape = new window.google.maps.Circle({map:mapInstanceRef.current,center:zone.center,radius:zone.radius||200,fillColor:zone.color,fillOpacity:0.3,strokeColor:zone.color,strokeWeight:2});
+      } else if (zone.path) {
+        shape = new window.google.maps.Polygon({map:mapInstanceRef.current,paths:zone.path,fillColor:zone.color,fillOpacity:0.3,strokeColor:zone.color,strokeWeight:2});
+      }
+      if (shape) shapesRef.current.push(shape);
+    });
+  }, [zones]);
 
-    if (drawingActive) {
-      drawingManagerRef.current.setDrawingMode(drawingMode==="circle"?window.google.maps.drawing.OverlayType.CIRCLE:window.google.maps.drawing.OverlayType.POLYGON);
-    } else {
-      drawingManagerRef.current.setDrawingMode(null);
-    }
-  }, [drawingActive,drawingMode]);
+  // Attiva/disattiva drawing mode
+  React.useEffect(() => {
+    const activate = () => {
+      if (!drawingManagerRef.current || !window.google || !window.google.maps.drawing) {
+        if (drawingActive) setTimeout(activate, 300);
+        return;
+      }
+      if (drawingActive) {
+        drawingManagerRef.current.setDrawingMode(
+          drawingMode==="circle" ? window.google.maps.drawing.OverlayType.CIRCLE : window.google.maps.drawing.OverlayType.POLYGON
+        );
+      } else {
+        drawingManagerRef.current.setDrawingMode(null);
+      }
+    };
+    activate();
+  }, [drawingActive, drawingMode]);
 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
 
+// ── PAGAMENTO ─────────────────────────────────────────
 function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
   const cardRef = React.useRef(null);
   const cardEl = React.useRef(null);
@@ -250,6 +244,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
   );
 }
 
+// ── AUTH ──────────────────────────────────────────────
 function AuthScreen({ onLogin }) {
   const [mode, setMode] = React.useState("login");
   const [email, setEmail] = React.useState("");
@@ -263,7 +258,6 @@ function AuthScreen({ onLogin }) {
   const [error, setError] = React.useState(null);
   const [adminUser, setAdminUser] = React.useState("");
   const [adminPass, setAdminPass] = React.useState("");
-
   const handleDocChange = (e) => {
     const file = e.target.files[0];
     if (file) { setDocFile(file); const r=new FileReader(); r.onload=ev=>setDocPreview(ev.target.result); r.readAsDataURL(file); }
@@ -304,7 +298,6 @@ function AuthScreen({ onLogin }) {
     setLoading(false);
   };
   const inp = {width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10};
-
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{width:390,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
@@ -375,6 +368,7 @@ function AuthScreen({ onLogin }) {
   );
 }
 
+// ── TIMER CORSA ───────────────────────────────────────
 function RideTimer({ bike, plan, user, rideId, onEnd }) {
   const [seconds, setSeconds] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
@@ -385,38 +379,24 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
   const [uploading, setUploading] = React.useState(false);
   const trackRef = React.useRef([]);
   const isGiornata = plan==="giornata";
-
-  React.useEffect(() => {
-    if (!paused&&!showEndFlow) { const t=setInterval(()=>setSeconds(s=>s+1),1000); return()=>clearInterval(t); }
-  },[paused,showEndFlow]);
-
-  React.useEffect(() => {
-    if (paused&&!showEndFlow) { const t=setInterval(()=>setPauseSeconds(s=>s+1),1000); return()=>clearInterval(t); }
-  },[paused,showEndFlow]);
-
+  React.useEffect(() => { if (!paused&&!showEndFlow) { const t=setInterval(()=>setSeconds(s=>s+1),1000); return()=>clearInterval(t); } },[paused,showEndFlow]);
+  React.useEffect(() => { if (paused&&!showEndFlow) { const t=setInterval(()=>setPauseSeconds(s=>s+1),1000); return()=>clearInterval(t); } },[paused,showEndFlow]);
   React.useEffect(() => {
     if (!navigator.geolocation||showEndFlow) return;
     const saveGPS = () => {
       navigator.geolocation.getCurrentPosition(async pos=>{
         const point={lat:pos.coords.latitude,lng:pos.coords.longitude,t:Date.now()};
         trackRef.current.push(point);
-        if (rideId) {
-          try { await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current}); } catch(e){}
-        }
+        if (rideId) { try { await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current}); } catch(e){} }
       },()=>{},{enableHighAccuracy:true});
     };
-    saveGPS();
-    const t=setInterval(saveGPS,30000);
-    return()=>clearInterval(t);
+    saveGPS(); const t=setInterval(saveGPS,30000); return()=>clearInterval(t);
   },[showEndFlow]);
-
   const mins=Math.floor(seconds/60), secs=seconds%60, pauseMins=Math.floor(pauseSeconds/60);
   const rideCost=isGiornata?TARIFFA_GIORNATA:SBLOCCO+(seconds/60)*TARIFFA_MIN;
   const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
   const totalCost=rideCost+pauseCost;
-
   const handleParkPhoto=(e)=>{ const file=e.target.files[0]; if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);} };
-
   const handleEndConfirm=async()=>{
     if(!parkPhoto){alert("Scatta una foto al parcheggio!");return;}
     setUploading(true);
@@ -428,10 +408,8 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
       const parkPhotoURL=await getDownloadURL(sRef);
       if(rideId) await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,parkPhotoURL,track:trackRef.current});
     } catch(e){console.error(e);}
-    setUploading(false);
-    onEnd(seconds,totalCost);
+    setUploading(false); onEnd(seconds,totalCost);
   };
-
   if(showEndFlow) return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:400,display:"flex",flexDirection:"column",overflowY:"auto"}}>
       <div style={{background:C.deepBlue,padding:"14px 22px"}}>
@@ -465,7 +443,6 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
       </div>
     </div>
   );
-
   return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,display:"flex",flexDirection:"column"}}>
       <div style={{background:C.deepBlue,padding:"16px 22px"}}>
@@ -502,6 +479,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
   );
 }
 
+// ── APP CLIENTE ───────────────────────────────────────
 function ClienteApp({ user, onLogout }) {
   const bikes = initBikes.filter(b=>b.status==="Disponibile");
   const [tab, setTab] = React.useState("mappa");
@@ -535,28 +513,14 @@ function ClienteApp({ user, onLogout }) {
         const ctx=canvas.getContext("2d"); ctx.drawImage(video,0,0);
         const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
         const code=window.jsQR(imageData.data,imageData.width,imageData.height);
-        if(code){
-          try{
-            const url=new URL(code.data);
-            const bikeId=url.searchParams.get("bike");
-            if(bikeId){
-              const bike=bikes.find(b=>b.id===bikeId);
-              clearInterval(qrIntervalRef.current); stream.getTracks().forEach(t=>t.stop()); setShowQRScanner(false);
-              if(bike){setSelectedBike(bike);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`);
-            }
-          }catch(e){}
-        }
+        if(code){ try{ const url=new URL(code.data); const bikeId=url.searchParams.get("bike"); if(bikeId){ const bike=bikes.find(b=>b.id===bikeId); clearInterval(qrIntervalRef.current); stream.getTracks().forEach(t=>t.stop()); setShowQRScanner(false); if(bike){setSelectedBike(bike);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`); } }catch(e){} }
       },500);
     }).catch(()=>alert("Fotocamera non accessibile"));
   },[showQRScanner]);
 
   React.useEffect(() => {
     const bikeId=getUrlBike();
-    if(bikeId){
-      const bike=bikes.find(b=>b.id===bikeId);
-      if(bike){setSelectedBike(bike);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile al momento`);
-      window.history.replaceState({},"","/");
-    }
+    if(bikeId){ const bike=bikes.find(b=>b.id===bikeId); if(bike){setSelectedBike(bike);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`); window.history.replaceState({},"","/"); }
   },[]);
 
   const payAmount=plan==="giornata"?TARIFFA_GIORNATA:SBLOCCO;
@@ -564,19 +528,12 @@ function ClienteApp({ user, onLogout }) {
     {id:"minuti",label:"Al minuto",icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)} sblocco + €${TARIFFA_MIN}/min · pausa €${TARIFFA_PAUSA}/min`},
     {id:"giornata",label:"Giornata intera",icon:"☀️",desc:`€${TARIFFA_GIORNATA.toFixed(2)} tutto il giorno · pausa gratuita`},
   ];
-
   const handleBikeClick=(bike)=>{setSelectedBike(bike);setShowPlan(true);};
   const handlePaySuccess=async()=>{
     setShowPayment(false);setShowPlan(false);
     try {
-      await waitFB();
-      const {collection,addDoc}=window.firebaseFunctions;
-      const rideDoc=await addDoc(collection(window.firebaseDb,"rides"),{
-        bikeId:selectedBike.id, userId:user.uid||"",
-        userName:`${user.nome||""} ${user.cognome||""}`.trim()||"Cliente",
-        userEmail:user.email||"", zone:selectedBike.zone,
-        plan, status:"In corso", startTime:new Date().toISOString(), track:[], cost:0
-      });
+      await waitFB(); const {collection,addDoc}=window.firebaseFunctions;
+      const rideDoc=await addDoc(collection(window.firebaseDb,"rides"),{bikeId:selectedBike.id,userId:user.uid||"",userName:`${user.nome||""} ${user.cognome||""}`.trim()||"Cliente",userEmail:user.email||"",zone:selectedBike.zone,plan,status:"In corso",startTime:new Date().toISOString(),track:[],cost:0});
       setCurrentRideId(rideDoc.id);
     } catch(e){console.error(e);}
     setRiding(true);setConfirmed(selectedBike);
@@ -587,7 +544,6 @@ function ClienteApp({ user, onLogout }) {
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <style>{css}</style>
       <div style={{width:390,minHeight:844,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
-
         {showQRScanner&&(
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.95)",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
             <button onClick={()=>setShowQRScanner(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>✕</button>
@@ -600,18 +556,12 @@ function ClienteApp({ user, onLogout }) {
               <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>Oppure inserisci il codice:</p>
               <input placeholder="Es: PA-021"
                 style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
-                onChange={e=>{
-                  const val=e.target.value.toUpperCase().trim();
-                  const bike=bikes.find(b=>b.id===val);
-                  if(bike){setShowQRScanner(false);setSelectedBike(bike);setShowPlan(true);}
-                }}
+                onChange={e=>{ const val=e.target.value.toUpperCase().trim(); const bike=bikes.find(b=>b.id===val); if(bike){setShowQRScanner(false);setSelectedBike(bike);setShowPlan(true);} }}
               />
             </div>
           </div>
         )}
-
         {riding&&confirmed&&<RideTimer bike={confirmed} plan={plan} user={user} rideId={currentRideId} onEnd={handleEndRide}/>}
-
         {showSummary&&rideSummary&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,overflowY:"auto",padding:24}}>
             <div style={{textAlign:"center",marginBottom:20}}>
@@ -635,7 +585,6 @@ function ClienteApp({ user, onLogout }) {
             </button>
           </div>
         )}
-
         {showPlan&&selectedBike&&!riding&&!showSummary&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:200,display:"flex",flexDirection:"column",overflowY:"auto"}}>
             {showPayment?(
@@ -686,7 +635,6 @@ function ClienteApp({ user, onLogout }) {
             )}
           </div>
         )}
-
         {tab==="mappa"&&(
           <div style={{flex:1,position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,right:0,zIndex:10,background:"linear-gradient(180deg,rgba(2,48,71,0.9) 0%,transparent 100%)",padding:"12px 18px 40px"}}>
@@ -727,7 +675,6 @@ function ClienteApp({ user, onLogout }) {
             </div>
           </div>
         )}
-
         {tab==="profilo"&&(
           <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
             <div style={{background:C.deepBlue,padding:"12px 22px 16px"}}>
@@ -756,17 +703,12 @@ function ClienteApp({ user, onLogout }) {
               </div>
               <div style={{background:`${C.warmOrange}10`,border:`1px solid ${C.warmOrange}30`,borderRadius:14,padding:16}}>
                 <p style={{color:C.warmOrange,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🆘 Assistenza</p>
-                <a href={`tel:${MARCO_TEL}`} style={{display:"block",background:C.warmOrange,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>
-                  📞 Chiama Marco: {MARCO_TEL}
-                </a>
-                <a href={`https://wa.me/${MARCO_WA}`} style={{display:"block",background:"#25D366",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>
-                  💬 WhatsApp Marco
-                </a>
+                <a href={`tel:${MARCO_TEL}`} style={{display:"block",background:C.warmOrange,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>📞 Chiama Marco: {MARCO_TEL}</a>
+                <a href={`https://wa.me/${MARCO_WA}`} style={{display:"block",background:"#25D366",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>💬 WhatsApp Marco</a>
               </div>
             </div>
           </div>
         )}
-
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"10px 0 18px",zIndex:20}}>
           {[["mappa","🗺️","Mappa"],["profilo","👤","Profilo"]].map(([id,icon,label])=>(
             <button key={id} className="btn" onClick={()=>setTab(id)}
@@ -782,6 +724,7 @@ function ClienteApp({ user, onLogout }) {
   );
 }
 
+// ── APP ADMIN ─────────────────────────────────────────
 function AdminApp({ user, onLogout }) {
   const [tab, setTab] = React.useState("dashboard");
   const [bikes, setBikes] = React.useState(initBikes);
@@ -817,25 +760,18 @@ function AdminApp({ user, onLogout }) {
 
   React.useEffect(()=>{
     const load=async()=>{
-      await waitFB();
-      const {collection,onSnapshot}=window.firebaseFunctions;
+      await waitFB(); const {collection,onSnapshot}=window.firebaseFunctions;
       onSnapshot(collection(window.firebaseDb,"rides"),snap=>{
-        setRides(snap.docs.map(d=>{
-          const dd=d.data();
-          return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]};
-        }));
+        setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; }));
       });
-    };
-    load();
+    }; load();
   },[]);
 
   const loadUsers=async()=>{
     setLoadingUsers(true);
-    try{ await waitFB(); const {collection,getDocs}=window.firebaseFunctions; const snap=await getDocs(collection(window.firebaseDb,"users")); setFbUsers(snap.docs.map(d=>({id:d.id,...d.data()}))); }
-    catch(e){console.error(e);}
+    try{ await waitFB(); const {collection,getDocs}=window.firebaseFunctions; const snap=await getDocs(collection(window.firebaseDb,"users")); setFbUsers(snap.docs.map(d=>({id:d.id,...d.data()}))); } catch(e){console.error(e);}
     setLoadingUsers(false);
   };
-
   React.useEffect(()=>{if(tab==="utenti")loadUsers();},[tab]);
 
   const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
@@ -846,20 +782,14 @@ function AdminApp({ user, onLogout }) {
     const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2));
     if(importoStr===null) return;
     const importoForced=parseFloat(importoStr)||0;
-    try{
-      await waitFB();
-      const {doc,updateDoc}=window.firebaseFunctions;
-      await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true});
-    }catch(e){alert("Errore: "+e.message);}
+    try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true}); }
+    catch(e){alert("Errore: "+e.message);}
   };
 
   const exportExcel=()=>{
     const data=fbUsers.map(u=>({"Nome":u.nome||"","Cognome":u.cognome||"","Email":u.email||"","Telefono":u.telefono||"","Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):""}));
     if(!data.length){alert("Nessun utente da esportare");return;}
-    const ws=XLSX.utils.json_to_sheet(data);
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,"Utenti",ws);
-    XLSX.writeFile(wb,"utenti_pedalagilla.xlsx");
+    const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,"Utenti",ws); XLSX.writeFile(wb,"utenti_pedalagilla.xlsx");
   };
 
   return(
@@ -951,10 +881,7 @@ function AdminApp({ user, onLogout }) {
               <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 8px",...ds,letterSpacing:1,textTransform:"uppercase",opacity:0.6}}>Note tecniche</p>
               <textarea value={editNote} onChange={e=>setEditNote(e.target.value)} placeholder="Note tecniche..."
                 style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,minHeight:80,resize:"vertical",marginBottom:14}}/>
-              <button onClick={saveBike}
-                style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
-                💾 Salva modifiche
-              </button>
+              <button onClick={saveBike} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>💾 Salva modifiche</button>
             </div>
           </div>
         )}
@@ -1048,9 +975,7 @@ function AdminApp({ user, onLogout }) {
             <div style={{display:"flex",gap:8,marginBottom:10}}>
               {["Tutti","Disponibile","Manutenzione"].map(f=>(
                 <button key={f} className="btn" onClick={()=>setMapFilter(f)}
-                  style={{background:mapFilter===f?C.deepBlue:C.white,border:`1.5px solid ${mapFilter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:mapFilter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>
-                  {f}
-                </button>
+                  style={{background:mapFilter===f?C.deepBlue:C.white,border:`1.5px solid ${mapFilter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:mapFilter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>
               ))}
             </div>
             <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
@@ -1075,9 +1000,7 @@ function AdminApp({ user, onLogout }) {
             <div style={{display:"flex",gap:8,marginBottom:12,overflowX:"auto"}}>
               {["Tutti","Disponibile","Manutenzione","Batteria Bassa"].map(f=>(
                 <button key={f} className="btn" onClick={()=>setFilter(f)}
-                  style={{background:filter===f?C.deepBlue:C.white,border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:filter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>
-                  {f}
-                </button>
+                  style={{background:filter===f?C.deepBlue:C.white,border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:filter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>
               ))}
             </div>
             {filteredBikes.map(bike=>(
@@ -1109,9 +1032,7 @@ function AdminApp({ user, onLogout }) {
             <div style={{display:"flex",gap:8,marginBottom:12}}>
               {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(
                 <button key={v} onClick={()=>setIncassiPeriod(v)}
-                  style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>
-                  {l}
-                </button>
+                  style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>
               ))}
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
@@ -1138,9 +1059,7 @@ function AdminApp({ user, onLogout }) {
                   <p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>
                     💶 Stimato: €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min
                   </p>
-                  <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
-                    🗺️ Vedi percorso
-                  </button>
+                  <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button>
                 </div>
               ))}
             </>}
@@ -1191,7 +1110,7 @@ function AdminApp({ user, onLogout }) {
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Gestione zone</p>
             <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🗺️ Tipi di zona</p>
-              {[["🟢","Area operativa","#00C853","Dove le bici possono circolare"],["🔵","Area di sosta","#2196F3","Parcheggi autorizzati"],["🟡","Velocità ridotta","#FFB703","Zone turistiche/pedonali"],["🔴","Fuori zona","#FB8500","Addebito €20 automatico"]].map(([emoji,name,color,desc])=>(
+              {[["Area operativa","#00C853","Dove le bici possono circolare"],["Area di sosta","#2196F3","Parcheggi autorizzati"],["Velocità ridotta","#FFB703","Zone turistiche/pedonali"],["Fuori zona","#FB8500","Addebito €20 automatico"]].map(([name,color,desc])=>(
                 <div key={name} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
                   <div style={{width:14,height:14,borderRadius:3,background:color,flexShrink:0}}/>
                   <div>
@@ -1226,9 +1145,9 @@ function AdminApp({ user, onLogout }) {
                 ✏️ Inizia a disegnare
               </button>
             </div>
-            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
-              <ZoneMapEditor bikes={bikes} zones={savedZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName}
-                onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);setZoneName("");}}/>
+            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
+              <ZoneMapEditor zones={savedZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName}
+                onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);}}/>
             </div>
             {savedZones.length>0&&<>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone salvate ({savedZones.length})</p>
@@ -1305,8 +1224,7 @@ function AdminApp({ user, onLogout }) {
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>📍 Corse per zona</p>
               {["Passignano","Castiglione","Tuoro","Magione","Panicale"].map(zona=>{
-                const count=rides.filter(r=>r.zone===zona).length;
-                const total=rides.length||1;
+                const count=rides.filter(r=>r.zone===zona).length; const total=rides.length||1;
                 return <div key={zona} style={{marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
                     <span style={{color:"#888",fontSize:12,...ds}}>{zona}</span>
