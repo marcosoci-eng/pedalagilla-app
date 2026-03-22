@@ -1206,8 +1206,14 @@ function AdminApp({ user, onLogout }) {
                     <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{zone.type} · {zone.shape}</p>
                   </div>
                 </div>
-                <button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))}
-                  style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>🗑️</button>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>{
+                    const nuovoNome = window.prompt("Nuovo nome zona:", zone.name);
+                    if(nuovoNome&&nuovoNome.trim()) setSavedZones(prev=>prev.map((z,idx)=>idx===i?{...z,name:nuovoNome.trim()}:z));
+                  }} style={{background:`${C.blueGreen}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.blueGreen,fontSize:12,cursor:"pointer",...ds}}>✏️</button>
+                  <button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))}
+                    style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>🗑️</button>
+                </div>
               </div>
             ))}
           </div>}
