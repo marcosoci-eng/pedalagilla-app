@@ -812,7 +812,11 @@ function AdminApp({ user, onLogout }) {
   const [loadingUsers, setLoadingUsers] = React.useState(false);
   const [selectedRide, setSelectedRide] = React.useState(null);
   const [showTrack, setShowTrack] = React.useState(false);
-
+const [zoneType, setZoneType] = React.useState("operativa");
+const [drawingMode, setDrawingMode] = React.useState("circle");
+const [drawingActive, setDrawingActive] = React.useState(false);
+const [zoneName, setZoneName] = React.useState("");
+const [savedZones, setSavedZones] = React.useState([]);
   const today = new Date().toLocaleDateString("it-IT");
   const todayRides = rides.filter(r=>r.date===today);
   const monthRides = rides;
@@ -1252,6 +1256,88 @@ function AdminApp({ user, onLogout }) {
               </div>
             ))}
           </div>}
+          {tab==="zone"&&<div className="slide" style={{padding:"16px 18px 0"}}>
+  <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Gestione zone</p>
+
+  {/* Legenda */}
+  <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+    <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🗺️ Tipi di zona</p>
+    {[["🟢","Area operativa","#00C853","Dove le bici possono circolare"],["🔵","Area di sosta","#2196F3","Parcheggi autorizzati"],["🟡","Velocità ridotta","#FFB703","Zone turistiche/pedonali"],["🔴","Fuori zona","#FB8500","Addebito €20 automatico"]].map(([emoji,name,color,desc])=>(
+      <div key={name} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+        <div style={{width:14,height:14,borderRadius:3,background:color,flexShrink:0}}/>
+        <div>
+          <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:0,...ds}}>{name}</p>
+          <p style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{desc}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  {/* Selettore tipo zona */}
+  <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+    <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>✏️ Disegna nuova zona</p>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+      {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([id,label,color])=>(
+        <div key={id} onClick={()=>setZoneType(id)}
+          style={{background:zoneType===id?color:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${zoneType===id?color:"transparent"}`}}>
+          <p style={{color:zoneType===id?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
+        </div>
+      ))}
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+      {[["circle","⭕ Cerchio"],["polygon","⬡ Poligono"]].map(([id,label])=>(
+        <div key={id} onClick={()=>setDrawingMode(id)}
+          style={{background:drawingMode===id?C.deepBlue:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${drawingMode===id?C.deepBlue:"transparent"}`}}>
+          <p style={{color:drawingMode===id?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
+        </div>
+      ))}
+    </div>
+    <input value={zoneName} onChange={e=>setZoneName(e.target.value)} placeholder="Nome zona (es. Centro Passignano)"
+      style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
+    <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 8px"}}>Attiva il disegno poi traccia la zona sulla mappa qui sotto</p>
+    <button onClick={()=>setDrawingActive(true)}
+      style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"12px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
+      ✏️ Inizia a disegnare
+    </button>
+  </div>
+
+  {/* Mappa zone */}
+  <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
+    <ZoneMapEditor
+      bikes={bikes}
+      zones={savedZones}
+      zoneType={zoneType}
+      drawingMode={drawingMode}
+      drawingActive={drawingActive}
+      zoneName={zoneName}
+      onZoneSaved={(zone)=>{
+        setSavedZones(prev=>[...prev,zone]);
+        setDrawingActive(false);
+        setZoneName("");
+      }}
+    />
+  </div>
+
+  {/* Zone salvate */}
+  {savedZones.length>0&&<>
+    <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone salvate ({savedZones.length})</p>
+    {savedZones.map((zone,i)=>(
+      <div key={i} style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/>
+          <div>
+            <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>{zone.name}</p>
+            <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{zone.type} · {zone.shape}</p>
+          </div>
+        </div>
+        <button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))}
+          style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>
+          🗑️
+        </button>
+      </div>
+    ))}
+  </>}
+</div>}
 {tab==="qr"&&<div className="slide" style={{padding:"16px 18px 0"}}>
   {/* QR Download App */}
 <div style={{background:C.white,borderRadius:16,padding:20,marginBottom:16,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",textAlign:"center"}}>
@@ -1350,7 +1436,7 @@ function AdminApp({ user, onLogout }) {
 
         {/* BOTTOM NAV ADMIN */}
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"8px 0 16px",zIndex:20}}>
-          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["qr","🔲","QR"],["stats","📊","Stats"]].map(([id,icon,label])=>(
+          ["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["stats","📊","Stats"]
             <button key={id} className="btn" onClick={()=>setTab(id)}
               style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <span style={{fontSize:18}}>{icon}</span>
