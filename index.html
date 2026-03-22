@@ -9,7 +9,7 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -62,7 +62,8 @@ const TARIFFA_MIN = 0.19;
 const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
 const QR_BASE_URL = "https://pedalagilla-app-k3zm.vercel.app/?bike=";
-  const APP_URL = "https://pedalagilla-app-k3zm.vercel.app";
+const APP_URL = "https://pedalagilla-app-k3zm.vercel.app";
+
 const checklist = ["🔗 Lubrificazione catena","🦶 Controllo pedali","🧹 Pulizia veicolo","🔋 Controllo batteria","🛞 Pressione pneumatici","🛑 Test freni","⚙️ Controllo cambio"];
 
 const initBikes = [
@@ -85,23 +86,17 @@ const getStatusColor = (s) => s==="Disponibile" ? C.blueGreen : C.warmOrange;
 const getRange = (battery) => Math.round((battery/100)*80);
 const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
 const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
-// Leggi parametro bici dall'URL (da QR code)
-const getUrlBike = () => {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("bike");
-};
-// ── MAPPA ─────────────────────────────────────────────
+const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
+
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
-
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
       if (!window.google) { setTimeout(tryInit,200); return; }
       const map = new window.google.maps.Map(mapRef.current, {
         center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
-        disableDefaultUI:false, zoomControl:true,
         styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       mapInstanceRef.current = map;
@@ -116,21 +111,9 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }
       });
       tracks.forEach(track => {
         if (track.points && track.points.length > 1) {
-          new window.google.maps.Polyline({
-            path:track.points, geodesic:true,
-            strokeColor:track.color||"#219EBC", strokeOpacity:0.8, strokeWeight:4, map
-          });
-          // Marker inizio e fine
-          new window.google.maps.Marker({
-            position:track.points[0], map,
-            label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"},
-            icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}
-          });
-          new window.google.maps.Marker({
-            position:track.points[track.points.length-1], map,
-            label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"},
-            icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}
-          });
+          new window.google.maps.Polyline({path:track.points,geodesic:true,strokeColor:track.color||"#219EBC",strokeOpacity:0.8,strokeWeight:4,map});
+          new window.google.maps.Marker({position:track.points[0],map,label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"},icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}});
+          new window.google.maps.Marker({position:track.points[track.points.length-1],map,label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"},icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}});
         }
       });
     };
@@ -140,14 +123,70 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }
       s.async=true; s.onload=tryInit; document.head.appendChild(s);
     } else tryInit();
   }, []);
-
-  const style = fullscreen
-    ? {position:"absolute",inset:0,width:"100%",height:"100%"}
-    : {width:"100%",height,borderRadius:16};
+  const style = fullscreen ? {position:"absolute",inset:0,width:"100%",height:"100%"} : {width:"100%",height,borderRadius:16};
   return <div ref={mapRef} style={style} />;
 }
 
-// ── PAGAMENTO ─────────────────────────────────────────
+function ZoneMapEditor({ bikes, zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
+  const mapRef = React.useRef(null);
+  const mapInstanceRef = React.useRef(null);
+  const drawingManagerRef = React.useRef(null);
+  const zoneColors = { operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500" };
+
+  React.useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+    const tryInit = () => {
+      if (!window.google||!window.google.maps.drawing) { setTimeout(tryInit,200); return; }
+      const map = new window.google.maps.Map(mapRef.current, {
+        center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
+        styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
+      });
+      mapInstanceRef.current = map;
+      zones.forEach(zone => {
+        if (zone.shape==="circle"&&zone.center) {
+          new window.google.maps.Circle({map,center:zone.center,radius:zone.radius||200,fillColor:zone.color,fillOpacity:0.25,strokeColor:zone.color,strokeWeight:2});
+        } else if (zone.path) {
+          new window.google.maps.Polygon({map,paths:zone.path,fillColor:zone.color,fillOpacity:0.25,strokeColor:zone.color,strokeWeight:2});
+        }
+      });
+      const dm = new window.google.maps.drawing.DrawingManager({
+        drawingMode:null, drawingControl:false,
+        circleOptions:{fillColor:"#219EBC",fillOpacity:0.25,strokeColor:"#219EBC",strokeWeight:2,editable:true},
+        polygonOptions:{fillColor:"#219EBC",fillOpacity:0.25,strokeColor:"#219EBC",strokeWeight:2,editable:true}
+      });
+      dm.setMap(map);
+      drawingManagerRef.current = dm;
+      window.google.maps.event.addListener(dm,"circlecomplete",circle=>{
+        dm.setDrawingMode(null);
+        const color = zoneColors[zoneType]||"#219EBC";
+        circle.setOptions({fillColor:color,strokeColor:color});
+        onZoneSaved({name:zoneName||"Nuova zona",type:zoneType,shape:"circle",color,center:{lat:circle.getCenter().lat(),lng:circle.getCenter().lng()},radius:circle.getRadius()});
+        circle.setMap(null);
+      });
+      window.google.maps.event.addListener(dm,"polygoncomplete",polygon=>{
+        dm.setDrawingMode(null);
+        const color = zoneColors[zoneType]||"#219EBC";
+        polygon.setOptions({fillColor:color,strokeColor:color});
+        const path = polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
+        onZoneSaved({name:zoneName||"Nuova zona",type:zoneType,shape:"polygon",color,path});
+        polygon.setMap(null);
+      });
+    };
+    tryInit();
+  }, []);
+
+  React.useEffect(() => {
+    if (!drawingManagerRef.current||!window.google||!window.google.maps.drawing) return;
+    if (drawingActive) {
+      drawingManagerRef.current.setDrawingMode(drawingMode==="circle"?window.google.maps.drawing.OverlayType.CIRCLE:window.google.maps.drawing.OverlayType.POLYGON);
+    } else {
+      drawingManagerRef.current.setDrawingMode(null);
+    }
+  }, [drawingActive,drawingMode]);
+
+  return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
+}
+
 function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
   const cardRef = React.useRef(null);
   const cardEl = React.useRef(null);
@@ -155,7 +194,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
   const [error, setError] = React.useState(null);
   const [nome, setNome] = React.useState("");
   React.useEffect(() => {
-    if (!cardRef.current || cardEl.current) return;
+    if (!cardRef.current||cardEl.current) return;
     const card = stripeElements.create("card",{style:{base:{fontSize:"16px",color:"#023047",fontFamily:"'DM Sans',sans-serif","::placeholder":{color:"#aaa"}}},hidePostalCode:true});
     card.mount(cardRef.current); cardEl.current = card;
   }, []);
@@ -193,7 +232,6 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
   );
 }
 
-// ── AUTH ──────────────────────────────────────────────
 function AuthScreen({ onLogin }) {
   const [mode, setMode] = React.useState("login");
   const [email, setEmail] = React.useState("");
@@ -213,7 +251,7 @@ function AuthScreen({ onLogin }) {
     if (file) { setDocFile(file); const r=new FileReader(); r.onload=ev=>setDocPreview(ev.target.result); r.readAsDataURL(file); }
   };
   const handleAdminLogin = () => {
-    if (adminUser==="marco" && adminPass==="pedalagilla2026") onLogin({type:"admin",nome:"Marco",email:"marco@pedalagilla.it"});
+    if (adminUser==="marco"&&adminPass==="pedalagilla2026") onLogin({type:"admin",nome:"Marco",email:"marco@pedalagilla.it"});
     else setError("Credenziali errate");
   };
   const handleLogin = async () => {
@@ -258,7 +296,7 @@ function AuthScreen({ onLogin }) {
           <p style={{color:C.skyBlue,fontSize:12,margin:"4px 0 0",...ds}}>E-BIKE SHARING · Lago Trasimeno</p>
         </div>
         <div style={{padding:"22px 20px",maxHeight:"75vh",overflowY:"auto"}}>
-          {mode!=="adminLogin" && (
+          {mode!=="adminLogin"&&(
             <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:18}}>
               {[["login","Accedi"],["register","Registrati"]].map(([m,l])=>(
                 <button key={m} onClick={()=>{setMode(m);setError(null);}}
@@ -266,12 +304,12 @@ function AuthScreen({ onLogin }) {
               ))}
             </div>
           )}
-          {mode==="login" && <>
+          {mode==="login"&&<>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>📧 Email</p>
             <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="mario@example.com" style={inp} />
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>🔑 Password</p>
             <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="••••••••" style={inp} />
-            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
+            {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             <button onClick={handleLogin} disabled={loading}
               style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
               {loading?"⏳ Accesso...":"Accedi 🚲"}
@@ -281,7 +319,7 @@ function AuthScreen({ onLogin }) {
               🔐 Accesso amministratore
             </button>
           </>}
-          {mode==="register" && <>
+          {mode==="register"&&<>
             {[["👤 Nome *",nome,setNome,"text","Mario"],["👤 Cognome *",cognome,setCognome,"text","Rossi"],["📧 Email *",email,setEmail,"email","mario@example.com"],["📱 Telefono *",telefono,setTelefono,"tel","+39 333 1234567"],["🔑 Password *",password,setPassword,"password","Minimo 6 caratteri"]].map(([label,val,setter,type,ph])=>(
               <div key={label}>
                 <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{label}</p>
@@ -295,19 +333,19 @@ function AuthScreen({ onLogin }) {
                 :<div><div style={{fontSize:32,marginBottom:4}}>📄</div><p style={{color:C.warmOrange,fontSize:13,...ds,fontWeight:600,margin:0}}>Tocca per caricare</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>Obbligatorio</p></div>}
               <input id="docInput" type="file" accept="image/*" onChange={handleDocChange} style={{display:"none"}} />
             </div>
-            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
+            {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             <button onClick={handleRegister} disabled={loading}
               style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
               {loading?"⏳ Registrazione...":"Crea account 🌊"}
             </button>
           </>}
-          {mode==="adminLogin" && <>
+          {mode==="adminLogin"&&<>
             <button onClick={()=>{setMode("login");setError(null);}} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,cursor:"pointer",...ds,fontWeight:600,marginBottom:14}}>← Torna</button>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>👤 Username</p>
             <input value={adminUser} onChange={e=>setAdminUser(e.target.value)} type="text" placeholder="marco" style={inp} />
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>🔑 Password</p>
             <input value={adminPass} onChange={e=>setAdminPass(e.target.value)} type="password" placeholder="••••••••" style={inp} />
-            {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
+            {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             <button onClick={handleAdminLogin}
               style={{width:"100%",background:`linear-gradient(90deg,${C.deepBlue},#034a6e)`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
               Accedi come Admin 🔐
@@ -319,7 +357,6 @@ function AuthScreen({ onLogin }) {
   );
 }
 
-// ── TIMER CORSA ───────────────────────────────────────
 function RideTimer({ bike, plan, user, rideId, onEnd }) {
   const [seconds, setSeconds] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
@@ -332,73 +369,52 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
   const isGiornata = plan==="giornata";
 
   React.useEffect(() => {
-    if (!paused && !showEndFlow) {
-      const t = setInterval(()=>setSeconds(s=>s+1),1000);
-      return ()=>clearInterval(t);
-    }
-  }, [paused, showEndFlow]);
+    if (!paused&&!showEndFlow) { const t=setInterval(()=>setSeconds(s=>s+1),1000); return()=>clearInterval(t); }
+  },[paused,showEndFlow]);
 
   React.useEffect(() => {
-    if (paused && !showEndFlow) {
-      const t = setInterval(()=>setPauseSeconds(s=>s+1),1000);
-      return ()=>clearInterval(t);
-    }
-  }, [paused, showEndFlow]);
+    if (paused&&!showEndFlow) { const t=setInterval(()=>setPauseSeconds(s=>s+1),1000); return()=>clearInterval(t); }
+  },[paused,showEndFlow]);
 
   React.useEffect(() => {
-    if (!navigator.geolocation || showEndFlow) return;
+    if (!navigator.geolocation||showEndFlow) return;
     const saveGPS = () => {
-      navigator.geolocation.getCurrentPosition(async pos => {
-        const point = {lat:pos.coords.latitude, lng:pos.coords.longitude, t:Date.now()};
+      navigator.geolocation.getCurrentPosition(async pos=>{
+        const point={lat:pos.coords.latitude,lng:pos.coords.longitude,t:Date.now()};
         trackRef.current.push(point);
         if (rideId) {
-          try {
-            await waitFB();
-            const {doc,updateDoc} = window.firebaseFunctions;
-            await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current});
-          } catch(e) {}
+          try { await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current}); } catch(e){}
         }
-      }, ()=>{}, {enableHighAccuracy:true});
+      },()=>{},{enableHighAccuracy:true});
     };
     saveGPS();
-    const t = setInterval(saveGPS,30000);
-    return ()=>clearInterval(t);
-  }, [showEndFlow]);
+    const t=setInterval(saveGPS,30000);
+    return()=>clearInterval(t);
+  },[showEndFlow]);
 
-  const mins = Math.floor(seconds/60);
-  const secs = seconds%60;
-  const pauseMins = Math.floor(pauseSeconds/60);
-  const rideCost = isGiornata ? TARIFFA_GIORNATA : SBLOCCO + (seconds/60)*TARIFFA_MIN;
-  const pauseCost = isGiornata ? 0 : (pauseSeconds/60)*TARIFFA_PAUSA;
-  const totalCost = rideCost + pauseCost;
+  const mins=Math.floor(seconds/60), secs=seconds%60, pauseMins=Math.floor(pauseSeconds/60);
+  const rideCost=isGiornata?TARIFFA_GIORNATA:SBLOCCO+(seconds/60)*TARIFFA_MIN;
+  const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
+  const totalCost=rideCost+pauseCost;
 
-  const handleParkPhoto = (e) => {
-    const file = e.target.files[0];
-    if (file) { setParkPhoto(file); const r=new FileReader(); r.onload=ev=>setParkPreview(ev.target.result); r.readAsDataURL(file); }
-  };
+  const handleParkPhoto=(e)=>{ const file=e.target.files[0]; if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);} };
 
-  const handleEndConfirm = async () => {
-    if (!parkPhoto) { alert("Scatta una foto al parcheggio!"); return; }
+  const handleEndConfirm=async()=>{
+    if(!parkPhoto){alert("Scatta una foto al parcheggio!");return;}
     setUploading(true);
     try {
       await waitFB();
-      const {ref,uploadBytes,getDownloadURL,doc,updateDoc} = window.firebaseFunctions;
-      const sRef = ref(window.firebaseStorage,`parcheggi/${bike.id}_${Date.now()}`);
+      const {ref,uploadBytes,getDownloadURL,doc,updateDoc}=window.firebaseFunctions;
+      const sRef=ref(window.firebaseStorage,`parcheggi/${bike.id}_${Date.now()}`);
       await uploadBytes(sRef,parkPhoto);
-      const parkPhotoURL = await getDownloadURL(sRef);
-      if (rideId) {
-        await updateDoc(doc(window.firebaseDb,"rides",rideId),{
-          status:"Completata", endTime:new Date().toISOString(),
-          duration:seconds, pauseDuration:pauseSeconds,
-          cost:totalCost, parkPhotoURL, track:trackRef.current
-        });
-      }
-    } catch(e) { console.error(e); }
+      const parkPhotoURL=await getDownloadURL(sRef);
+      if(rideId) await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,parkPhotoURL,track:trackRef.current});
+    } catch(e){console.error(e);}
     setUploading(false);
-    onEnd(seconds, totalCost);
+    onEnd(seconds,totalCost);
   };
 
-  if (showEndFlow) return (
+  if(showEndFlow) return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:400,display:"flex",flexDirection:"column",overflowY:"auto"}}>
       <div style={{background:C.deepBlue,padding:"14px 22px"}}>
         <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>TERMINA CORSA</p>
@@ -411,8 +427,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
         </div>
         <div style={{border:`2px dashed ${parkPhoto?C.blueGreen:C.warmOrange}`,borderRadius:14,padding:20,textAlign:"center",marginBottom:16,cursor:"pointer"}}
           onClick={()=>document.getElementById("parkInput").click()}>
-          {parkPreview
-            ?<div><img src={parkPreview} style={{width:"100%",borderRadius:10,maxHeight:200,objectFit:"cover",marginBottom:8}}/><p style={{color:C.blueGreen,fontSize:13,...ds,fontWeight:600,margin:0}}>✅ Tocca per cambiare</p></div>
+          {parkPreview?<div><img src={parkPreview} style={{width:"100%",borderRadius:10,maxHeight:200,objectFit:"cover",marginBottom:8}}/><p style={{color:C.blueGreen,fontSize:13,...ds,fontWeight:600,margin:0}}>✅ Tocca per cambiare</p></div>
             :<div><div style={{fontSize:48,marginBottom:8}}>📸</div><p style={{color:C.warmOrange,fontSize:14,...ds,fontWeight:600,margin:0}}>Scatta foto parcheggio</p></div>}
           <input id="parkInput" type="file" accept="image/*" capture="environment" onChange={handleParkPhoto} style={{display:"none"}} />
         </div>
@@ -428,15 +443,12 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
           style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
           {uploading?"⏳ Salvataggio...":"✅ Conferma fine corsa"}
         </button>
-        <button onClick={()=>setShowEndFlow(false)}
-          style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>
-          ← Torna alla corsa
-        </button>
+        <button onClick={()=>setShowEndFlow(false)} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>← Torna alla corsa</button>
       </div>
     </div>
   );
 
-  return (
+  return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,display:"flex",flexDirection:"column"}}>
       <div style={{background:C.deepBlue,padding:"16px 22px"}}>
         <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>CORSA IN CORSO</p>
@@ -444,9 +456,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
       </div>
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
         <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:24,padding:28,textAlign:"center",marginBottom:20,width:"100%"}}>
-          {paused&&<div style={{background:C.sunYellow,borderRadius:10,padding:"4px 14px",display:"inline-block",marginBottom:10}}>
-            <p style={{color:C.deepBlue,fontSize:11,...ds,fontWeight:700,margin:0}}>⏸️ PAUSA — {isGiornata?"Gratis":`€${TARIFFA_PAUSA}/min`}</p>
-          </div>}
+          {paused&&<div style={{background:C.sunYellow,borderRadius:10,padding:"4px 14px",display:"inline-block",marginBottom:10}}><p style={{color:C.deepBlue,fontSize:11,...ds,fontWeight:700,margin:0}}>⏸️ PAUSA — {isGiornata?"Gratis":`€${TARIFFA_PAUSA}/min`}</p></div>}
           <p style={{color:C.skyBlue,fontSize:12,margin:"0 0 6px",...ds,letterSpacing:2}}>{paused?"PAUSA":"CORSA"}</p>
           <p style={{color:C.white,fontSize:48,fontWeight:700,margin:"0 0 12px",...ds,fontFamily:"monospace"}}>
             {paused?`${String(pauseMins).padStart(2,"0")}:${String(pauseSeconds%60).padStart(2,"0")}`:
@@ -463,12 +473,10 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
             </div>
           ))}
         </div>
-        <button onClick={()=>setPaused(p=>!p)}
-          style={{width:"100%",background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:14,color:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
+        <button onClick={()=>setPaused(p=>!p)} style={{width:"100%",background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:14,color:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
           {paused?"▶️ Riprendi":"⏸️ Pausa"}
         </button>
-        <button onClick={()=>setShowEndFlow(true)}
-          style={{width:"100%",background:C.warmOrange,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+        <button onClick={()=>setShowEndFlow(true)} style={{width:"100%",background:C.warmOrange,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
           🏁 Termina corsa
         </button>
       </div>
@@ -476,7 +484,6 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
   );
 }
 
-// ── APP CLIENTE ───────────────────────────────────────
 function ClienteApp({ user, onLogout }) {
   const bikes = initBikes.filter(b=>b.status==="Disponibile");
   const [tab, setTab] = React.useState("mappa");
@@ -489,117 +496,104 @@ function ClienteApp({ user, onLogout }) {
   const [currentRideId, setCurrentRideId] = React.useState(null);
   const [showSummary, setShowSummary] = React.useState(false);
   const [rideSummary, setRideSummary] = React.useState(null);
-const [showQRScanner, setShowQRScanner] = React.useState(false);
-const qrIntervalRef = React.useRef(null);
+  const [showQRScanner, setShowQRScanner] = React.useState(false);
+  const qrIntervalRef = React.useRef(null);
 
-React.useEffect(() => {
-  if (!showQRScanner) {
-    clearInterval(qrIntervalRef.current);
-    const video = document.getElementById("qrVideo");
-    if (video && video.srcObject) {
-      video.srcObject.getTracks().forEach(t=>t.stop());
-      video.srcObject = null;
-    }
-    return;
-  }
-  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(stream=>{
-    const video = document.getElementById("qrVideo");
-    if (video) { video.srcObject = stream; video.play(); }
-    qrIntervalRef.current = setInterval(()=>{
+  React.useEffect(() => {
+    if (!showQRScanner) {
+      clearInterval(qrIntervalRef.current);
       const video = document.getElementById("qrVideo");
-      const canvas = document.getElementById("qrCanvas");
-      if (!video||!canvas||!window.jsQR) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video,0,0);
-      const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-      const code = window.jsQR(imageData.data,imageData.width,imageData.height);
-      if (code) {
-        const url = new URL(code.data);
-        const bikeId = url.searchParams.get("bike");
-        if (bikeId) {
-          const bike = bikes.find(b=>b.id===bikeId);
-          clearInterval(qrIntervalRef.current);
-          stream.getTracks().forEach(t=>t.stop());
-          setShowQRScanner(false);
-          if (bike) { setSelectedBike(bike); setShowPlan(true); }
-          else alert(`Bici ${bikeId} non disponibile`);
+      if (video&&video.srcObject) { video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject=null; }
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(stream=>{
+      const video=document.getElementById("qrVideo");
+      if(video){video.srcObject=stream;video.play();}
+      qrIntervalRef.current=setInterval(()=>{
+        const video=document.getElementById("qrVideo");
+        const canvas=document.getElementById("qrCanvas");
+        if(!video||!canvas||!window.jsQR) return;
+        canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+        const ctx=canvas.getContext("2d"); ctx.drawImage(video,0,0);
+        const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+        const code=window.jsQR(imageData.data,imageData.width,imageData.height);
+        if(code){
+          try{
+            const url=new URL(code.data);
+            const bikeId=url.searchParams.get("bike");
+            if(bikeId){
+              const bike=bikes.find(b=>b.id===bikeId);
+              clearInterval(qrIntervalRef.current); stream.getTracks().forEach(t=>t.stop()); setShowQRScanner(false);
+              if(bike){setSelectedBike(bike);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`);
+            }
+          }catch(e){}
         }
-      }
-    },500);
-  }).catch(()=>alert("Fotocamera non accessibile"));
-}, [showQRScanner]);
-  const payAmount = plan==="giornata" ? TARIFFA_GIORNATA : SBLOCCO;
-  const plans = [
+      },500);
+    }).catch(()=>alert("Fotocamera non accessibile"));
+  },[showQRScanner]);
+
+  React.useEffect(() => {
+    const bikeId=getUrlBike();
+    if(bikeId){
+      const bike=bikes.find(b=>b.id===bikeId);
+      if(bike){setSelectedBike(bike);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile al momento`);
+      window.history.replaceState({},"","/");
+    }
+  },[]);
+
+  const payAmount=plan==="giornata"?TARIFFA_GIORNATA:SBLOCCO;
+  const plans=[
     {id:"minuti",label:"Al minuto",icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)} sblocco + €${TARIFFA_MIN}/min · pausa €${TARIFFA_PAUSA}/min`},
     {id:"giornata",label:"Giornata intera",icon:"☀️",desc:`€${TARIFFA_GIORNATA.toFixed(2)} tutto il giorno · pausa gratuita`},
   ];
 
-  const handleBikeClick = (bike) => { setSelectedBike(bike); setShowPlan(true); };
-  // Auto-apri prenotazione se arrivi da QR code
-React.useEffect(() => {
-  const bikeId = getUrlBike();
-  if (bikeId) {
-    const bike = bikes.find(b=>b.id===bikeId);
-    if (bike) { setSelectedBike(bike); setShowPlan(true); }
-    else alert(`Bici ${bikeId} non disponibile al momento`);
-    // Pulisci URL
-    window.history.replaceState({}, "", "/");
-  }
-}, []);
-  const handlePaySuccess = async () => {
-    setShowPayment(false); setShowPlan(false);
+  const handleBikeClick=(bike)=>{setSelectedBike(bike);setShowPlan(true);};
+  const handlePaySuccess=async()=>{
+    setShowPayment(false);setShowPlan(false);
     try {
       await waitFB();
-      const {collection,addDoc} = window.firebaseFunctions;
-      const rideDoc = await addDoc(collection(window.firebaseDb,"rides"),{
-        bikeId:selectedBike.id, userId:user.uid,
+      const {collection,addDoc}=window.firebaseFunctions;
+      const rideDoc=await addDoc(collection(window.firebaseDb,"rides"),{
+        bikeId:selectedBike.id, userId:user.uid||"",
         userName:`${user.nome||""} ${user.cognome||""}`.trim()||"Cliente",
-        userEmail:user.email||user.userEmail||"", zone:selectedBike.zone,
-        plan, status:"In corso",
-        startTime:new Date().toISOString(), track:[], cost:0
+        userEmail:user.email||"", zone:selectedBike.zone,
+        plan, status:"In corso", startTime:new Date().toISOString(), track:[], cost:0
       });
       setCurrentRideId(rideDoc.id);
-    } catch(e) { console.error(e); }
-    setRiding(true); setConfirmed(selectedBike);
+    } catch(e){console.error(e);}
+    setRiding(true);setConfirmed(selectedBike);
   };
-  const handleEndRide = (secs,cost) => { setRiding(false); setRideSummary({bike:confirmed,secs,cost}); setShowSummary(true); };
+  const handleEndRide=(secs,cost)=>{setRiding(false);setRideSummary({bike:confirmed,secs,cost});setShowSummary(true);};
 
-  // ── WRAPPER ─────────────────────────────────────────
-  return (
+  return(
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <style>{css}</style>
       <div style={{width:390,minHeight:844,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
-{showQRScanner&&(
-  <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.95)",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-    <button onClick={()=>setShowQRScanner(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>✕</button>
-    <div style={{fontSize:60,marginBottom:20}}>📷</div>
-    <p style={{color:C.white,fontSize:18,fontWeight:700,fontFamily:"Lora",marginBottom:8}}>Scansiona il QR della bici</p>
-    <p style={{color:"rgba(255,255,255,0.6)",fontSize:13,...ds,marginBottom:30,textAlign:"center",padding:"0 30px"}}>Inquadra il QR code sul telaio della bici</p>
-    <div style={{background:C.white,borderRadius:20,padding:20,marginBottom:24,width:220,textAlign:"center"}}>
-      <p style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600,margin:"0 0 12px"}}>Oppure inserisci il codice manualmente:</p>
-      <input
-        placeholder="Es: PA-021"
-        style={{width:"100%",padding:"12px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:16,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
-        onChange={e=>{
-          const val = e.target.value.toUpperCase().trim();
-          const bike = bikes.find(b=>b.id===val);
-          if (bike) {
-            setShowQRScanner(false);
-            setSelectedBike(bike);
-            setShowPlan(true);
-          }
-        }}
-      />
-    </div>
-    <video id="qrVideo" style={{width:260,height:260,borderRadius:16,objectFit:"cover",border:`3px solid ${C.blueGreen}`}} autoPlay playsInline muted/>
-<canvas id="qrCanvas" style={{display:"none"}}/>
-  </div>
-)}
+
+        {showQRScanner&&(
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.95)",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <button onClick={()=>setShowQRScanner(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>✕</button>
+            <div style={{fontSize:60,marginBottom:20}}>📷</div>
+            <p style={{color:C.white,fontSize:18,fontWeight:700,fontFamily:"Lora",marginBottom:8}}>Scansiona il QR della bici</p>
+            <p style={{color:"rgba(255,255,255,0.6)",fontSize:13,...ds,marginBottom:20,textAlign:"center",padding:"0 30px"}}>Inquadra il QR code sul telaio della bici</p>
+            <video id="qrVideo" style={{width:260,height:260,borderRadius:16,objectFit:"cover",border:`3px solid ${C.blueGreen}`,marginBottom:20}} autoPlay playsInline muted/>
+            <canvas id="qrCanvas" style={{display:"none"}}/>
+            <div style={{background:C.white,borderRadius:16,padding:16,width:260,textAlign:"center"}}>
+              <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>Oppure inserisci il codice:</p>
+              <input placeholder="Es: PA-021"
+                style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
+                onChange={e=>{
+                  const val=e.target.value.toUpperCase().trim();
+                  const bike=bikes.find(b=>b.id===val);
+                  if(bike){setShowQRScanner(false);setSelectedBike(bike);setShowPlan(true);}
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {riding&&confirmed&&<RideTimer bike={confirmed} plan={plan} user={user} rideId={currentRideId} onEnd={handleEndRide}/>}
 
-        {/* RIEPILOGO */}
         {showSummary&&rideSummary&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,overflowY:"auto",padding:24}}>
             <div style={{textAlign:"center",marginBottom:20}}>
@@ -624,7 +618,6 @@ React.useEffect(() => {
           </div>
         )}
 
-        {/* PIANO + PAGAMENTO */}
         {showPlan&&selectedBike&&!riding&&!showSummary&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:200,display:"flex",flexDirection:"column",overflowY:"auto"}}>
             {showPayment?(
@@ -668,7 +661,7 @@ React.useEffect(() => {
                   ))}
                   <button onClick={()=>setShowPayment(true)}
                     style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
-                   💳 Continua — {plan==="giornata"?`€${payAmount.toFixed(2)}`:`€${SBLOCCO.toFixed(2)} sblocco`}
+                    💳 Continua — {plan==="giornata"?`€${payAmount.toFixed(2)}`:`€${SBLOCCO.toFixed(2)} sblocco`}
                   </button>
                 </div>
               </>
@@ -676,10 +669,8 @@ React.useEffect(() => {
           </div>
         )}
 
-        {/* ── MAPPA FULLSCREEN ── */}
         {tab==="mappa"&&(
           <div style={{flex:1,position:"relative",overflow:"hidden"}}>
-            {/* Overlay header */}
             <div style={{position:"absolute",top:0,left:0,right:0,zIndex:10,background:"linear-gradient(180deg,rgba(2,48,71,0.9) 0%,transparent 100%)",padding:"12px 18px 40px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
@@ -694,39 +685,18 @@ React.useEffect(() => {
                 </div>
               </div>
             </div>
-
-            {/* Mappa */}
             <div style={{position:"absolute",inset:0}}>
               <MapView bikes={bikes} onBikeClick={handleBikeClick} fullscreen={true}/>
             </div>
-
-            {/* Card bassa */}
-<div style={{position:"absolute",bottom:80,left:12,right:12,zIndex:10}}>
-  <div style={{display:"flex",gap:8,marginBottom:8}}>
-    <button onClick={()=>setShowQRScanner(true)}
-      style={{flex:1,background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"12px 16px",color:C.white,fontSize:14,...ds,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-      📷 Scansiona QR bici
-    </button>
-  </div>
-  <div style={{background:"rgba(2,48,71,0.88)",borderRadius:16,padding:"10px 14px",backdropFilter:"blur(8px)"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-      <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,...ds,margin:0}}>👆 Oppure tocca una bici sulla mappa</p>
-      <div style={{display:"flex",gap:8}}>
-        {[[C.blueGreen,"≥80%"],[C.sunYellow,"50%"],[C.warmOrange,"<50%"]].map(([c,l])=>(
-          <div key={l} style={{display:"flex",alignItems:"center",gap:3}}>
-            <div style={{width:7,height:7,borderRadius:4,background:c}}/>
-            <span style={{color:"rgba(255,255,255,0.6)",fontSize:9,...ds}}>{l}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-</div>
             <div style={{position:"absolute",bottom:80,left:12,right:12,zIndex:10}}>
-              <div style={{background:"rgba(2,48,71,0.88)",borderRadius:16,padding:"10px 14px",backdropFilter:"blur(8px)"}}>
+              <button onClick={()=>setShowQRScanner(true)}
+                style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                📷 Scansiona QR bici
+              </button>
+              <div style={{background:"rgba(2,48,71,0.88)",borderRadius:16,padding:"8px 14px",backdropFilter:"blur(8px)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,...ds,margin:0}}>👆 Tocca una bici per prenotare</p>
-                  <div style={{display:"flex",gap:8}}>
+                  <p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:0}}>👆 Oppure tocca una bici sulla mappa</p>
+                  <div style={{display:"flex",gap:6}}>
                     {[[C.blueGreen,"≥80%"],[C.sunYellow,"50%"],[C.warmOrange,"<50%"]].map(([c,l])=>(
                       <div key={l} style={{display:"flex",alignItems:"center",gap:3}}>
                         <div style={{width:7,height:7,borderRadius:4,background:c}}/>
@@ -740,7 +710,6 @@ React.useEffect(() => {
           </div>
         )}
 
-        {/* ── PROFILO ── */}
         {tab==="profilo"&&(
           <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
             <div style={{background:C.deepBlue,padding:"12px 22px 16px"}}>
@@ -780,7 +749,6 @@ React.useEffect(() => {
           </div>
         )}
 
-        {/* BOTTOM NAV */}
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"10px 0 18px",zIndex:20}}>
           {[["mappa","🗺️","Mappa"],["profilo","👤","Profilo"]].map(([id,icon,label])=>(
             <button key={id} className="btn" onClick={()=>setTab(id)}
@@ -796,100 +764,7 @@ React.useEffect(() => {
   );
 }
 
-// ── APP ADMIN ─────────────────────────────────────────
-function ZoneMapEditor({ bikes, zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
-  const mapRef = React.useRef(null);
-  const mapInstanceRef = React.useRef(null);
-  const drawingManagerRef = React.useRef(null);
-
-  const zoneColors = {
-    operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500"
-  };
-
-  React.useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
-    const tryInit = () => {
-      if (!window.google) { setTimeout(tryInit,200); return; }
-      const map = new window.google.maps.Map(mapRef.current, {
-        center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
-        styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
-      });
-      mapInstanceRef.current = map;
-
-      // Mostra zone esistenti
-      zones.forEach(zone => {
-        if (zone.shape==="circle" && zone.center) {
-          new window.google.maps.Circle({
-            map, center:zone.center, radius:zone.radius||200,
-            fillColor:zone.color, fillOpacity:0.25,
-            strokeColor:zone.color, strokeWeight:2
-          });
-        } else if (zone.path) {
-          new window.google.maps.Polygon({
-            map, paths:zone.path,
-            fillColor:zone.color, fillOpacity:0.25,
-            strokeColor:zone.color, strokeWeight:2
-          });
-        }
-      });
-
-      // Drawing Manager
-      const dm = new window.google.maps.drawing.DrawingManager({
-        drawingMode: null,
-        drawingControl: false,
-        circleOptions:{ fillColor:"#219EBC", fillOpacity:0.25, strokeColor:"#219EBC", strokeWeight:2, editable:true },
-        polygonOptions:{ fillColor:"#219EBC", fillOpacity:0.25, strokeColor:"#219EBC", strokeWeight:2, editable:true }
-      });
-      dm.setMap(map);
-      drawingManagerRef.current = dm;
-
-      window.google.maps.event.addListener(dm, "circlecomplete", circle => {
-        dm.setDrawingMode(null);
-        const color = zoneColors[zoneType]||"#219EBC";
-        circle.setOptions({fillColor:color, strokeColor:color});
-        onZoneSaved({
-          name: zoneName||"Nuova zona",
-          type: zoneType, shape:"circle", color,
-          center: {lat:circle.getCenter().lat(), lng:circle.getCenter().lng()},
-          radius: circle.getRadius()
-        });
-        circle.setMap(null);
-      });
-
-      window.google.maps.event.addListener(dm, "polygoncomplete", polygon => {
-        dm.setDrawingMode(null);
-        const color = zoneColors[zoneType]||"#219EBC";
-        polygon.setOptions({fillColor:color, strokeColor:color});
-        const path = polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
-        onZoneSaved({
-          name: zoneName||"Nuova zona",
-          type: zoneType, shape:"polygon", color, path
-        });
-        polygon.setMap(null);
-      });
-    };
-    if (!document.querySelector('script[src*="maps.googleapis"]')) {
-      const s = document.createElement("script");
-      s.src=`https://maps.googleapis.com/maps/api/js?key=AIzaSyBfgaG8lGRp7P8XGI-powaYfKufeLPebx8&libraries=drawing,geometry,visualization`;
-      s.async=true; s.onload=tryInit; document.head.appendChild(s);
-    } else tryInit();
-  }, []);
-
-  React.useEffect(() => {
-    if (!drawingManagerRef.current || !window.google) return;
-    if (drawingActive) {
-      const mode = drawingMode==="circle"
-        ? window.google.maps.drawing.OverlayType.CIRCLE
-        : window.google.maps.drawing.OverlayType.POLYGON;
-      drawingManagerRef.current.setDrawingMode(mode);
-    } else {
-      drawingManagerRef.current.setDrawingMode(null);
-    }
-  }, [drawingActive, drawingMode]);
-
-  return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
-}
-  function AdminApp({ user, onLogout }) {
+function AdminApp({ user, onLogout }) {
   const [tab, setTab] = React.useState("dashboard");
   const [bikes, setBikes] = React.useState(initBikes);
   const [selBike, setSelBike] = React.useState(null);
@@ -904,11 +779,12 @@ function ZoneMapEditor({ bikes, zones, zoneType, drawingMode, drawingActive, zon
   const [loadingUsers, setLoadingUsers] = React.useState(false);
   const [selectedRide, setSelectedRide] = React.useState(null);
   const [showTrack, setShowTrack] = React.useState(false);
-const [zoneType, setZoneType] = React.useState("operativa");
-const [drawingMode, setDrawingMode] = React.useState("circle");
-const [drawingActive, setDrawingActive] = React.useState(false);
-const [zoneName, setZoneName] = React.useState("");
-const [savedZones, setSavedZones] = React.useState([]);
+  const [zoneType, setZoneType] = React.useState("operativa");
+  const [drawingMode, setDrawingMode] = React.useState("circle");
+  const [drawingActive, setDrawingActive] = React.useState(false);
+  const [zoneName, setZoneName] = React.useState("");
+  const [savedZones, setSavedZones] = React.useState([]);
+
   const today = new Date().toLocaleDateString("it-IT");
   const todayRides = rides.filter(r=>r.date===today);
   const monthRides = rides;
@@ -918,88 +794,61 @@ const [savedZones, setSavedZones] = React.useState([]);
   const maint = bikes.filter(b=>b.status==="Manutenzione").length;
   const low = bikes.filter(b=>b.battery<50).length;
   const avg = Math.round(bikes.reduce((a,b)=>a+b.battery,0)/bikes.length);
-
   const filteredBikes = filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>b.battery<50);
   const mapBikes = mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
 
-  // Corse real-time da Firebase
-  React.useEffect(() => {
-    const load = async () => {
+  React.useEffect(()=>{
+    const load=async()=>{
       await waitFB();
-      const {collection,onSnapshot,query,orderBy} = window.firebaseFunctions;
-      const q = collection(window.firebaseDb,"rides");
-      onSnapshot(q, snap => {
-        const data = snap.docs.map(d=>{
-          const dd = d.data();
-          return {
-            id:d.id, ...dd,
-            date: dd.startTime ? new Date(dd.startTime).toLocaleDateString("it-IT") : "",
-            user: dd.userName||"—",
-            bike: dd.bikeId||"—",
-            zone: dd.zone||"—",
-            cost: dd.cost||0,
-            status: dd.status||"In corso",
-            duration: dd.duration||0,
-            parkPhotoURL: dd.parkPhotoURL||null,
-            track: dd.track||[],
-          };
-        });
-        setRides(data);
+      const {collection,onSnapshot}=window.firebaseFunctions;
+      onSnapshot(collection(window.firebaseDb,"rides"),snap=>{
+        setRides(snap.docs.map(d=>{
+          const dd=d.data();
+          return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]};
+        }));
       });
     };
     load();
-  }, []);
+  },[]);
 
-  const loadUsers = async () => {
+  const loadUsers=async()=>{
     setLoadingUsers(true);
-    try {
-      await waitFB();
-      const {collection,getDocs} = window.firebaseFunctions;
-      const snap = await getDocs(collection(window.firebaseDb,"users"));
-      setFbUsers(snap.docs.map(d=>({id:d.id,...d.data()})));
-    } catch(e) { console.error(e); }
+    try{ await waitFB(); const {collection,getDocs}=window.firebaseFunctions; const snap=await getDocs(collection(window.firebaseDb,"users")); setFbUsers(snap.docs.map(d=>({id:d.id,...d.data()}))); }
+    catch(e){console.error(e);}
     setLoadingUsers(false);
   };
 
-  React.useEffect(() => { if(tab==="utenti") loadUsers(); }, [tab]);
+  React.useEffect(()=>{if(tab==="utenti")loadUsers();},[tab]);
 
-  const openBikeDetail = (bike) => { setSelBike(bike); setEditNote(bike.note||""); setEditChecks(bike.checks||{}); setShowBikeDetail(true); };
-  const saveBike = () => { setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b)); setShowBikeDetail(false); };
-  const toggleStatus = (bikeId) => { setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b)); };
+  const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
+  const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
+  const toggleStatus=(bikeId)=>{setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b));};
 
- const forceEndRide = async (ride) => {
-    const importoStr = window.prompt(`Corsa di ${ride.user}\nCosto calcolato: €${(ride.cost||0).toFixed(2)}\n\nInserisci importo da fatturare (o lascia vuoto per €${(ride.cost||0).toFixed(2)}):`, (ride.cost||0).toFixed(2));
-    if (importoStr===null) return;
-    const importoForced = parseFloat(importoStr)||0;
-    try {
+  const forceEndRide=async(ride)=>{
+    const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2));
+    if(importoStr===null) return;
+    const importoForced=parseFloat(importoStr)||0;
+    try{
       await waitFB();
-      const {doc,updateDoc} = window.firebaseFunctions;
-      await updateDoc(doc(window.firebaseDb,"rides",ride.id),{
-        status:"Completata", endTime:new Date().toISOString(),
-        cost:importoForced, duration:ride.duration||0,
-        closedByAdmin:true
-      });
-    } catch(e) { alert("Errore: "+e.message); }
+      const {doc,updateDoc}=window.firebaseFunctions;
+      await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true});
+    }catch(e){alert("Errore: "+e.message);}
   };
 
-  const exportExcel = () => {
-    const data = fbUsers.map(u=>({
-      "Nome":u.nome||"","Cognome":u.cognome||"","Email":u.email||"",
-      "Telefono":u.telefono||"","Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):""
-    }));
-    if (!data.length) { alert("Nessun utente da esportare"); return; }
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
+  const exportExcel=()=>{
+    const data=fbUsers.map(u=>({"Nome":u.nome||"","Cognome":u.cognome||"","Email":u.email||"","Telefono":u.telefono||"","Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):""}));
+    if(!data.length){alert("Nessun utente da esportare");return;}
+    const ws=XLSX.utils.json_to_sheet(data);
+    const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,"Utenti",ws);
     XLSX.writeFile(wb,"utenti_pedalagilla.xlsx");
   };
 
-  return (
+  return(
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <style>{css}</style>
       <div style={{width:390,minHeight:844,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
 
-        {/* TRACK VIEWER */}
         {showTrack&&selectedRide&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,display:"flex",flexDirection:"column"}}>
             <div style={{background:C.deepBlue,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1008,8 +857,7 @@ const [savedZones, setSavedZones] = React.useState([]);
               <div style={{width:30}}/>
             </div>
             <div style={{flex:1,position:"relative"}}>
-              <MapView bikes={[]} onBikeClick={()=>{}} fullscreen={true}
-                tracks={selectedRide.track&&selectedRide.track.length>1?[{points:selectedRide.track,color:"#219EBC"}]:[]}/>
+              <MapView bikes={[]} onBikeClick={()=>{}} fullscreen={true} tracks={selectedRide.track&&selectedRide.track.length>1?[{points:selectedRide.track,color:"#219EBC"}]:[]}/>
               {(!selectedRide.track||selectedRide.track.length<2)&&(
                 <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
                   <div style={{background:"rgba(245,249,251,0.95)",borderRadius:20,padding:30,textAlign:"center"}}>
@@ -1020,7 +868,6 @@ const [savedZones, setSavedZones] = React.useState([]);
                 </div>
               )}
             </div>
-            {/* Info corsa sotto la mappa */}
             <div style={{background:C.white,padding:"14px 18px",borderTop:`1px solid ${C.skyBlue}20`}}>
               <div style={{display:"flex",justifyContent:"space-between"}}>
                 <div>
@@ -1032,7 +879,6 @@ const [savedZones, setSavedZones] = React.useState([]);
                   <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{Math.floor((selectedRide.duration||0)/60)}min</p>
                 </div>
               </div>
-              {/* Foto parcheggio nella scheda percorso */}
               {selectedRide.parkPhotoURL&&(
                 <div style={{marginTop:12}}>
                   <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 6px",...ds}}>📸 Foto parcheggio</p>
@@ -1043,7 +889,6 @@ const [savedZones, setSavedZones] = React.useState([]);
           </div>
         )}
 
-        {/* DETTAGLIO BICI */}
         {showBikeDetail&&selBike&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:200,display:"flex",flexDirection:"column",overflowY:"auto"}}>
             <div style={{background:C.deepBlue,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1096,7 +941,6 @@ const [savedZones, setSavedZones] = React.useState([]);
           </div>
         )}
 
-        {/* HEADER ADMIN */}
         <div style={{background:C.deepBlue,padding:"10px 24px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{color:C.skyBlue,fontSize:12,...ds,fontWeight:600}}>{new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</span>
           <div style={{width:110,height:18,background:"rgba(0,0,0,0.4)",borderRadius:10}}/>
@@ -1263,32 +1107,25 @@ const [savedZones, setSavedZones] = React.useState([]);
                 </div>
               ))}
             </div>
-
             {rides.filter(r=>r.status==="In corso").length>0&&<>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>🔴 In corso</p>
               {rides.filter(r=>r.status==="In corso").map(ride=>(
                 <div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span>
-                    <button onClick={()=>forceEndRide(ride)}
-                      style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
-                      🛑 Termina
-                    </button>
+                    <button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button>
                   </div>
                   <p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p>
-                  <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ Iniziata: {ride.startTime ? new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}) : ride.date}</p>
-<p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>
-  💶 Costo stimato: €{ride.startTime ? (SBLOCCO + (Math.floor((Date.now() - new Date(ride.startTime).getTime())/60000)) * TARIFFA_MIN).toFixed(2) : "0.00"}
-  {" "}· ⏱️ {ride.startTime ? Math.floor((Date.now() - new Date(ride.startTime).getTime())/60000) : 0} min in corso
-</p>
-                  <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}}
-                    style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
+                  <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ Iniziata: {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p>
+                  <p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>
+                    💶 Stimato: €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min
+                  </p>
+                  <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
                     🗺️ Vedi percorso
                   </button>
                 </div>
               ))}
             </>}
-
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"12px 0 8px",...ds,opacity:0.5}}>Completate</p>
             {(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status!=="In corso").map(ride=>(
               <div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}>
@@ -1299,16 +1136,8 @@ const [savedZones, setSavedZones] = React.useState([]);
                 <p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p>
                 <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 8px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}}
-                    style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
-                    🗺️ Percorso
-                  </button>
-                  {ride.parkPhotoURL&&(
-                    <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}}
-                      style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
-                      📸 Foto parcheggio
-                    </button>
-                  )}
+                  <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>
+                  {ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}
                 </div>
               </div>
             ))}
@@ -1317,10 +1146,7 @@ const [savedZones, setSavedZones] = React.useState([]);
           {tab==="utenti"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>Utenti ({fbUsers.length})</p>
-              <button onClick={exportExcel}
-                style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"7px 14px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
-                📊 Excel
-              </button>
+              <button onClick={exportExcel} style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"7px 14px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📊 Excel</button>
             </div>
             {loadingUsers&&<p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:20}}>⏳ Caricamento...</p>}
             {!loadingUsers&&fbUsers.length===0&&<div style={{textAlign:"center",padding:30}}><div style={{fontSize:40,marginBottom:10}}>👥</div><p style={{color:"#aaa",fontSize:13,...ds}}>Nessun utente</p></div>}
@@ -1333,152 +1159,116 @@ const [savedZones, setSavedZones] = React.useState([]);
                     <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):"—"}</p>
                   </div>
                 </div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
-                  <span style={{color:C.deepBlue,fontSize:12,...ds}}>📧 {u.email}</span>
-                </div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
-                  <span style={{color:C.deepBlue,fontSize:12,...ds}}>📱 {u.telefono||"—"}</span>
-                </div>
-                {u.docURL&&(
-                  <div style={{marginTop:8}}>
-                    <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 4px",...ds}}>📄 Documento d'identità</p>
-                    <img src={u.docURL} style={{width:"100%",borderRadius:10,maxHeight:120,objectFit:"cover",cursor:"pointer"}} onClick={()=>window.open(u.docURL,"_blank")} alt="Documento"/>
-                  </div>
-                )}
+                <p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 4px"}}>📧 {u.email}</p>
+                <p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 6px"}}>📱 {u.telefono||"—"}</p>
+                {u.docURL&&<div style={{marginTop:8}}>
+                  <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 4px",...ds}}>📄 Documento</p>
+                  <img src={u.docURL} style={{width:"100%",borderRadius:10,maxHeight:120,objectFit:"cover",cursor:"pointer"}} onClick={()=>window.open(u.docURL,"_blank")} alt="Documento"/>
+                </div>}
               </div>
             ))}
           </div>}
+
           {tab==="zone"&&<div className="slide" style={{padding:"16px 18px 0"}}>
-  <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Gestione zone</p>
+            <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Gestione zone</p>
+            <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+              <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🗺️ Tipi di zona</p>
+              {[["🟢","Area operativa","#00C853","Dove le bici possono circolare"],["🔵","Area di sosta","#2196F3","Parcheggi autorizzati"],["🟡","Velocità ridotta","#FFB703","Zone turistiche/pedonali"],["🔴","Fuori zona","#FB8500","Addebito €20 automatico"]].map(([emoji,name,color,desc])=>(
+                <div key={name} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                  <div style={{width:14,height:14,borderRadius:3,background:color,flexShrink:0}}/>
+                  <div>
+                    <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:0,...ds}}>{name}</p>
+                    <p style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+              <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>✏️ Disegna nuova zona</p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([zid,label,color])=>(
+                  <div key={zid} onClick={()=>setZoneType(zid)}
+                    style={{background:zoneType===zid?color:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${zoneType===zid?color:"transparent"}`}}>
+                    <p style={{color:zoneType===zid?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                {[["circle","⭕ Cerchio"],["polygon","⬡ Poligono"]].map(([mid,label])=>(
+                  <div key={mid} onClick={()=>setDrawingMode(mid)}
+                    style={{background:drawingMode===mid?C.deepBlue:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${drawingMode===mid?C.deepBlue:"transparent"}`}}>
+                    <p style={{color:drawingMode===mid?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
+                  </div>
+                ))}
+              </div>
+              <input value={zoneName} onChange={e=>setZoneName(e.target.value)} placeholder="Nome zona (es. Centro Passignano)"
+                style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
+              <button onClick={()=>setDrawingActive(true)}
+                style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"12px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
+                ✏️ Inizia a disegnare
+              </button>
+            </div>
+            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
+              <ZoneMapEditor bikes={bikes} zones={savedZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName}
+                onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);setZoneName("");}}/>
+            </div>
+            {savedZones.length>0&&<>
+              <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone salvate ({savedZones.length})</p>
+              {savedZones.map((zone,i)=>(
+                <div key={i} style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/>
+                    <div>
+                      <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>{zone.name}</p>
+                      <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{zone.type} · {zone.shape}</p>
+                    </div>
+                  </div>
+                  <button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))}
+                    style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>🗑️</button>
+                </div>
+              ))}
+            </>}
+          </div>}
 
-  {/* Legenda */}
-  <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-    <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🗺️ Tipi di zona</p>
-    {[["🟢","Area operativa","#00C853","Dove le bici possono circolare"],["🔵","Area di sosta","#2196F3","Parcheggi autorizzati"],["🟡","Velocità ridotta","#FFB703","Zone turistiche/pedonali"],["🔴","Fuori zona","#FB8500","Addebito €20 automatico"]].map(([emoji,name,color,desc])=>(
-      <div key={name} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-        <div style={{width:14,height:14,borderRadius:3,background:color,flexShrink:0}}/>
-        <div>
-          <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:0,...ds}}>{name}</p>
-          <p style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{desc}</p>
-        </div>
-      </div>
-    ))}
-  </div>
+          {tab==="qr"&&<div className="slide" style={{padding:"16px 18px 0"}}>
+            <div style={{background:C.white,borderRadius:16,padding:20,marginBottom:16,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",textAlign:"center"}}>
+              <p style={{color:C.deepBlue,fontSize:15,fontWeight:700,margin:"0 0 4px",fontFamily:"Lora"}}>📱 QR Scarica l'app</p>
+              <p style={{color:"#aaa",fontSize:12,...ds,margin:"0 0 14px"}}>Mettilo su cartelli, volantini e hotel!</p>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`}
+                style={{width:180,height:180,borderRadius:12,border:`3px solid ${C.skyBlue}30`,marginBottom:14}} alt="QR App"/>
+              <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 10px"}}>{APP_URL}</p>
+              <a href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`}
+                target="_blank" style={{display:"block",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,borderRadius:12,padding:"12px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>
+                🖨️ Stampa QR in alta qualità
+              </a>
+            </div>
+            <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 14px",...ds,opacity:0.5}}>QR Code bici</p>
+            <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:14,padding:14,marginBottom:16}}>
+              <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>💡 Come usare</p>
+              <p style={{color:"#888",fontSize:12,...ds,margin:0}}>Stampa il QR di ogni bici e attaccalo al telaio. Il cliente lo scansiona per sbloccarla.</p>
+            </div>
+            {bikes.map(bike=>(
+              <div key={bike.id} style={{background:C.white,borderRadius:14,padding:16,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                  <div>
+                    <p style={{color:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{bike.id}</p>
+                    <p style={{color:"#aaa",fontSize:12,...ds,margin:"2px 0 0"}}>📍 {bike.zone} · {bike.model}</p>
+                    <p style={{color:getStatusColor(bike.status),fontSize:11,...ds,margin:"2px 0 0"}}>● {bike.status}</p>
+                  </div>
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=1`}
+                    style={{width:100,height:100,borderRadius:8,border:`2px solid ${C.skyBlue}30`}} alt={`QR ${bike.id}`}/>
+                </div>
+                <a href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=2`}
+                  target="_blank" style={{display:"block",background:C.deepBlue,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>
+                  🖨️ Stampa QR {bike.id}
+                </a>
+                <div style={{background:"#f5f5f5",borderRadius:8,padding:"8px 12px"}}>
+                  <p style={{color:"#aaa",fontSize:10,...ds,margin:0,wordBreak:"break-all"}}>{QR_BASE_URL+bike.id}</p>
+                </div>
+              </div>
+            ))}
+          </div>}
 
-  {/* Selettore tipo zona */}
-  <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-    <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>✏️ Disegna nuova zona</p>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-      {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([zid,label,color])=>(
-        <div key={id} onClick={()=>setZoneType(id)}
-          style={{background:zoneType===zid?color:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${zoneType===zid?color:"transparent"}`}}>
-  <p style={{color:zoneType===zid?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
-        </div>
-      ))}
-    </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-      {[["circle","⭕ Cerchio"],["polygon","⬡ Poligono"]].map(([id,label])=>(
-        <div key={id} onClick={()=>setDrawingMode(id)}
-          style={{background:drawingMode===id?C.deepBlue:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${drawingMode===id?C.deepBlue:"transparent"}`}}>
-          <p style={{color:drawingMode===id?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
-        </div>
-      ))}
-    </div>
-    <input value={zoneName} onChange={e=>setZoneName(e.target.value)} placeholder="Nome zona (es. Centro Passignano)"
-      style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
-    <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 8px"}}>Attiva il disegno poi traccia la zona sulla mappa qui sotto</p>
-    <button onClick={()=>setDrawingActive(true)}
-      style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"12px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
-      ✏️ Inizia a disegnare
-    </button>
-  </div>
-
-  {/* Mappa zone */}
-  <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
-    <ZoneMapEditor
-      bikes={bikes}
-      zones={savedZones}
-      zoneType={zoneType}
-      drawingMode={drawingMode}
-      drawingActive={drawingActive}
-      zoneName={zoneName}
-      onZoneSaved={(zone)=>{
-        setSavedZones(prev=>[...prev,zone]);
-        setDrawingActive(false);
-        setZoneName("");
-      }}
-    />
-  </div>
-
-  {/* Zone salvate */}
-  {savedZones.length>0&&<>
-    <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone salvate ({savedZones.length})</p>
-    {savedZones.map((zone,i)=>(
-      <div key={i} style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/>
-          <div>
-            <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>{zone.name}</p>
-            <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{zone.type} · {zone.shape}</p>
-          </div>
-        </div>
-        <button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))}
-          style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>
-          🗑️
-        </button>
-      </div>
-    ))}
-  </>}
-</div>}
-{tab==="qr"&&<div className="slide" style={{padding:"16px 18px 0"}}>
-  {/* QR Download App */}
-<div style={{background:C.white,borderRadius:16,padding:20,marginBottom:16,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",textAlign:"center"}}>
-  <p style={{color:C.deepBlue,fontSize:15,fontWeight:700,margin:"0 0 4px",fontFamily:"Lora"}}>📱 QR Scarica l'app</p>
-  <p style={{color:"#aaa",fontSize:12,...ds,margin:"0 0 14px"}}>Mettilo su cartelli, volantini e hotel!</p>
-  <img
-    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`}
-    style={{width:180,height:180,borderRadius:12,border:`3px solid ${C.skyBlue}30`,marginBottom:14}}
-    alt="QR App"
-  />
-  <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 10px"}}>{APP_URL}</p>
-  <a href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`}
-    target="_blank"
-    style={{display:"block",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,borderRadius:12,padding:"12px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>
-    🖨️ Stampa QR in alta qualità
-  </a>
-</div>
-  <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 14px",...ds,opacity:0.5}}>QR Code bici</p>
-  <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:14,padding:14,marginBottom:16}}>
-    <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>💡 Come usare</p>
-    <p style={{color:"#888",fontSize:12,...ds,margin:0}}>Stampa il QR di ogni bici e attaccalo al telaio. Il cliente lo scansiona per sbloccarla.</p>
-  </div>
-  {bikes.map(bike=>(
-    <div key={bike.id} style={{background:C.white,borderRadius:14,padding:16,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <div>
-          <p style={{color:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{bike.id}</p>
-          <p style={{color:"#aaa",fontSize:12,...ds,margin:"2px 0 0"}}>📍 {bike.zone} · {bike.model}</p>
-          <p style={{color:getStatusColor(bike.status),fontSize:11,...ds,margin:"2px 0 0"}}>● {bike.status}</p>
-        </div>
-        <div style={{textAlign:"center"}}>
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=1`}
-            style={{width:100,height:100,borderRadius:8,border:`2px solid ${C.skyBlue}30`}}
-            alt={`QR ${bike.id}`}
-          />
-        </div>
-      </div>
-      <a href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=2`}
-        target="_blank"
-        style={{display:"block",background:C.deepBlue,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>
-        🖨️ Stampa QR {bike.id}
-      </a>
-      <div style={{background:"#f5f5f5",borderRadius:8,padding:"8px 12px"}}>
-        <p style={{color:"#aaa",fontSize:10,...ds,margin:0,wordBreak:"break-all"}}>{QR_BASE_URL+bike.id}</p>
-      </div>
-    </div>
-  ))}
-</div>}
           {tab==="stats"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>⚡ Batteria flotta</p>
@@ -1526,14 +1316,13 @@ const [savedZones, setSavedZones] = React.useState([]);
 
         </div>
 
-        {/* BOTTOM NAV ADMIN */}
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"8px 0 16px",zIndex:20}}>
-          ["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["stats","📊","Stats"]
-            <button key={id} className="btn" onClick={()=>setTab(id)}
+          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["stats","📊","Stats"]].map(([tid,icon,label])=>(
+            <button key={tid} className="btn" onClick={()=>setTab(tid)}
               style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-              <span style={{fontSize:18}}>{icon}</span>
-              <span style={{color:tab===id?C.blueGreen:"#bbb",fontSize:9,...ds,fontWeight:tab===id?600:400}}>{label}</span>
-              {tab===id&&<div style={{width:16,height:3,borderRadius:2,background:C.blueGreen}}/>}
+              <span style={{fontSize:16}}>{icon}</span>
+              <span style={{color:tab===tid?C.blueGreen:"#bbb",fontSize:8,...ds,fontWeight:tab===tid?600:400}}>{label}</span>
+              {tab===tid&&<div style={{width:14,height:3,borderRadius:2,background:C.blueGreen}}/>}
             </button>
           ))}
         </div>
@@ -1544,13 +1333,10 @@ const [savedZones, setSavedZones] = React.useState([]);
 
 function Main() {
   const [user, setUser] = React.useState(null);
-  const handleLogin = (u) => setUser(u);
-  const handleLogout = () => {
-    if (window.firebaseAuth) window.firebaseFunctions.signOut(window.firebaseAuth).catch(()=>{});
-    setUser(null);
-  };
-  if (!user) return <AuthScreen onLogin={handleLogin}/>;
-  if (user.type==="admin") return <AdminApp user={user} onLogout={handleLogout}/>;
+  const handleLogin=(u)=>setUser(u);
+  const handleLogout=()=>{ if(window.firebaseAuth) window.firebaseFunctions.signOut(window.firebaseAuth).catch(()=>{}); setUser(null); };
+  if(!user) return <AuthScreen onLogin={handleLogin}/>;
+  if(user.type==="admin") return <AdminApp user={user} onLogout={handleLogout}/>;
   return <ClienteApp user={user} onLogout={handleLogout}/>;
 }
 
