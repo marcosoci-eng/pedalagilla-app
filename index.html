@@ -139,8 +139,8 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
 
   const redrawZones = React.useCallback(() => {
     if (!mapInstanceRef.current || !window.google) return;
-    shapesRef.current.forEach(s=>s.setMap(null));
-    markersRef.current.forEach(m=>m.setMap(null));
+    shapesRef.current.forEach(s=>{ if(s) s.setMap(null); });
+    markersRef.current.forEach(m=>{ if(m) m.setMap(null); });
     shapesRef.current = [];
     markersRef.current = [];
     zones.forEach((zone, idx) => {
