@@ -130,7 +130,29 @@ function ZoneMapEditor({ bikes, zones, zoneType, drawingMode, drawingActive, zon
   const drawingManagerRef = React.useRef(null);
   const zoneColors = { operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500" };
 
+  const shapesRef = React.useRef([]);
+
   React.useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    // Rimuovi zone vecchie
+    shapesRef.current.forEach(s=>s.setMap(null));
+    shapesRef.current = [];
+    // Ridisegna zone aggiornate
+    zones.forEach(zone => {
+      let shape;
+      if (zone.shape==="circle"&&zone.center) {
+        shape = new window.google.maps.Circle({map:mapInstanceRef.current,center:zone.center,radius:zone.radius||200,fillColor:zone.color,fillOpacity:0.25,strokeColor:zone.color,strokeWeight:2});
+      } else if (zone.path) {
+        shape = new window.google.maps.Polygon({map:mapInstanceRef.current,paths:zone.path,fillColor:zone.color,fillOpacity:0.25,strokeColor:zone.color,strokeWeight:2});
+      }
+      if (shape) shapesRef.current.push(shape);
+    });
+  }, [zones]);
+
+  React.useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+    const tryInit = () => {
+      if (!window.google||!window.google.maps.drawing) { setTimeout(tryInit,200); return; }
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
       if (!window.google||!window.google.maps.drawing) { setTimeout(tryInit,200); return; }
