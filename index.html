@@ -1369,10 +1369,10 @@ const [savedZones, setSavedZones] = React.useState([]);
   <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
     <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>✏️ Disegna nuova zona</p>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-      {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([id,label,color])=>(
+      {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([zid,label,color])=>(
         <div key={id} onClick={()=>setZoneType(id)}
-          style={{background:zoneType===id?color:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${zoneType===id?color:"transparent"}`}}>
-          <p style={{color:zoneType===id?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
+          style={{background:zoneType===zid?color:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${zoneType===zid?color:"transparent"}`}}>
+  <p style={{color:zoneType===zid?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
         </div>
       ))}
     </div>
