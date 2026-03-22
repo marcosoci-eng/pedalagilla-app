@@ -797,7 +797,99 @@ React.useEffect(() => {
 }
 
 // ── APP ADMIN ─────────────────────────────────────────
-function AdminApp({ user, onLogout }) {
+function ZoneMapEditor({ bikes, zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
+  const mapRef = React.useRef(null);
+  const mapInstanceRef = React.useRef(null);
+  const drawingManagerRef = React.useRef(null);
+
+  const zoneColors = {
+    operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500"
+  };
+
+  React.useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+    const tryInit = () => {
+      if (!window.google) { setTimeout(tryInit,200); return; }
+      const map = new window.google.maps.Map(mapRef.current, {
+        center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
+        styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
+      });
+      mapInstanceRef.current = map;
+
+      // Mostra zone esistenti
+      zones.forEach(zone => {
+        if (zone.shape==="circle" && zone.center) {
+          new window.google.maps.Circle({
+            map, center:zone.center, radius:zone.radius||200,
+            fillColor:zone.color, fillOpacity:0.25,
+            strokeColor:zone.color, strokeWeight:2
+          });
+        } else if (zone.path) {
+          new window.google.maps.Polygon({
+            map, paths:zone.path,
+            fillColor:zone.color, fillOpacity:0.25,
+            strokeColor:zone.color, strokeWeight:2
+          });
+        }
+      });
+
+      // Drawing Manager
+      const dm = new window.google.maps.drawing.DrawingManager({
+        drawingMode: null,
+        drawingControl: false,
+        circleOptions:{ fillColor:"#219EBC", fillOpacity:0.25, strokeColor:"#219EBC", strokeWeight:2, editable:true },
+        polygonOptions:{ fillColor:"#219EBC", fillOpacity:0.25, strokeColor:"#219EBC", strokeWeight:2, editable:true }
+      });
+      dm.setMap(map);
+      drawingManagerRef.current = dm;
+
+      window.google.maps.event.addListener(dm, "circlecomplete", circle => {
+        dm.setDrawingMode(null);
+        const color = zoneColors[zoneType]||"#219EBC";
+        circle.setOptions({fillColor:color, strokeColor:color});
+        onZoneSaved({
+          name: zoneName||"Nuova zona",
+          type: zoneType, shape:"circle", color,
+          center: {lat:circle.getCenter().lat(), lng:circle.getCenter().lng()},
+          radius: circle.getRadius()
+        });
+        circle.setMap(null);
+      });
+
+      window.google.maps.event.addListener(dm, "polygoncomplete", polygon => {
+        dm.setDrawingMode(null);
+        const color = zoneColors[zoneType]||"#219EBC";
+        polygon.setOptions({fillColor:color, strokeColor:color});
+        const path = polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
+        onZoneSaved({
+          name: zoneName||"Nuova zona",
+          type: zoneType, shape:"polygon", color, path
+        });
+        polygon.setMap(null);
+      });
+    };
+    if (!document.querySelector('script[src*="maps.googleapis"]')) {
+      const s = document.createElement("script");
+      s.src=`https://maps.googleapis.com/maps/api/js?key=AIzaSyBfgaG8lGRp7P8XGI-powaYfKufeLPebx8&libraries=drawing,geometry,visualization`;
+      s.async=true; s.onload=tryInit; document.head.appendChild(s);
+    } else tryInit();
+  }, []);
+
+  React.useEffect(() => {
+    if (!drawingManagerRef.current || !window.google) return;
+    if (drawingActive) {
+      const mode = drawingMode==="circle"
+        ? window.google.maps.drawing.OverlayType.CIRCLE
+        : window.google.maps.drawing.OverlayType.POLYGON;
+      drawingManagerRef.current.setDrawingMode(mode);
+    } else {
+      drawingManagerRef.current.setDrawingMode(null);
+    }
+  }, [drawingActive, drawingMode]);
+
+  return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
+}
+  function AdminApp({ user, onLogout }) {
   const [tab, setTab] = React.useState("dashboard");
   const [bikes, setBikes] = React.useState(initBikes);
   const [selBike, setSelBike] = React.useState(null);
