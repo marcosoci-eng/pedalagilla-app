@@ -182,9 +182,6 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
         });
         center = zone.center;
         shape.addListener("center_changed",()=>{
-          const idx = shapesRef.current.indexOf(shape);
-          if(idx>=0) { zones[idx].center={lat:shape.getCenter().lat(),lng:shape.getCenter().lng()}; }
-        });
         shape.addListener("radius_changed",()=>{
           const idx = shapesRef.current.indexOf(shape);
           if(idx>=0) { zones[idx].radius=shape.getRadius(); }
@@ -781,6 +778,7 @@ function AdminApp({ user, onLogout }) {
   const [drawingMode, setDrawingMode] = React.useState("circle");
   const [drawingActive, setDrawingActive] = React.useState(false);
   const [zoneName, setZoneName] = React.useState("");
+  const [zoneFilters, setZoneFilters] = React.useState({operativa:true,sosta:true,lenta:true,fuori:true});
   const [savedZones, setSavedZones] = React.useState([
   {name:"Area operativa Lago Trasimeno",type:"operativa",shape:"circle",color:"#00C853",center:{lat:43.1500,lng:12.0800},radius:25000},
   {name:"Sosta Passignano",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1876,lng:12.1978},radius:300},
@@ -1154,6 +1152,18 @@ function AdminApp({ user, onLogout }) {
 
           {tab==="zone"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Gestione zone</p>
+            <div style={{background:C.white,borderRadius:14,padding:12,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+  <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 10px",...ds}}>👁️ Mostra sulla mappa</p>
+  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+    {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([id,label,color])=>(
+      <div key={id} onClick={()=>setZoneFilters(prev=>({...prev,[id]:!prev[id]}))}
+        style={{background:zoneFilters[id]?color+"20":"#f5f5f5",borderRadius:10,padding:"8px 12px",cursor:"pointer",border:`2px solid ${zoneFilters[id]?color:"transparent"}`,display:"flex",alignItems:"center",gap:6}}>
+        <div style={{width:10,height:10,borderRadius:5,background:zoneFilters[id]?color:"#ccc"}}/>
+        <p style={{color:zoneFilters[id]?C.deepBlue:"#aaa",fontSize:11,...ds,fontWeight:600,margin:0}}>{label}</p>
+      </div>
+    ))}
+  </div>
+</div>
             <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🗺️ Tipi di zona</p>
               {[["Area operativa","#00C853","Dove le bici possono circolare"],["Area di sosta","#2196F3","Parcheggi autorizzati"],["Velocità ridotta","#FFB703","Zone turistiche/pedonali"],["Fuori zona","#FB8500","Addebito €20 automatico"]].map(([name,color,desc])=>(
@@ -1192,7 +1202,7 @@ function AdminApp({ user, onLogout }) {
               </button>
             </div>
             <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
-              <ZoneMapEditor zones={savedZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName}
+              <ZoneMapEditor zones={savedZones.filter(z=>zoneFilters[z.type]||false)} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName}
                 onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);}}/>
             </div>
             {savedZones.length>0&&<>
