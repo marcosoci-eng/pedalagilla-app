@@ -161,23 +161,56 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
     tryInit();
   }, []);
 
+ const markersRef = React.useRef([]);
+
   // Aggiorna zone sulla mappa quando cambiano
   React.useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
+    // Rimuovi shapes e markers vecchi
     shapesRef.current.forEach(s=>s.setMap(null));
+    markersRef.current.forEach(m=>m.setMap(null));
     shapesRef.current = [];
+    markersRef.current = [];
     zones.forEach(zone => {
       let shape;
+      let center = null;
       if (zone.shape==="circle" && zone.center) {
-        shape = new window.google.maps.Circle({map:mapInstanceRef.current,center:zone.center,radius:zone.radius||200,fillColor:zone.color,fillOpacity:0.3,strokeColor:zone.color,strokeWeight:2,draggable:true,editable:true});
-shape.addListener("center_changed",()=>{
-  const idx = shapesRef.current.indexOf(shape);
-  if(idx>=0) { zones[idx].center={lat:shape.getCenter().lat(),lng:shape.getCenter().lng()}; zones[idx].radius=shape.getRadius(); }
-});
-      } else if (zone.path) {
-        shape = new window.google.maps.Polygon({map:mapInstanceRef.current,paths:zone.path,fillColor:zone.color,fillOpacity:0.3,strokeColor:zone.color,strokeWeight:2,draggable:true,editable:true});
+        shape = new window.google.maps.Circle({
+          map:mapInstanceRef.current,center:zone.center,radius:zone.radius||200,
+          fillColor:zone.color,fillOpacity:0.2,strokeColor:zone.color,strokeWeight:2,
+          draggable:true,editable:true
+        });
+        center = zone.center;
+        shape.addListener("center_changed",()=>{
+          const idx = shapesRef.current.indexOf(shape);
+          if(idx>=0) { zones[idx].center={lat:shape.getCenter().lat(),lng:shape.getCenter().lng()}; }
+        });
+        shape.addListener("radius_changed",()=>{
+          const idx = shapesRef.current.indexOf(shape);
+          if(idx>=0) { zones[idx].radius=shape.getRadius(); }
+        });
+      } else if (zone.path && zone.path.length>0) {
+        shape = new window.google.maps.Polygon({
+          map:mapInstanceRef.current,paths:zone.path,
+          fillColor:zone.color,fillOpacity:0.2,strokeColor:zone.color,strokeWeight:2,
+          draggable:true,editable:true
+        });
+        const bounds = new window.google.maps.LatLngBounds();
+        zone.path.forEach(p=>bounds.extend(p));
+        const c = bounds.getCenter();
+        center = {lat:c.lat(),lng:c.lng()};
       }
       if (shape) shapesRef.current.push(shape);
+      // Aggiungi icona al centro
+      if (center && zone.type !== "operativa") {
+        const icon = zone.type==="sosta" ? "🅿️" : zone.type==="lenta" ? "🐢" : "⛔";
+        const marker = new window.google.maps.Marker({
+          position:center, map:mapInstanceRef.current,
+          label:{text:icon, fontSize:"18px"},
+          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}
+        });
+        markersRef.current.push(marker);
+      }
     });
   }, [zones]);
 
