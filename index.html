@@ -223,7 +223,9 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
     tryInit();
   }, []);
 
-  React.useEffect(() => { redrawZones(); }, [zones]);
+  React.useEffect(() => {
+    if (mapInstanceRef.current) redrawZones();
+  }, [zones]);
 
   React.useEffect(() => {
     const activate = () => {
