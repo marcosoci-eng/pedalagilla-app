@@ -136,7 +136,10 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
   const markersRef = React.useRef([]);
   const zoneColors = { operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500" };
   const zoneIcons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
-
+const zoneTypeRef = React.useRef(zoneType);
+  const zoneNameRef = React.useRef(zoneName);
+  React.useEffect(()=>{ zoneTypeRef.current = zoneType; }, [zoneType]);
+  React.useEffect(()=>{ zoneNameRef.current = zoneName; }, [zoneName]);
   const redrawZones = React.useCallback(() => {
     if (!mapInstanceRef.current || !window.google) return;
     shapesRef.current.forEach(s=>{ if(s) s.setMap(null); });
@@ -203,19 +206,23 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
       });
       dm.setMap(map);
       drawingManagerRef.current = dm;
-      window.google.maps.event.addListener(dm,"circlecomplete",circle=>{
+     window.google.maps.event.addListener(dm,"circlecomplete",circle=>{
         dm.setDrawingMode(null);
-        const color = zoneColors[zoneType]||"#219EBC";
-        circle.setOptions({fillColor:color,strokeColor:color});
-        onZoneSaved({name:zoneName||"Nuova zona",type:zoneType,shape:"circle",color,center:{lat:circle.getCenter().lat(),lng:circle.getCenter().lng()},radius:circle.getRadius()});
+        const zt = zoneTypeRef.current;
+        const zn = zoneNameRef.current;
+        const color = zoneColors[zt]||"#219EBC";
+        circle.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.2});
+        onZoneSaved({name:zn||"Nuova zona",type:zt,shape:"circle",color,center:{lat:circle.getCenter().lat(),lng:circle.getCenter().lng()},radius:circle.getRadius()});
         circle.setMap(null);
       });
       window.google.maps.event.addListener(dm,"polygoncomplete",polygon=>{
         dm.setDrawingMode(null);
-        const color = zoneColors[zoneType]||"#219EBC";
-        polygon.setOptions({fillColor:color,strokeColor:color});
+        const zt = zoneTypeRef.current;
+        const zn = zoneNameRef.current;
+        const color = zoneColors[zt]||"#219EBC";
+        polygon.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.2});
         const path = polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
-        onZoneSaved({name:zoneName||"Nuova zona",type:zoneType,shape:"polygon",color,path});
+        onZoneSaved({name:zn||"Nuova zona",type:zt,shape:"polygon",color,path});
         polygon.setMap(null);
       });
       redrawZones();
