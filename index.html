@@ -62,6 +62,7 @@ const TARIFFA_MIN = 0.19;
 const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
 const QR_BASE_URL = "https://pedalagilla-app-k3zm.vercel.app/?bike=";
+  const APP_URL = "https://pedalagilla-app-k3zm.vercel.app";
 const checklist = ["🔗 Lubrificazione catena","🦶 Controllo pedali","🧹 Pulizia veicolo","🔋 Controllo batteria","🛞 Pressione pneumatici","🛑 Test freni","⚙️ Controllo cambio"];
 
 const initBikes = [
@@ -1252,6 +1253,22 @@ function AdminApp({ user, onLogout }) {
             ))}
           </div>}
 {tab==="qr"&&<div className="slide" style={{padding:"16px 18px 0"}}>
+  {/* QR Download App */}
+<div style={{background:C.white,borderRadius:16,padding:20,marginBottom:16,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",textAlign:"center"}}>
+  <p style={{color:C.deepBlue,fontSize:15,fontWeight:700,margin:"0 0 4px",fontFamily:"Lora"}}>📱 QR Scarica l'app</p>
+  <p style={{color:"#aaa",fontSize:12,...ds,margin:"0 0 14px"}}>Mettilo su cartelli, volantini e hotel!</p>
+  <img
+    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`}
+    style={{width:180,height:180,borderRadius:12,border:`3px solid ${C.skyBlue}30`,marginBottom:14}}
+    alt="QR App"
+  />
+  <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 10px"}}>{APP_URL}</p>
+  <a href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`}
+    target="_blank"
+    style={{display:"block",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,borderRadius:12,padding:"12px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>
+    🖨️ Stampa QR in alta qualità
+  </a>
+</div>
   <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 14px",...ds,opacity:0.5}}>QR Code bici</p>
   <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:14,padding:14,marginBottom:16}}>
     <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>💡 Come usare</p>
