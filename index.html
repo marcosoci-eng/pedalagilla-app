@@ -1,3 +1,6 @@
+Scusa Marco! Mandiamo tutto il codice corretto in una volta sola. Vai su GitHub → **CTRL+A** → cancella tutto e incolla questo:
+
+```html
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -63,18 +66,28 @@ const QR_BASE_URL = "https://pedalagilla-app-k3zm.vercel.app/?bike=";
 const APP_URL = "https://pedalagilla-app-k3zm.vercel.app";
 const checklist = ["🔗 Lubrificazione catena","🦶 Controllo pedali","🧹 Pulizia veicolo","🔋 Controllo batteria","🛞 Pressione pneumatici","🛑 Test freni","⚙️ Controllo cambio"];
 const initBikes = [
-  { id:"PA-021", battery:88, status:"Disponibile", odometer:386.9, zone:"Passignano", model:"City Comfort", lat:43.1876, lng:12.1978, note:"", lastMaint:"15/03/2026", checks:{} },
-  { id:"PA-033", battery:100, status:"Disponibile", odometer:265, zone:"Castiglione", model:"City Comfort", lat:43.1208, lng:11.9847, note:"", lastMaint:"14/03/2026", checks:{} },
-  { id:"PA-035", battery:43, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"Trail Explorer", lat:43.2041, lng:12.0731, note:"Batteria scarica", lastMaint:"10/03/2026", checks:{} },
-  { id:"PA-012", battery:89, status:"Disponibile", odometer:346.7, zone:"Magione", model:"Trail Explorer", lat:43.1394, lng:12.2056, note:"", lastMaint:"16/03/2026", checks:{} },
-  { id:"PA-005", battery:76, status:"Disponibile", odometer:220.7, zone:"Passignano", model:"City Comfort", lat:43.1856, lng:12.1950, note:"", lastMaint:"15/03/2026", checks:{} },
-  { id:"PA-020", battery:74, status:"Disponibile", odometer:380.4, zone:"Panicale", model:"Trail Explorer", lat:43.0278, lng:12.1044, note:"", lastMaint:"13/03/2026", checks:{} },
-  { id:"PA-029", battery:80, status:"Disponibile", odometer:234.6, zone:"Castiglione", model:"City Comfort", lat:43.1228, lng:11.9820, note:"", lastMaint:"16/03/2026", checks:{} },
-  { id:"PA-039", battery:78, status:"Disponibile", odometer:561.8, zone:"Tuoro", model:"Trail Explorer", lat:43.2061, lng:12.0780, note:"", lastMaint:"12/03/2026", checks:{} },
-  { id:"PA-034", battery:100, status:"Manutenzione", odometer:157.5, zone:"Magione", model:"City Comfort", lat:43.1414, lng:12.2080, note:"Pick up programmato", lastMaint:"11/03/2026", checks:{} },
-  { id:"PA-003", battery:77, status:"Disponibile", odometer:351.3, zone:"Passignano", model:"City Comfort", lat:43.1896, lng:12.1990, note:"", lastMaint:"15/03/2026", checks:{} },
-  { id:"PA-016", battery:96, status:"Disponibile", odometer:502.8, zone:"Panicale", model:"Trail Explorer", lat:43.0298, lng:12.1020, note:"", lastMaint:"16/03/2026", checks:{} },
-  { id:"PA-015", battery:30, status:"Manutenzione", odometer:0, zone:"Tuoro", model:"City Comfort", lat:43.2021, lng:12.0750, note:"Sostituzione batteria", lastMaint:"09/03/2026", checks:{} },
+  {id:"PA-021",battery:88,status:"Disponibile",odometer:386.9,zone:"Passignano",model:"City Comfort",lat:43.1876,lng:12.1978,note:"",lastMaint:"15/03/2026",checks:{}},
+  {id:"PA-033",battery:100,status:"Disponibile",odometer:265,zone:"Castiglione",model:"City Comfort",lat:43.1208,lng:11.9847,note:"",lastMaint:"14/03/2026",checks:{}},
+  {id:"PA-035",battery:43,status:"Manutenzione",odometer:0,zone:"Tuoro",model:"Trail Explorer",lat:43.2041,lng:12.0731,note:"Batteria scarica",lastMaint:"10/03/2026",checks:{}},
+  {id:"PA-012",battery:89,status:"Disponibile",odometer:346.7,zone:"Magione",model:"Trail Explorer",lat:43.1394,lng:12.2056,note:"",lastMaint:"16/03/2026",checks:{}},
+  {id:"PA-005",battery:76,status:"Disponibile",odometer:220.7,zone:"Passignano",model:"City Comfort",lat:43.1856,lng:12.1950,note:"",lastMaint:"15/03/2026",checks:{}},
+  {id:"PA-020",battery:74,status:"Disponibile",odometer:380.4,zone:"Panicale",model:"Trail Explorer",lat:43.0278,lng:12.1044,note:"",lastMaint:"13/03/2026",checks:{}},
+  {id:"PA-029",battery:80,status:"Disponibile",odometer:234.6,zone:"Castiglione",model:"City Comfort",lat:43.1228,lng:11.9820,note:"",lastMaint:"16/03/2026",checks:{}},
+  {id:"PA-039",battery:78,status:"Disponibile",odometer:561.8,zone:"Tuoro",model:"Trail Explorer",lat:43.2061,lng:12.0780,note:"",lastMaint:"12/03/2026",checks:{}},
+  {id:"PA-034",battery:100,status:"Manutenzione",odometer:157.5,zone:"Magione",model:"City Comfort",lat:43.1414,lng:12.2080,note:"Pick up programmato",lastMaint:"11/03/2026",checks:{}},
+  {id:"PA-003",battery:77,status:"Disponibile",odometer:351.3,zone:"Passignano",model:"City Comfort",lat:43.1896,lng:12.1990,note:"",lastMaint:"15/03/2026",checks:{}},
+  {id:"PA-016",battery:96,status:"Disponibile",odometer:502.8,zone:"Panicale",model:"Trail Explorer",lat:43.0298,lng:12.1020,note:"",lastMaint:"16/03/2026",checks:{}},
+  {id:"PA-015",battery:30,status:"Manutenzione",odometer:0,zone:"Tuoro",model:"City Comfort",lat:43.2021,lng:12.0750,note:"Sostituzione batteria",lastMaint:"09/03/2026",checks:{}},
+];
+const DEFAULT_ZONES = [
+  {name:"Area operativa Lago Trasimeno",type:"operativa",shape:"circle",color:"#00C853",center:{lat:43.1500,lng:12.0800},radius:25000},
+  {name:"Sosta Passignano",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1876,lng:12.1978},radius:300},
+  {name:"Sosta Castiglione",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1208,lng:11.9847},radius:300},
+  {name:"Sosta Tuoro",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.2041,lng:12.0731},radius:300},
+  {name:"Sosta Magione",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1394,lng:12.2056},radius:300},
+  {name:"Sosta Panicale",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.0278,lng:12.1044},radius:300},
+  {name:"Vel. ridotta Passignano",type:"lenta",shape:"circle",color:"#FFB703",center:{lat:43.1876,lng:12.1978},radius:120},
+  {name:"Vel. ridotta Castiglione",type:"lenta",shape:"circle",color:"#FFB703",center:{lat:43.1208,lng:11.9847},radius:120},
 ];
 const getBattColor = (b) => b>=80 ? C.blueGreen : b>=50 ? C.sunYellow : C.warmOrange;
 const getStatusColor = (s) => s==="Disponibile" ? C.blueGreen : C.warmOrange;
@@ -83,7 +96,6 @@ const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:tran
 const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
 const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
 
-// ── MAPPA ─────────────────────────────────────────────
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
@@ -119,15 +131,65 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }
   return <div ref={mapRef} style={style} />;
 }
 
-// ── ZONE MAP EDITOR ───────────────────────────────────
 function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const drawingManagerRef = React.useRef(null);
   const shapesRef = React.useRef([]);
+  const markersRef = React.useRef([]);
   const zoneColors = { operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500" };
+  const zoneIcons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
 
-  // Init mappa una sola volta
+  const redrawZones = React.useCallback(() => {
+    if (!mapInstanceRef.current || !window.google) return;
+    shapesRef.current.forEach(s=>s.setMap(null));
+    markersRef.current.forEach(m=>m.setMap(null));
+    shapesRef.current = [];
+    markersRef.current = [];
+    zones.forEach((zone, idx) => {
+      let shape = null;
+      let center = null;
+      if (zone.shape==="circle" && zone.center) {
+        shape = new window.google.maps.Circle({
+          map:mapInstanceRef.current, center:zone.center, radius:zone.radius||200,
+          fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2,
+          draggable:true, editable:true
+        });
+        center = {lat:zone.center.lat, lng:zone.center.lng};
+        // Aggiorna marker quando cerchio si sposta
+        shape.addListener("center_changed", ()=>{
+          const newCenter = shape.getCenter();
+          if (markersRef.current[idx]) markersRef.current[idx].setPosition(newCenter);
+          zone.center = {lat:newCenter.lat(), lng:newCenter.lng()};
+        });
+        shape.addListener("radius_changed", ()=>{ zone.radius = shape.getRadius(); });
+      } else if (zone.path && zone.path.length>0) {
+        shape = new window.google.maps.Polygon({
+          map:mapInstanceRef.current, paths:zone.path,
+          fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2,
+          draggable:true, editable:true
+        });
+        const bounds = new window.google.maps.LatLngBounds();
+        zone.path.forEach(p=>bounds.extend(p));
+        const c = bounds.getCenter();
+        center = {lat:c.lat(), lng:c.lng()};
+      }
+      if (shape) shapesRef.current[idx] = shape;
+      // Icona al centro (non per operativa)
+      if (center && zone.type !== "operativa" && zoneIcons[zone.type]) {
+        const marker = new window.google.maps.Marker({
+          position:center, map:mapInstanceRef.current,
+          label:{text:zoneIcons[zone.type], fontSize:"20px", fontWeight:"bold"},
+          icon:{path:window.google.maps.SymbolPath.CIRCLE, scale:0, fillOpacity:0, strokeOpacity:0},
+          zIndex:10
+        });
+        markersRef.current[idx] = marker;
+      } else {
+        markersRef.current[idx] = null;
+      }
+    });
+  }, [zones]);
+
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
@@ -139,92 +201,42 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
       mapInstanceRef.current = map;
       const dm = new window.google.maps.drawing.DrawingManager({
         drawingMode:null, drawingControl:false,
-        circleOptions:{fillColor:"#219EBC",fillOpacity:0.3,strokeColor:"#219EBC",strokeWeight:2,editable:false},
-        polygonOptions:{fillColor:"#219EBC",fillOpacity:0.3,strokeColor:"#219EBC",strokeWeight:2,editable:false}
+        circleOptions:{fillColor:"#219EBC",fillOpacity:0.2,strokeColor:"#219EBC",strokeWeight:2,editable:false},
+        polygonOptions:{fillColor:"#219EBC",fillOpacity:0.2,strokeColor:"#219EBC",strokeWeight:2,editable:false}
       });
       dm.setMap(map);
       drawingManagerRef.current = dm;
       window.google.maps.event.addListener(dm,"circlecomplete",circle=>{
         dm.setDrawingMode(null);
         const color = zoneColors[zoneType]||"#219EBC";
-        circle.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.3});
+        circle.setOptions({fillColor:color,strokeColor:color});
         onZoneSaved({name:zoneName||"Nuova zona",type:zoneType,shape:"circle",color,center:{lat:circle.getCenter().lat(),lng:circle.getCenter().lng()},radius:circle.getRadius()});
+        circle.setMap(null);
       });
       window.google.maps.event.addListener(dm,"polygoncomplete",polygon=>{
         dm.setDrawingMode(null);
         const color = zoneColors[zoneType]||"#219EBC";
-        polygon.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.3});
+        polygon.setOptions({fillColor:color,strokeColor:color});
         const path = polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
         onZoneSaved({name:zoneName||"Nuova zona",type:zoneType,shape:"polygon",color,path});
+        polygon.setMap(null);
       });
+      redrawZones();
     };
     tryInit();
   }, []);
 
- const markersRef = React.useRef([]);
+  React.useEffect(() => { redrawZones(); }, [zones]);
 
-  // Aggiorna zone sulla mappa quando cambiano
-  React.useEffect(() => {
-    if (!mapInstanceRef.current || !window.google) return;
-    // Rimuovi shapes e markers vecchi
-    shapesRef.current.forEach(s=>s.setMap(null));
-    markersRef.current.forEach(m=>m.setMap(null));
-    shapesRef.current = [];
-    markersRef.current = [];
-    zones.forEach(zone => {
-      let shape;
-      let center = null;
-      if (zone.shape==="circle" && zone.center) {
-        shape = new window.google.maps.Circle({
-          map:mapInstanceRef.current,center:zone.center,radius:zone.radius||200,
-          fillColor:zone.color,fillOpacity:0.2,strokeColor:zone.color,strokeWeight:2,
-          draggable:true,editable:true
-        });
-        center = zone.center;
-        shape.addListener("center_changed",()=>{
-        shape.addListener("radius_changed",()=>{
-          const idx = shapesRef.current.indexOf(shape);
-          if(idx>=0) { zones[idx].radius=shape.getRadius(); }
-        });
-      } else if (zone.path && zone.path.length>0) {
-        shape = new window.google.maps.Polygon({
-          map:mapInstanceRef.current,paths:zone.path,
-          fillColor:zone.color,fillOpacity:0.2,strokeColor:zone.color,strokeWeight:2,
-          draggable:true,editable:true
-        });
-        const bounds = new window.google.maps.LatLngBounds();
-        zone.path.forEach(p=>bounds.extend(p));
-        const c = bounds.getCenter();
-        center = {lat:c.lat(),lng:c.lng()};
-      }
-      if (shape) shapesRef.current.push(shape);
-      // Aggiungi icona al centro
-      if (center && zone.type !== "operativa") {
-        const icon = zone.type==="sosta" ? "🅿️" : zone.type==="lenta" ? "🐢" : "⛔";
-        const marker = new window.google.maps.Marker({
-          position:center, map:mapInstanceRef.current,
-          label:{text:icon, fontSize:"18px"},
-          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}
-        });
-        markersRef.current.push(marker);
-      }
-    });
-  }, [zones]);
-
-  // Attiva/disattiva drawing mode
   React.useEffect(() => {
     const activate = () => {
       if (!drawingManagerRef.current || !window.google || !window.google.maps.drawing) {
         if (drawingActive) setTimeout(activate, 300);
         return;
       }
-      if (drawingActive) {
-        drawingManagerRef.current.setDrawingMode(
-          drawingMode==="circle" ? window.google.maps.drawing.OverlayType.CIRCLE : window.google.maps.drawing.OverlayType.POLYGON
-        );
-      } else {
-        drawingManagerRef.current.setDrawingMode(null);
-      }
+      drawingManagerRef.current.setDrawingMode(
+        drawingActive ? (drawingMode==="circle" ? window.google.maps.drawing.OverlayType.CIRCLE : window.google.maps.drawing.OverlayType.POLYGON) : null
+      );
     };
     activate();
   }, [drawingActive, drawingMode]);
@@ -232,7 +244,6 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
 
-// ── PAGAMENTO ─────────────────────────────────────────
 function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
   const cardRef = React.useRef(null);
   const cardEl = React.useRef(null);
@@ -278,7 +289,6 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
   );
 }
 
-// ── AUTH ──────────────────────────────────────────────
 function AuthScreen({ onLogin }) {
   const [mode, setMode] = React.useState("login");
   const [email, setEmail] = React.useState("");
@@ -402,7 +412,6 @@ function AuthScreen({ onLogin }) {
   );
 }
 
-// ── TIMER CORSA ───────────────────────────────────────
 function RideTimer({ bike, plan, user, rideId, onEnd }) {
   const [seconds, setSeconds] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
@@ -513,7 +522,6 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
   );
 }
 
-// ── APP CLIENTE ───────────────────────────────────────
 function ClienteApp({ user, onLogout }) {
   const bikes = initBikes.filter(b=>b.status==="Disponibile");
   const [tab, setTab] = React.useState("mappa");
@@ -528,7 +536,6 @@ function ClienteApp({ user, onLogout }) {
   const [rideSummary, setRideSummary] = React.useState(null);
   const [showQRScanner, setShowQRScanner] = React.useState(false);
   const qrIntervalRef = React.useRef(null);
-
   React.useEffect(() => {
     if (!showQRScanner) {
       clearInterval(qrIntervalRef.current);
@@ -551,12 +558,10 @@ function ClienteApp({ user, onLogout }) {
       },500);
     }).catch(()=>alert("Fotocamera non accessibile"));
   },[showQRScanner]);
-
   React.useEffect(() => {
     const bikeId=getUrlBike();
     if(bikeId){ const bike=bikes.find(b=>b.id===bikeId); if(bike){setSelectedBike(bike);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`); window.history.replaceState({},"","/"); }
   },[]);
-
   const payAmount=plan==="giornata"?TARIFFA_GIORNATA:SBLOCCO;
   const plans=[
     {id:"minuti",label:"Al minuto",icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)} sblocco + €${TARIFFA_MIN}/min · pausa €${TARIFFA_PAUSA}/min`},
@@ -573,7 +578,6 @@ function ClienteApp({ user, onLogout }) {
     setRiding(true);setConfirmed(selectedBike);
   };
   const handleEndRide=(secs,cost)=>{setRiding(false);setRideSummary({bike:confirmed,secs,cost});setShowSummary(true);};
-
   return(
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <style>{css}</style>
@@ -758,7 +762,6 @@ function ClienteApp({ user, onLogout }) {
   );
 }
 
-// ── APP ADMIN ─────────────────────────────────────────
 function AdminApp({ user, onLogout }) {
   const [tab, setTab] = React.useState("dashboard");
   const [bikes, setBikes] = React.useState(initBikes);
@@ -778,17 +781,8 @@ function AdminApp({ user, onLogout }) {
   const [drawingMode, setDrawingMode] = React.useState("circle");
   const [drawingActive, setDrawingActive] = React.useState(false);
   const [zoneName, setZoneName] = React.useState("");
+  const [savedZones, setSavedZones] = React.useState(DEFAULT_ZONES);
   const [zoneFilters, setZoneFilters] = React.useState({operativa:true,sosta:true,lenta:true,fuori:true});
-  const [savedZones, setSavedZones] = React.useState([
-  {name:"Area operativa Lago Trasimeno",type:"operativa",shape:"circle",color:"#00C853",center:{lat:43.1500,lng:12.0800},radius:25000},
-  {name:"Sosta Passignano",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1876,lng:12.1978},radius:300},
-  {name:"Sosta Castiglione",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1208,lng:11.9847},radius:300},
-  {name:"Sosta Tuoro",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.2041,lng:12.0731},radius:300},
-  {name:"Sosta Magione",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1394,lng:12.2056},radius:300},
-  {name:"Sosta Panicale",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.0278,lng:12.1044},radius:300},
-  {name:"Velocità ridotta Passignano centro",type:"lenta",shape:"circle",color:"#FFB703",center:{lat:43.1876,lng:12.1978},radius:150},
-  {name:"Velocità ridotta Castiglione centro",type:"lenta",shape:"circle",color:"#FFB703",center:{lat:43.1208,lng:11.9847},radius:150},
-]);
 
   const today = new Date().toLocaleDateString("it-IT");
   const todayRides = rides.filter(r=>r.date===today);
@@ -801,6 +795,7 @@ function AdminApp({ user, onLogout }) {
   const avg = Math.round(bikes.reduce((a,b)=>a+b.battery,0)/bikes.length);
   const filteredBikes = filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>b.battery<50);
   const mapBikes = mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
+  const visibleZones = savedZones.filter(z=>zoneFilters[z.type]);
 
   React.useEffect(()=>{
     const load=async()=>{
@@ -821,7 +816,6 @@ function AdminApp({ user, onLogout }) {
   const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
   const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
   const toggleStatus=(bikeId)=>{setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b));};
-
   const forceEndRide=async(ride)=>{
     const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2));
     if(importoStr===null) return;
@@ -829,7 +823,6 @@ function AdminApp({ user, onLogout }) {
     try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true}); }
     catch(e){alert("Errore: "+e.message);}
   };
-
   const exportExcel=()=>{
     const data=fbUsers.map(u=>({"Nome":u.nome||"","Cognome":u.cognome||"","Email":u.email||"","Telefono":u.telefono||"","Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):""}));
     if(!data.length){alert("Nessun utente da esportare");return;}
@@ -1152,30 +1145,22 @@ function AdminApp({ user, onLogout }) {
 
           {tab==="zone"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Gestione zone</p>
+
+            {/* Filtri visibilità */}
             <div style={{background:C.white,borderRadius:14,padding:12,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-  <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 10px",...ds}}>👁️ Mostra sulla mappa</p>
-  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-    {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([id,label,color])=>(
-      <div key={id} onClick={()=>setZoneFilters(prev=>({...prev,[id]:!prev[id]}))}
-        style={{background:zoneFilters[id]?color+"20":"#f5f5f5",borderRadius:10,padding:"8px 12px",cursor:"pointer",border:`2px solid ${zoneFilters[id]?color:"transparent"}`,display:"flex",alignItems:"center",gap:6}}>
-        <div style={{width:10,height:10,borderRadius:5,background:zoneFilters[id]?color:"#ccc"}}/>
-        <p style={{color:zoneFilters[id]?C.deepBlue:"#aaa",fontSize:11,...ds,fontWeight:600,margin:0}}>{label}</p>
-      </div>
-    ))}
-  </div>
-</div>
-            <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-              <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🗺️ Tipi di zona</p>
-              {[["Area operativa","#00C853","Dove le bici possono circolare"],["Area di sosta","#2196F3","Parcheggi autorizzati"],["Velocità ridotta","#FFB703","Zone turistiche/pedonali"],["Fuori zona","#FB8500","Addebito €20 automatico"]].map(([name,color,desc])=>(
-                <div key={name} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                  <div style={{width:14,height:14,borderRadius:3,background:color,flexShrink:0}}/>
-                  <div>
-                    <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:0,...ds}}>{name}</p>
-                    <p style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{desc}</p>
+              <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 10px",...ds}}>👁️ Mostra sulla mappa</p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {[["operativa","🟢 Operativa","#00C853"],["sosta","🅿️ Sosta","#2196F3"],["lenta","🐢 Vel. ridotta","#FFB703"],["fuori","⛔ Fuori zona","#FB8500"]].map(([id,label,color])=>(
+                  <div key={id} onClick={()=>setZoneFilters(prev=>({...prev,[id]:!prev[id]}))}
+                    style={{background:zoneFilters[id]?color+"20":"#f5f5f5",borderRadius:10,padding:"8px 12px",cursor:"pointer",border:`2px solid ${zoneFilters[id]?color:"transparent"}`,display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:10,height:10,borderRadius:5,background:zoneFilters[id]?color:"#ccc"}}/>
+                    <p style={{color:zoneFilters[id]?C.deepBlue:"#aaa",fontSize:11,...ds,fontWeight:600,margin:0}}>{label}</p>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {/* Disegna nuova zona */}
             <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>✏️ Disegna nuova zona</p>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
@@ -1201,26 +1186,31 @@ function AdminApp({ user, onLogout }) {
                 ✏️ Inizia a disegnare
               </button>
             </div>
+
+            {/* Mappa zone */}
             <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
-              <ZoneMapEditor zones={savedZones.filter(z=>zoneFilters[z.type]||false)} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName}
-                onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);}}/>
+              <ZoneMapEditor
+                zones={visibleZones}
+                zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName}
+                onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);setZoneName("");}}
+              />
             </div>
-            {savedZones.length>0&&<>
-              <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone salvate ({savedZones.length})</p>
-              {savedZones.map((zone,i)=>(
-                <div key={i} style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/>
-                    <div>
-                      <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>{zone.name}</p>
-                      <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{zone.type} · {zone.shape}</p>
-                    </div>
+
+            {/* Zone salvate */}
+            <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone ({savedZones.length})</p>
+            {savedZones.map((zone,i)=>(
+              <div key={i} style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/>
+                  <div>
+                    <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>{zone.name}</p>
+                    <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{zone.type} · {zone.shape}</p>
                   </div>
-                  <button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))}
-                    style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>🗑️</button>
                 </div>
-              ))}
-            </>}
+                <button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))}
+                  style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>🗑️</button>
+              </div>
+            ))}
           </div>}
 
           {tab==="qr"&&<div className="slide" style={{padding:"16px 18px 0"}}>
@@ -1240,7 +1230,7 @@ function AdminApp({ user, onLogout }) {
               <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>💡 Come usare</p>
               <p style={{color:"#888",fontSize:12,...ds,margin:0}}>Stampa il QR di ogni bici e attaccalo al telaio. Il cliente lo scansiona per sbloccarla.</p>
             </div>
-            {bikes.map(bike=>(
+            {initBikes.map(bike=>(
               <div key={bike.id} style={{background:C.white,borderRadius:14,padding:16,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                   <div>
@@ -1336,3 +1326,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<Main/>);
 </script>
 </body>
 </html>
+```
+
+Clicca **"Conferma le modifiche"** e dimmi **"fatto"**! 😊
