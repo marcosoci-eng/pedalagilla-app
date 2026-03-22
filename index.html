@@ -173,7 +173,13 @@ function ZoneMapEditor({ bikes, zones, zoneType, drawingMode, drawingActive, zon
   }, []);
 
   React.useEffect(() => {
-    if (!drawingManagerRef.current||!window.google||!window.google.maps.drawing) return;
+    if (!drawingManagerRef.current||!window.google||!window.google.maps.drawing) {
+      if (drawingActive) setTimeout(()=>{
+        if (!drawingManagerRef.current) return;
+        drawingManagerRef.current.setDrawingMode(drawingMode==="circle"?window.google.maps.drawing.OverlayType.CIRCLE:window.google.maps.drawing.OverlayType.POLYGON);
+      },500);
+      return;
+    }
     if (drawingActive) {
       drawingManagerRef.current.setDrawingMode(drawingMode==="circle"?window.google.maps.drawing.OverlayType.CIRCLE:window.google.maps.drawing.OverlayType.POLYGON);
     } else {
