@@ -169,9 +169,13 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
     zones.forEach(zone => {
       let shape;
       if (zone.shape==="circle" && zone.center) {
-        shape = new window.google.maps.Circle({map:mapInstanceRef.current,center:zone.center,radius:zone.radius||200,fillColor:zone.color,fillOpacity:0.3,strokeColor:zone.color,strokeWeight:2});
+        shape = new window.google.maps.Circle({map:mapInstanceRef.current,center:zone.center,radius:zone.radius||200,fillColor:zone.color,fillOpacity:0.3,strokeColor:zone.color,strokeWeight:2,draggable:true,editable:true});
+shape.addListener("center_changed",()=>{
+  const idx = shapesRef.current.indexOf(shape);
+  if(idx>=0) { zones[idx].center={lat:shape.getCenter().lat(),lng:shape.getCenter().lng()}; zones[idx].radius=shape.getRadius(); }
+});
       } else if (zone.path) {
-        shape = new window.google.maps.Polygon({map:mapInstanceRef.current,paths:zone.path,fillColor:zone.color,fillOpacity:0.3,strokeColor:zone.color,strokeWeight:2});
+        shape = new window.google.maps.Polygon({map:mapInstanceRef.current,paths:zone.path,fillColor:zone.color,fillOpacity:0.3,strokeColor:zone.color,strokeWeight:2,draggable:true,editable:true});
       }
       if (shape) shapesRef.current.push(shape);
     });
@@ -744,7 +748,16 @@ function AdminApp({ user, onLogout }) {
   const [drawingMode, setDrawingMode] = React.useState("circle");
   const [drawingActive, setDrawingActive] = React.useState(false);
   const [zoneName, setZoneName] = React.useState("");
-  const [savedZones, setSavedZones] = React.useState([]);
+  const [savedZones, setSavedZones] = React.useState([
+  {name:"Area operativa Lago Trasimeno",type:"operativa",shape:"circle",color:"#00C853",center:{lat:43.1500,lng:12.0800},radius:25000},
+  {name:"Sosta Passignano",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1876,lng:12.1978},radius:300},
+  {name:"Sosta Castiglione",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1208,lng:11.9847},radius:300},
+  {name:"Sosta Tuoro",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.2041,lng:12.0731},radius:300},
+  {name:"Sosta Magione",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.1394,lng:12.2056},radius:300},
+  {name:"Sosta Panicale",type:"sosta",shape:"circle",color:"#2196F3",center:{lat:43.0278,lng:12.1044},radius:300},
+  {name:"Velocità ridotta Passignano centro",type:"lenta",shape:"circle",color:"#FFB703",center:{lat:43.1876,lng:12.1978},radius:150},
+  {name:"Velocità ridotta Castiglione centro",type:"lenta",shape:"circle",color:"#FFB703",center:{lat:43.1208,lng:11.9847},radius:150},
+]);
 
   const today = new Date().toLocaleDateString("it-IT");
   const todayRides = rides.filter(r=>r.date===today);
