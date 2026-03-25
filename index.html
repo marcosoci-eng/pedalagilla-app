@@ -153,7 +153,18 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
           label:{text:`${bike.battery}%`,color:"#ffffff",fontSize:"10px",fontWeight:"bold"},
           icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:16,fillColor:bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500",fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2}
         });
-        const iw = new window.google.maps.InfoWindow({content:`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span><br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`});
+        const distanceText = window._userPosition ? (() => {
+          const R=6371000;
+          const lat1=window._userPosition.lat*Math.PI/180;
+          const lat2=bike.lat*Math.PI/180;
+          const dLat=(bike.lat-window._userPosition.lat)*Math.PI/180;
+          const dLng=(bike.lng-window._userPosition.lng)*Math.PI/180;
+          const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)*Math.sin(dLng/2);
+          const d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+          const mins=Math.round(d/80);
+          return d<1000?`🚶 ${Math.round(d)}m · ~${mins} min`:`🚶 ${(d/1000).toFixed(1)}km · ~${mins} min`;
+        })() : "";
+        const iw = new window.google.maps.InfoWindow({content:`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>${distanceText?`<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>`:""}<br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`});
         marker.addListener("click",()=>{ iw.open(map,marker); onBikeClick(bike); });
       });
       // Disegna zone sulla mappa
@@ -610,6 +621,13 @@ function ClienteApp({ user, onLogout }) {
   const [showQRScanner, setShowQRScanner] = React.useState(false);
   const qrIntervalRef = React.useRef(null);
   const [clientZones, setClientZones] = React.useState([]);
+  // GPS utente per distanza a piedi
+  React.useEffect(()=>{
+    if (!navigator.geolocation) return;
+    navigator.geolocation.watchPosition(pos=>{
+      window._userPosition = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+    },()=>{},{enableHighAccuracy:true});
+  },[]);
 
   // Carica zone da Firebase
   React.useEffect(()=>{
