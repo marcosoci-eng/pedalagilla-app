@@ -212,9 +212,16 @@ const zoneTypeRef = React.useRef(zoneType);
     if (!mapInstanceRef.current || !window.google) return;
     shapesRef.current.forEach(s=>{ if(s) s.setMap(null); });
     markersRef.current.forEach(m=>{ if(m) m.setMap(null); });
-    shapesRef.current = [];
-    markersRef.current = [];
-   
+  shapesRef.current = [];
+    zones.forEach((zone, idx) => {
+      let shape = null;
+      let center = null;
+      if (zone.shape==="circle" && zone.center) {
+        shape = new window.google.maps.Circle({
+          map:mapInstanceRef.current, center:zone.center, radius:zone.radius||200,
+          fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2,
+          draggable:true, editable:true
+        });
         center = {lat:zone.center.lat, lng:zone.center.lng};
         // Aggiorna marker quando cerchio si sposta
         shape.addListener("center_changed", ()=>{
