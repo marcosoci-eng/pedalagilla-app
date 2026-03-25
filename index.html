@@ -93,7 +93,7 @@ const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:tran
 const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
 const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
 
-function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }) {
+function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], zones=[] }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   React.useEffect(() => {
@@ -113,6 +113,32 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[] }
         });
         const iw = new window.google.maps.InfoWindow({content:`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span><br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`});
         marker.addListener("click",()=>{ iw.open(map,marker); onBikeClick(bike); });
+      });
+      // Disegna zone sulla mappa
+      zones.forEach(zone => {
+        if (zone.shape==="circle" && zone.center) {
+          new window.google.maps.Circle({
+            map, center:zone.center, radius:zone.radius||200,
+            fillColor:zone.color, fillOpacity:0.15,
+            strokeColor:zone.color, strokeWeight:1.5
+          });
+          if (zone.type!=="operativa") {
+            const icons = {sosta:"🅿️", lenta:"🐢", fuori:"⛔"};
+            if (icons[zone.type]) {
+              new window.google.maps.Marker({
+                position:zone.center, map,
+                label:{text:icons[zone.type], fontSize:"16px"},
+                icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}
+              });
+            }
+          }
+        } else if (zone.path && zone.path.length>0) {
+          new window.google.maps.Polygon({
+            map, paths:zone.path,
+            fillColor:zone.color, fillOpacity:0.15,
+            strokeColor:zone.color, strokeWeight:1.5
+          });
+        }
       });
       tracks.forEach(track => {
         if (track.points && track.points.length > 1) {
@@ -542,6 +568,21 @@ function ClienteApp({ user, onLogout }) {
   const [rideSummary, setRideSummary] = React.useState(null);
   const [showQRScanner, setShowQRScanner] = React.useState(false);
   const qrIntervalRef = React.useRef(null);
+  const [clientZones, setClientZones] = React.useState([]);
+
+  // Carica zone da Firebase
+  React.useEffect(()=>{
+    const load = async () => {
+      try {
+        await waitFB();
+        const {doc,getDoc} = window.firebaseFunctions;
+        const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
+        if(snap.exists()) setClientZones(snap.data().zones||[]);
+        else setClientZones(DEFAULT_ZONES);
+      } catch(e){ setClientZones(DEFAULT_ZONES); }
+    };
+    load();
+  },[]);
   React.useEffect(() => {
     if (!showQRScanner) {
       clearInterval(qrIntervalRef.current);
@@ -696,7 +737,7 @@ function ClienteApp({ user, onLogout }) {
               </div>
             </div>
             <div style={{position:"absolute",inset:0}}>
-              <MapView bikes={bikes} onBikeClick={handleBikeClick} fullscreen={true}/>
+              <MapView bikes={bikes} onBikeClick={handleBikeClick} fullscreen={true} zones={clientZones}/>
             </div>
             <div style={{position:"absolute",bottom:80,left:12,right:12,zIndex:10}}>
               <button onClick={()=>setShowQRScanner(true)}
@@ -789,6 +830,18 @@ function AdminApp({ user, onLogout }) {
   const [zoneName, setZoneName] = React.useState("");
   const [savedZones, setSavedZones] = React.useState(DEFAULT_ZONES);
   const [zoneFilters, setZoneFilters] = React.useState({operativa:true,sosta:true,lenta:true,fuori:true});
+
+  // Salva zone su Firebase quando cambiano
+  React.useEffect(()=>{
+    const saveZones = async () => {
+      try {
+        await waitFB();
+        const {doc,setDoc} = window.firebaseFunctions;
+        await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()});
+      } catch(e){ console.log("Errore salvataggio zone:",e); }
+    };
+    if(savedZones!==DEFAULT_ZONES) saveZones();
+  },[savedZones]);
 
   const today = new Date().toLocaleDateString("it-IT");
   const todayRides = rides.filter(r=>r.date===today);
