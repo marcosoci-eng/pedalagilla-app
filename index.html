@@ -96,6 +96,48 @@ const getUrlBike = () => { const params = new URLSearchParams(window.location.se
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], zones=[] }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
+  const zoneShapesRef = React.useRef([]);
+  const zoneMarkersRef = React.useRef([]);
+
+  // Aggiorna zone quando cambiano
+  React.useEffect(() => {
+    if (!mapInstanceRef.current || !window.google) return;
+    zoneShapesRef.current.forEach(s=>{ if(s) s.setMap(null); });
+    zoneMarkersRef.current.forEach(m=>{ if(m) m.setMap(null); });
+    zoneShapesRef.current = [];
+    zoneMarkersRef.current = [];
+    const icons = {sosta:"🅿️", lenta:"🐢", fuori:"⛔"};
+    zones.forEach(zone => {
+      let shape = null;
+      let center = null;
+      if (zone.shape==="circle" && zone.center) {
+        shape = new window.google.maps.Circle({
+          map:mapInstanceRef.current, center:zone.center, radius:zone.radius||200,
+          fillColor:zone.color, fillOpacity:0.15, strokeColor:zone.color, strokeWeight:1.5
+        });
+        center = zone.center;
+      } else if (zone.path && zone.path.length>0) {
+        shape = new window.google.maps.Polygon({
+          map:mapInstanceRef.current, paths:zone.path,
+          fillColor:zone.color, fillOpacity:0.15, strokeColor:zone.color, strokeWeight:1.5
+        });
+        const bounds = new window.google.maps.LatLngBounds();
+        zone.path.forEach(p=>bounds.extend(p));
+        const c = bounds.getCenter();
+        center = {lat:c.lat(), lng:c.lng()};
+      }
+      if (shape) zoneShapesRef.current.push(shape);
+      if (center && zone.type!=="operativa" && icons[zone.type]) {
+        const marker = new window.google.maps.Marker({
+          position:center, map:mapInstanceRef.current,
+          label:{text:icons[zone.type], fontSize:"16px"},
+          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}
+        });
+        zoneMarkersRef.current.push(marker);
+      }
+    });
+  }, [zones, mapInstanceRef.current]);
+
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
@@ -172,15 +214,7 @@ const zoneTypeRef = React.useRef(zoneType);
     markersRef.current.forEach(m=>{ if(m) m.setMap(null); });
     shapesRef.current = [];
     markersRef.current = [];
-    zones.forEach((zone, idx) => {
-      let shape = null;
-      let center = null;
-      if (zone.shape==="circle" && zone.center) {
-        shape = new window.google.maps.Circle({
-          map:mapInstanceRef.current, center:zone.center, radius:zone.radius||200,
-          fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2,
-          draggable:true, editable:true
-        });
+   
         center = {lat:zone.center.lat, lng:zone.center.lng};
         // Aggiorna marker quando cerchio si sposta
         shape.addListener("center_changed", ()=>{
