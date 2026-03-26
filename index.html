@@ -92,7 +92,6 @@ const getRange = (battery) => Math.round((battery/100)*80);
 const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
 const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
 const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
-
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], zones=[], userPos=null }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
@@ -113,9 +112,7 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
     if (!pos) return "";
     const d = calcDist(pos.lat, pos.lng, bike.lat, bike.lng);
     const mins = Math.round(d / 80);
-    return d < 1000
-      ? `🚶 ${Math.round(d)}m · ~${mins} min`
-      : `🚶 ${(d/1000).toFixed(1)}km · ~${mins} min`;
+    return d < 1000 ? `🚶 ${Math.round(d)}m · ~${mins} min` : `🚶 ${(d/1000).toFixed(1)}km · ~${mins} min`;
   };
 
   // Aggiorna zone
@@ -133,7 +130,6 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
           map: mapInstanceRef.current, center: zone.center, radius: zone.radius || 200,
           fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
         });
-        
         center = zone.center;
       } else if (zone.path?.length > 0) {
         shape = new window.google.maps.Polygon({
@@ -156,6 +152,8 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       }
     });
   }, [zones, mapInstanceRef.current]);
+
+  // Centra sulla posizione utente appena arriva il GPS
   React.useEffect(() => {
     if (!mapInstanceRef.current || !userPos) return;
     if (!mapInstanceRef.current._centeredOnUser) {
@@ -165,9 +163,7 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
     }
   }, [userPos]);
 
-  // Aggiorna InfoWindow distanza quando cambia userPos
-  React.useEffect(() => {
-  // Aggiorna InfoWindow distanza quando cambia userPos
+  // Aggiorna InfoWindow distanza e marker utente quando cambia userPos
   React.useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
     markersRef.current.forEach(({ marker, iw, bike }) => {
@@ -182,38 +178,28 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
         </div>`
       );
     });
-
-    // Marker posizione utente
     if (userPos && mapInstanceRef.current) {
       if (userMarkerRef.current) {
         userMarkerRef.current.setPosition(userPos);
       } else {
         userMarkerRef.current = new window.google.maps.Marker({
-          position: userPos,
-          map: mapInstanceRef.current,
-          title: "La tua posizione",
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: "#219EBC",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 3
-          },
+          position: userPos, map: mapInstanceRef.current, title: "La tua posizione",
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#219EBC", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 3 },
           zIndex: 999
         });
       }
     }
   }, [userPos]);
 
+  // Inizializza mappa
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
       if (!window.google) { setTimeout(tryInit, 200); return; }
-     const initialCenter = window._userPosition || {lat:43.1500,lng:12.0800};
-const initialZoom = window._userPosition ? 14 : 11;
-const map = new window.google.maps.Map(mapRef.current, {
-  center:initialCenter, zoom:initialZoom, mapTypeId:"roadmap",
+      const initialCenter = window._userPosition || {lat:43.1500,lng:12.0800};
+      const initialZoom = window._userPosition ? 14 : 11;
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: initialCenter, zoom: initialZoom, mapTypeId: "roadmap",
         styles: [
           { featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },
           { featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },
@@ -222,21 +208,15 @@ const map = new window.google.maps.Map(mapRef.current, {
         ]
       });
       mapInstanceRef.current = map;
-
       bikes.forEach(bike => {
         const iw = new window.google.maps.InfoWindow({ content: "" });
         const marker = new window.google.maps.Marker({
           position: { lat: bike.lat, lng: bike.lng }, map, title: bike.id,
           label: { text: `${bike.battery}%`, color: "#ffffff", fontSize: "10px", fontWeight: "bold" },
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE, scale: 16,
-            fillColor: bike.battery >= 80 ? "#219EBC" : bike.battery >= 50 ? "#FFB703" : "#FB8500",
-            fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2
-          }
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 }
         });
         markersRef.current.push({ marker, iw, bike });
         marker.addListener("click", () => {
-          // Aggiorna contenuto al click (distanza fresca)
           const distanceText = getDistText(bike, userPos);
           iw.setContent(
             `<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px">
@@ -251,33 +231,20 @@ const map = new window.google.maps.Map(mapRef.current, {
           onBikeClick(bike);
         });
       });
-
-      // Zone iniziali
       zones.forEach(zone => {
         if (zone.shape === "circle" && zone.center) {
-          new window.google.maps.Circle({
-            map, center: zone.center, radius: zone.radius || 200,
-            fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
-          });
+          new window.google.maps.Circle({ map, center: zone.center, radius: zone.radius||200, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 });
           const icons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
           if (zone.type !== "operativa" && icons[zone.type]) {
-            new window.google.maps.Marker({
-              position: zone.center, map,
-              label: { text: icons[zone.type], fontSize: "16px" },
-              icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 }
-            });
+            new window.google.maps.Marker({ position: zone.center, map, label: { text: icons[zone.type], fontSize: "16px" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 } });
           }
         } else if (zone.path?.length > 0) {
-          new window.google.maps.Polygon({
-            map, paths: zone.path,
-            fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
-          });
+          new window.google.maps.Polygon({ map, paths: zone.path, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 });
         }
       });
-
       tracks.forEach(track => {
         if (track.points?.length > 1) {
-          new window.google.maps.Polyline({ path: track.points, geodesic: true, strokeColor: track.color || "#219EBC", strokeOpacity: 0.8, strokeWeight: 4, map });
+          new window.google.maps.Polyline({ path: track.points, geodesic: true, strokeColor: track.color||"#219EBC", strokeOpacity: 0.8, strokeWeight: 4, map });
           new window.google.maps.Marker({ position: track.points[0], map, label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} });
           new window.google.maps.Marker({ position: track.points[track.points.length-1], map, label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} });
         }
@@ -286,12 +253,9 @@ const map = new window.google.maps.Map(mapRef.current, {
     tryInit();
   }, []);
 
-  const style = fullscreen
-    ? { position:"absolute", inset:0, width:"100%", height:"100%" }
-    : { width:"100%", height, borderRadius:16 };
+  const style = fullscreen ? { position:"absolute", inset:0, width:"100%", height:"100%" } : { width:"100%", height, borderRadius:16 };
   return <div ref={mapRef} style={style} />;
 }
-
 function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
