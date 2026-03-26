@@ -621,6 +621,14 @@ function ClienteApp({ user, onLogout }) {
   const [showQRScanner, setShowQRScanner] = React.useState(false);
   const qrIntervalRef = React.useRef(null);
   const [clientZones, setClientZones] = React.useState([]);
+  const [userPos, setUserPos] = React.useState(null);
+
+  React.useEffect(()=>{
+    if (!navigator.geolocation) return;
+    navigator.geolocation.watchPosition(pos=>{
+      setUserPos({lat:pos.coords.latitude, lng:pos.coords.longitude});
+    },()=>{},{enableHighAccuracy:true});
+  },[]);
   // GPS utente per distanza a piedi
   React.useEffect(()=>{
     if (!navigator.geolocation) return;
@@ -796,7 +804,7 @@ function ClienteApp({ user, onLogout }) {
               </div>
             </div>
             <div style={{position:"absolute",inset:0}}>
-              <MapView bikes={bikes} onBikeClick={handleBikeClick} fullscreen={true} zones={clientZones}/>
+              <MapView bikes={bikes} onBikeClick={handleBikeClick} fullscreen={true} zones={clientZones} userPos={userPos}/>
             </div>
             <div style={{position:"absolute",bottom:80,left:12,right:12,zIndex:10}}>
               <button onClick={()=>setShowQRScanner(true)}
