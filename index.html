@@ -199,8 +199,10 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
       if (!window.google) { setTimeout(tryInit, 200); return; }
-      const map = new window.google.maps.Map(mapRef.current, {
-        center: { lat: 43.1500, lng: 12.0800 }, zoom: 11, mapTypeId: "roadmap",
+     const initialCenter = window._userPosition || {lat:43.1500,lng:12.0800};
+const initialZoom = window._userPosition ? 14 : 11;
+const map = new window.google.maps.Map(mapRef.current, {
+  center:initialCenter, zoom:initialZoom, mapTypeId:"roadmap",
         styles: [
           { featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },
           { featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },
