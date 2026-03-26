@@ -200,9 +200,7 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       const initialZoom = window._userPosition ? 14 : 11;
       const map = new window.google.maps.Map(mapRef.current, {
         center: initialCenter, zoom: initialZoom, mapTypeId: "roadmap",
-        const map = new window.google.maps.Map(mapRef.current, {
-  center: initialCenter, zoom: initialZoom, mapTypeId: "roadmap",
-  gestureHandling: "greedy",
+        gestureHandling: "greedy",
         styles: [
           { featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },
           { featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },
