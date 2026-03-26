@@ -133,14 +133,7 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
           map: mapInstanceRef.current, center: zone.center, radius: zone.radius || 200,
           fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
         });
-        React.useEffect(() => {
-  if (!mapInstanceRef.current || !userPos) return;
-  if (!mapInstanceRef.current._centeredOnUser) {
-    mapInstanceRef.current.setCenter(userPos);
-    mapInstanceRef.current.setZoom(14);
-    mapInstanceRef.current._centeredOnUser = true;
-  }
-}, [userPos]);
+        
         center = zone.center;
       } else if (zone.path?.length > 0) {
         shape = new window.google.maps.Polygon({
@@ -163,7 +156,17 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       }
     });
   }, [zones, mapInstanceRef.current]);
+  React.useEffect(() => {
+    if (!mapInstanceRef.current || !userPos) return;
+    if (!mapInstanceRef.current._centeredOnUser) {
+      mapInstanceRef.current.setCenter(userPos);
+      mapInstanceRef.current.setZoom(14);
+      mapInstanceRef.current._centeredOnUser = true;
+    }
+  }, [userPos]);
 
+  // Aggiorna InfoWindow distanza quando cambia userPos
+  React.useEffect(() => {
   // Aggiorna InfoWindow distanza quando cambia userPos
   React.useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
