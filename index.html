@@ -93,117 +93,189 @@ const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:tran
 const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
 const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
 
-function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], zones=[] }) {
+function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], zones=[], userPos=null }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const zoneShapesRef = React.useRef([]);
   const zoneMarkersRef = React.useRef([]);
+  const markersRef = React.useRef([]);
+  const userMarkerRef = React.useRef(null);
 
-  // Aggiorna zone quando cambiano
+  const calcDist = (lat1, lng1, lat2, lng2) => {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+
+  const getDistText = (bike, pos) => {
+    if (!pos) return "";
+    const d = calcDist(pos.lat, pos.lng, bike.lat, bike.lng);
+    const mins = Math.round(d / 80);
+    return d < 1000
+      ? `🚶 ${Math.round(d)}m · ~${mins} min`
+      : `🚶 ${(d/1000).toFixed(1)}km · ~${mins} min`;
+  };
+
+  // Aggiorna zone
   React.useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
-    zoneShapesRef.current.forEach(s=>{ if(s) s.setMap(null); });
-    zoneMarkersRef.current.forEach(m=>{ if(m) m.setMap(null); });
+    zoneShapesRef.current.forEach(s => s?.setMap(null));
+    zoneMarkersRef.current.forEach(m => m?.setMap(null));
     zoneShapesRef.current = [];
     zoneMarkersRef.current = [];
-    const icons = {sosta:"🅿️", lenta:"🐢", fuori:"⛔"};
+    const icons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
     zones.forEach(zone => {
-      let shape = null;
-      let center = null;
-      if (zone.shape==="circle" && zone.center) {
+      let shape = null, center = null;
+      if (zone.shape === "circle" && zone.center) {
         shape = new window.google.maps.Circle({
-          map:mapInstanceRef.current, center:zone.center, radius:zone.radius||200,
-          fillColor:zone.color, fillOpacity:0.15, strokeColor:zone.color, strokeWeight:1.5
+          map: mapInstanceRef.current, center: zone.center, radius: zone.radius || 200,
+          fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
         });
         center = zone.center;
-      } else if (zone.path && zone.path.length>0) {
+      } else if (zone.path?.length > 0) {
         shape = new window.google.maps.Polygon({
-          map:mapInstanceRef.current, paths:zone.path,
-          fillColor:zone.color, fillOpacity:0.15, strokeColor:zone.color, strokeWeight:1.5
+          map: mapInstanceRef.current, paths: zone.path,
+          fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
         });
         const bounds = new window.google.maps.LatLngBounds();
-        zone.path.forEach(p=>bounds.extend(p));
+        zone.path.forEach(p => bounds.extend(p));
         const c = bounds.getCenter();
-        center = {lat:c.lat(), lng:c.lng()};
+        center = { lat: c.lat(), lng: c.lng() };
       }
       if (shape) zoneShapesRef.current.push(shape);
-      if (center && zone.type!=="operativa" && icons[zone.type]) {
+      if (center && zone.type !== "operativa" && icons[zone.type]) {
         const marker = new window.google.maps.Marker({
-          position:center, map:mapInstanceRef.current,
-          label:{text:icons[zone.type], fontSize:"16px"},
-          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}
+          position: center, map: mapInstanceRef.current,
+          label: { text: icons[zone.type], fontSize: "16px" },
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 }
         });
         zoneMarkersRef.current.push(marker);
       }
     });
   }, [zones, mapInstanceRef.current]);
 
+  // Aggiorna InfoWindow distanza quando cambia userPos
+  React.useEffect(() => {
+    if (!mapInstanceRef.current || !window.google) return;
+    markersRef.current.forEach(({ marker, iw, bike }) => {
+      const distanceText = getDistText(bike, userPos);
+      iw.setContent(
+        `<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px">
+          <b style="color:#023047;font-size:14px">${bike.id}</b><br/>
+          <span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/>
+          <span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>
+          ${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}
+          <br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span>
+        </div>`
+      );
+    });
+
+    // Marker posizione utente
+    if (userPos && mapInstanceRef.current) {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setPosition(userPos);
+      } else {
+        userMarkerRef.current = new window.google.maps.Marker({
+          position: userPos,
+          map: mapInstanceRef.current,
+          title: "La tua posizione",
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: "#219EBC",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 3
+          },
+          zIndex: 999
+        });
+      }
+    }
+  }, [userPos]);
+
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
-      if (!window.google) { setTimeout(tryInit,200); return; }
+      if (!window.google) { setTimeout(tryInit, 200); return; }
       const map = new window.google.maps.Map(mapRef.current, {
-        center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
-        styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
+        center: { lat: 43.1500, lng: 12.0800 }, zoom: 11, mapTypeId: "roadmap",
+        styles: [
+          { featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },
+          { featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },
+          { featureType:"road", elementType:"geometry", stylers:[{color:"#ffffff"}] },
+          { featureType:"poi", stylers:[{visibility:"off"}] }
+        ]
       });
       mapInstanceRef.current = map;
+
       bikes.forEach(bike => {
+        const iw = new window.google.maps.InfoWindow({ content: "" });
         const marker = new window.google.maps.Marker({
-          position:{lat:bike.lat,lng:bike.lng}, map, title:bike.id,
-          label:{text:`${bike.battery}%`,color:"#ffffff",fontSize:"10px",fontWeight:"bold"},
-          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:16,fillColor:bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500",fillOpacity:1,strokeColor:"#ffffff",strokeWeight:2}
-        });
-        const distanceText = window._userPosition ? (() => {
-          const R=6371000;
-          const lat1=window._userPosition.lat*Math.PI/180;
-          const lat2=bike.lat*Math.PI/180;
-          const dLat=(bike.lat-window._userPosition.lat)*Math.PI/180;
-          const dLng=(bike.lng-window._userPosition.lng)*Math.PI/180;
-          const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)*Math.sin(dLng/2);
-          const d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-          const mins=Math.round(d/80);
-          return d<1000?`🚶 ${Math.round(d)}m · ~${mins} min`:`🚶 ${(d/1000).toFixed(1)}km · ~${mins} min`;
-        })() : "";
-        const iw = new window.google.maps.InfoWindow({content:`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>${distanceText?`<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>`:""}<br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`});
-        marker.addListener("click",()=>{ iw.open(map,marker); onBikeClick(bike); });
-      });
-      // Disegna zone sulla mappa
-      zones.forEach(zone => {
-        if (zone.shape==="circle" && zone.center) {
-          new window.google.maps.Circle({
-            map, center:zone.center, radius:zone.radius||200,
-            fillColor:zone.color, fillOpacity:0.15,
-            strokeColor:zone.color, strokeWeight:1.5
-          });
-          if (zone.type!=="operativa") {
-            const icons = {sosta:"🅿️", lenta:"🐢", fuori:"⛔"};
-            if (icons[zone.type]) {
-              new window.google.maps.Marker({
-                position:zone.center, map,
-                label:{text:icons[zone.type], fontSize:"16px"},
-                icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}
-              });
-            }
+          position: { lat: bike.lat, lng: bike.lng }, map, title: bike.id,
+          label: { text: `${bike.battery}%`, color: "#ffffff", fontSize: "10px", fontWeight: "bold" },
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE, scale: 16,
+            fillColor: bike.battery >= 80 ? "#219EBC" : bike.battery >= 50 ? "#FFB703" : "#FB8500",
+            fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2
           }
-        } else if (zone.path && zone.path.length>0) {
+        });
+        markersRef.current.push({ marker, iw, bike });
+        marker.addListener("click", () => {
+          // Aggiorna contenuto al click (distanza fresca)
+          const distanceText = getDistText(bike, userPos);
+          iw.setContent(
+            `<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px">
+              <b style="color:#023047;font-size:14px">${bike.id}</b><br/>
+              <span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/>
+              <span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>
+              ${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}
+              <br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span>
+            </div>`
+          );
+          iw.open(map, marker);
+          onBikeClick(bike);
+        });
+      });
+
+      // Zone iniziali
+      zones.forEach(zone => {
+        if (zone.shape === "circle" && zone.center) {
+          new window.google.maps.Circle({
+            map, center: zone.center, radius: zone.radius || 200,
+            fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
+          });
+          const icons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
+          if (zone.type !== "operativa" && icons[zone.type]) {
+            new window.google.maps.Marker({
+              position: zone.center, map,
+              label: { text: icons[zone.type], fontSize: "16px" },
+              icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 }
+            });
+          }
+        } else if (zone.path?.length > 0) {
           new window.google.maps.Polygon({
-            map, paths:zone.path,
-            fillColor:zone.color, fillOpacity:0.15,
-            strokeColor:zone.color, strokeWeight:1.5
+            map, paths: zone.path,
+            fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
           });
         }
       });
+
       tracks.forEach(track => {
-        if (track.points && track.points.length > 1) {
-          new window.google.maps.Polyline({path:track.points,geodesic:true,strokeColor:track.color||"#219EBC",strokeOpacity:0.8,strokeWeight:4,map});
-          new window.google.maps.Marker({position:track.points[0],map,label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"},icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}});
-          new window.google.maps.Marker({position:track.points[track.points.length-1],map,label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"},icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2}});
+        if (track.points?.length > 1) {
+          new window.google.maps.Polyline({ path: track.points, geodesic: true, strokeColor: track.color || "#219EBC", strokeOpacity: 0.8, strokeWeight: 4, map });
+          new window.google.maps.Marker({ position: track.points[0], map, label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} });
+          new window.google.maps.Marker({ position: track.points[track.points.length-1], map, label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} });
         }
       });
     };
     tryInit();
   }, []);
-  const style = fullscreen ? {position:"absolute",inset:0,width:"100%",height:"100%"} : {width:"100%",height,borderRadius:16};
+
+  const style = fullscreen
+    ? { position:"absolute", inset:0, width:"100%", height:"100%" }
+    : { width:"100%", height, borderRadius:16 };
   return <div ref={mapRef} style={style} />;
 }
 
