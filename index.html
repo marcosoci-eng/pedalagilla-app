@@ -1379,10 +1379,6 @@ function AdminApp({ user, onLogout }) {
                 style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"12px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
                 ✏️ Inizia a disegnare
               </button>
-<button onClick={()=>setDrawingActive(true)}
-                style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"12px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
-                ✏️ Inizia a disegnare
-              </button>
               <button onClick={async()=>{
                 try {
                   await waitFB();
