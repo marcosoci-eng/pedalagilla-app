@@ -440,10 +440,25 @@ function AuthScreen({ onLogin }) {
     const file = e.target.files[0];
     if (file) { setDocFile(file); const r=new FileReader(); r.onload=ev=>setDocPreview(ev.target.result); r.readAsDataURL(file); }
   };
-  const handleAdminLogin = () => {
-    if (adminUser==="marco"&&adminPass==="pedalagilla2026") onLogin({type:"admin",nome:"Marco",email:"marco@pedalagilla.it"});
-    else setError("Credenziali errate");
-  };
+  const handleAdminLogin = async () => {
+  if (!adminUser||!adminPass) { setError("Inserisci credenziali"); return; }
+  setLoading(true); setError(null);
+  try {
+    await waitFB();
+    const {signInWithEmailAndPassword, doc, getDoc} = window.firebaseFunctions;
+    const cred = await signInWithEmailAndPassword(window.firebaseAuth, adminUser, adminPass);
+    const snap = await getDoc(doc(window.firebaseDb, "users", cred.user.uid));
+    const data = snap.data();
+    if (data?.type !== "admin") {
+      await window.firebaseFunctions.signOut(window.firebaseAuth);
+      setError("Accesso non autorizzato");
+      setLoading(false);
+      return;
+    }
+    onLogin({type:"admin", nome:data.nome||"Admin", email:data.email||adminUser});
+  } catch(e) { setError("Credenziali errate"); }
+  setLoading(false);
+};
   const handleLogin = async () => {
     if (!email||!password) { setError("Inserisci email e password"); return; }
     setLoading(true); setError(null);
@@ -452,12 +467,7 @@ function AuthScreen({ onLogin }) {
       const {signInWithEmailAndPassword,doc,getDoc} = window.firebaseFunctions;
       const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
       const snap = await getDoc(doc(window.firebaseDb,"users",cred.user.uid));
-      if (!cred.user.emailVerified) {
-  await window.firebaseFunctions.signOut(window.firebaseAuth);
-  setError("📧 Email non verificata. Controlla la tua casella e clicca il link.");
-  setLoading(false);
-  return;
-}
+      
 onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
     } catch(e) { setError("Email o password errati"); }
     setLoading(false);
