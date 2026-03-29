@@ -452,7 +452,13 @@ function AuthScreen({ onLogin }) {
       const {signInWithEmailAndPassword,doc,getDoc} = window.firebaseFunctions;
       const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
       const snap = await getDoc(doc(window.firebaseDb,"users",cred.user.uid));
-      onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
+      if (!cred.user.emailVerified) {
+  await window.firebaseFunctions.signOut(window.firebaseAuth);
+  setError("📧 Email non verificata. Controlla la tua casella e clicca il link.");
+  setLoading(false);
+  return;
+}
+onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
     } catch(e) { setError("Email o password errati"); }
     setLoading(false);
   };
@@ -471,7 +477,12 @@ function AuthScreen({ onLogin }) {
       await uploadBytes(sRef,docFile);
       const docURL = await getDownloadURL(sRef);
       await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString()});
-      onLogin({type:"cliente",nome,cognome,email,telefono,docURL,uid:cred.user.uid});
+      await cred.user.sendEmailVerification();
+alert("📧 Controlla la tua email e clicca il link di verifica prima di accedere.");
+// Non fare login automatico, torna alla schermata di login
+setMode("login");
+setEmail("");
+setPassword("");
     } catch(e) { setError(e.code==="auth/email-already-in-use"?"Email già registrata":"Errore: "+e.message); }
     setLoading(false);
   };
