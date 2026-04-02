@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>PedalAgilla</title>
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#023047"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="PedalAgilla"/>
+<link rel="apple-touch-icon" href="/icons/icon-192x192.png"/>
+  <title>PedalAgilla</title>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -1554,6 +1560,13 @@ function Main() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Main/>);
+</script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
 </script>
 </body>
 </html>
