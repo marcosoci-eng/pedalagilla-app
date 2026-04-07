@@ -753,7 +753,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t }) {
   );
 }
 
-function AuthScreen({ onLogin }) {
+function AuthScreen({ onLogin, lang, setLang, t }) {
   const [mode, setMode] = React.useState("login");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -766,12 +766,6 @@ function AuthScreen({ onLogin }) {
   const [error, setError] = React.useState(null);
   const [adminUser, setAdminUser] = React.useState("");
   const [adminPass, setAdminPass] = React.useState("");
-  const [lang, setLang] = React.useState(() => {
-    const l = navigator.language?.slice(0,2);
-    return LANG_LIST.includes(l) ? l : 'en';
-  });
-  const t = (k) => (TRANSLATIONS[lang] || TRANSLATIONS.en)[k] || k;
-
   const handleDocChange = (e) => {
     const file = e.target.files[0];
     if (file) { setDocFile(file); const r=new FileReader(); r.onload=ev=>setDocPreview(ev.target.result); r.readAsDataURL(file); }
@@ -1001,7 +995,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd, t }) {
   );
 }
 
-function ClienteApp({ user, onLogout }) {
+function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const bikes = initBikes.filter(b=>b.status==="Disponibile");
   const [tab, setTab] = React.useState("mappa");
   const [selectedBike, setSelectedBike] = React.useState(null);
@@ -1017,9 +1011,6 @@ function ClienteApp({ user, onLogout }) {
   const qrIntervalRef = React.useRef(null);
   const [clientZones, setClientZones] = React.useState([]);
   const [userPos, setUserPos] = React.useState(null);
-  const [lang, setLang] = React.useState(() => { const l = navigator.language?.slice(0,2); return LANG_LIST.includes(l) ? l : 'en'; });
-  const t = (k) => (TRANSLATIONS[lang] || TRANSLATIONS.en)[k] || k;
-
   React.useEffect(()=>{ if (!navigator.geolocation) return; navigator.geolocation.watchPosition(pos=>{ setUserPos({lat:pos.coords.latitude, lng:pos.coords.longitude}); window._userPosition = {lat:pos.coords.latitude, lng:pos.coords.longitude}; },()=>{},{enableHighAccuracy:true}); },[]);
   React.useEffect(()=>{
     const load = async () => {
@@ -1522,11 +1513,16 @@ function AdminApp({ user, onLogout }) {
 
 function Main() {
   const [user, setUser] = React.useState(null);
+  const [lang, setLang] = React.useState(() => {
+    const l = navigator.language?.slice(0,2);
+    return LANG_LIST.includes(l) ? l : 'en';
+  });
+  const t = (k) => (TRANSLATIONS[lang] || TRANSLATIONS.en)[k] || k;
   const handleLogin=(u)=>setUser(u);
   const handleLogout=()=>{ if(window.firebaseAuth) window.firebaseFunctions.signOut(window.firebaseAuth).catch(()=>{}); setUser(null); };
-  if(!user) return <AuthScreen onLogin={handleLogin}/>;
+  if(!user) return <AuthScreen onLogin={handleLogin} lang={lang} setLang={setLang} t={t}/>;
   if(user.type==="admin") return <AdminApp user={user} onLogout={handleLogout}/>;
-  return <ClienteApp user={user} onLogout={handleLogout}/>;
+  return <ClienteApp user={user} onLogout={handleLogout} lang={lang} setLang={setLang} t={t}/>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Main/>);
