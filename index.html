@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="PedalAgilla"/>
 <link rel="apple-touch-icon" href="/icons/icon-192x192.png"/>
-  <title>PedalAgilla</title>
+<title>PedalAgilla</title>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -53,7 +53,332 @@ input:focus, textarea:focus { outline: none; border-color: #219EBC !important; }
 <body>
 <div id="root"></div>
 <script type="text/babel">
-
+ 
+const TRANSLATIONS = {
+  it: {
+    appSubtitle: "E-BIKE SHARING · Lago Trasimeno",
+    login: "Accedi", register: "Registrati",
+    email: "📧 Email", password: "🔑 Password",
+    emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
+    loginBtn: "Accedi 🚲", loginLoading: "⏳ Accesso...",
+    adminAccess: "🔐 Accesso amministratore",
+    nome: "👤 Nome *", cognome: "👤 Cognome *", telefono: "📱 Telefono *",
+    nomePh: "Mario", cognomePh: "Rossi", telefonoPh: "+39 333 1234567", passwordMin: "Minimo 6 caratteri",
+    documento: "📷 Documento", docRequired: "Obbligatorio", docTap: "Tocca per caricare", docLoaded: "✅ Caricato",
+    createAccount: "Crea account 🌊", registerLoading: "⏳ Registrazione...",
+    errEmail: "Inserisci email e password", errCampi: "Compila tutti i campi",
+    errNome: "Il nome è obbligatorio", errCognome: "Il cognome è obbligatorio",
+    errDoc: "La foto del documento è obbligatoria", errPassword: "Password minimo 6 caratteri",
+    errLogin: "Email o password errati", errEmailUsed: "Email già registrata",
+    errGenerico: "Errore: ", errAdmin: "Credenziali errate", errUnauthorized: "Accesso non autorizzato",
+    emailVerifyMsg: "📧 Controlla la tua email e clicca il link di verifica prima di accedere.",
+    adminUsername: "👤 Username", adminUsernamePh: "marco",
+    adminLoginBtn: "Accedi come Admin 🔐", adminBack: "← Torna",
+    hiUser: "CIAO", scanQR: "📷 Scansiona QR bici",
+    tapBike: "👆 Oppure tocca una bici sulla mappa", logout: "Esci",
+    scanTitle: "Scansiona il QR della bici", scanDesc: "Inquadra il QR code sul telaio della bici",
+    scanManual: "Oppure inserisci il codice:", scanPh: "Es: PA-021", scanClose: "✕",
+    planMinutes: "Al minuto", planDay: "Giornata intera",
+    planMinutesDesc: "sblocco + /min · pausa", planDayDesc: "tutto il giorno · pausa gratuita",
+    continueBtn: "💳 Continua", walkDistance: "dalla tua posizione attuale",
+    rideInProgress: "CORSA IN CORSO", ridePause: "PAUSA", totalCost: "Costo totale",
+    unlock: "🔓 Sblocco", ridePerMin: "⏱️ Corsa", pausePerMin: "⏸️ Pausa", zone: "📍 Zona",
+    pauseBtn: "⏸️ Pausa", resumeBtn: "▶️ Riprendi", endRide: "🏁 Termina corsa", free: "Gratis",
+    endRideTitle: "Foto del parcheggio", photoRequired: "📸 Obbligatorio",
+    photoDesc: "Scatta una foto alla bici parcheggiata", takePhoto: "Scatta foto parcheggio",
+    photoChange: "✅ Tocca per cambiare", confirmEnd: "✅ Conferma fine corsa",
+    saving: "⏳ Salvataggio...", backToRide: "← Torna alla corsa",
+    rideComplete: "Corsa completata!", thankYou: "Grazie per aver scelto PedalAgilla 🌊",
+    totalPaid: "TOTALE PAGATO", bikeLbl: "🚲 Bici", zoneLbl: "📍 Zona", durationLbl: "⏱️ Durata",
+    backToMap: "Torna alla mappa 🌊", myProfile: "IL MIO PROFILO", rates: "💶 Tariffe",
+    unlockRate: "🔓 Sblocco", perMinRate: "⏱️ Al minuto", pauseRate: "⏸️ Pausa",
+    dayRate: "☀️ Giornata", pauseFree: "pausa gratis", assistance: "🆘 Assistenza",
+    callMarco: "📞 Chiama Marco:", whatsappMarco: "💬 WhatsApp Marco",
+    navMap: "Mappa", navProfile: "Profilo",
+    total: "TOTALE", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    cardName: "Nome", cardNamePh: "Mario Rossi", card: "Carta",
+    payBtn: "💳 Paga", paying: "⏳ Elaborazione...", cancel: "Annulla",
+    errName: "Inserisci il tuo nome", errPayment: "Errore. Riprova.",
+    payment: "💳 Pagamento", min: "min",
+  },
+  en: {
+    appSubtitle: "E-BIKE SHARING · Lake Trasimeno",
+    login: "Login", register: "Sign Up",
+    email: "📧 Email", password: "🔑 Password",
+    emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
+    loginBtn: "Login 🚲", loginLoading: "⏳ Logging in...",
+    adminAccess: "🔐 Administrator access",
+    nome: "👤 First Name *", cognome: "👤 Last Name *", telefono: "📱 Phone *",
+    nomePh: "John", cognomePh: "Smith", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 characters",
+    documento: "📷 ID Document", docRequired: "Required", docTap: "Tap to upload", docLoaded: "✅ Uploaded",
+    createAccount: "Create account 🌊", registerLoading: "⏳ Registering...",
+    errEmail: "Enter email and password", errCampi: "Fill in all fields",
+    errNome: "First name is required", errCognome: "Last name is required",
+    errDoc: "ID document photo is required", errPassword: "Password min. 6 characters",
+    errLogin: "Wrong email or password", errEmailUsed: "Email already registered",
+    errGenerico: "Error: ", errAdmin: "Wrong credentials", errUnauthorized: "Unauthorized access",
+    emailVerifyMsg: "📧 Check your email and click the verification link before logging in.",
+    adminUsername: "👤 Username", adminUsernamePh: "marco",
+    adminLoginBtn: "Login as Admin 🔐", adminBack: "← Back",
+    hiUser: "HI", scanQR: "📷 Scan bike QR",
+    tapBike: "👆 Or tap a bike on the map", logout: "Logout",
+    scanTitle: "Scan the bike QR code", scanDesc: "Point the camera at the QR code on the bike frame",
+    scanManual: "Or enter the code:", scanPh: "E.g.: PA-021", scanClose: "✕",
+    planMinutes: "Per minute", planDay: "Full day",
+    planMinutesDesc: "unlock + /min · pause", planDayDesc: "all day · free pause",
+    continueBtn: "💳 Continue", walkDistance: "from your current location",
+    rideInProgress: "RIDE IN PROGRESS", ridePause: "PAUSE", totalCost: "Total cost",
+    unlock: "🔓 Unlock", ridePerMin: "⏱️ Ride", pausePerMin: "⏸️ Pause", zone: "📍 Zone",
+    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Resume", endRide: "🏁 End ride", free: "Free",
+    endRideTitle: "Parking photo", photoRequired: "📸 Required",
+    photoDesc: "Take a photo of the parked bike", takePhoto: "Take parking photo",
+    photoChange: "✅ Tap to change", confirmEnd: "✅ Confirm end of ride",
+    saving: "⏳ Saving...", backToRide: "← Back to ride",
+    rideComplete: "Ride completed!", thankYou: "Thank you for choosing PedalAgilla 🌊",
+    totalPaid: "TOTAL PAID", bikeLbl: "🚲 Bike", zoneLbl: "📍 Zone", durationLbl: "⏱️ Duration",
+    backToMap: "Back to map 🌊", myProfile: "MY PROFILE", rates: "💶 Rates",
+    unlockRate: "🔓 Unlock", perMinRate: "⏱️ Per minute", pauseRate: "⏸️ Pause",
+    dayRate: "☀️ Full day", pauseFree: "free pause", assistance: "🆘 Assistance",
+    callMarco: "📞 Call Marco:", whatsappMarco: "💬 WhatsApp Marco",
+    navMap: "Map", navProfile: "Profile",
+    total: "TOTAL", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    cardName: "Name", cardNamePh: "John Smith", card: "Card",
+    payBtn: "💳 Pay", paying: "⏳ Processing...", cancel: "Cancel",
+    errName: "Enter your name", errPayment: "Error. Try again.",
+    payment: "💳 Payment", min: "min",
+  },
+  de: {
+    appSubtitle: "E-BIKE SHARING · Trasimenischer See",
+    login: "Anmelden", register: "Registrieren",
+    email: "📧 E-Mail", password: "🔑 Passwort",
+    emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
+    loginBtn: "Anmelden 🚲", loginLoading: "⏳ Anmeldung...",
+    adminAccess: "🔐 Administratorzugang",
+    nome: "👤 Vorname *", cognome: "👤 Nachname *", telefono: "📱 Telefon *",
+    nomePh: "Hans", cognomePh: "Müller", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 Zeichen",
+    documento: "📷 Ausweis", docRequired: "Erforderlich", docTap: "Tippen zum Hochladen", docLoaded: "✅ Hochgeladen",
+    createAccount: "Konto erstellen 🌊", registerLoading: "⏳ Registrierung...",
+    errEmail: "E-Mail und Passwort eingeben", errCampi: "Alle Felder ausfüllen",
+    errNome: "Vorname ist erforderlich", errCognome: "Nachname ist erforderlich",
+    errDoc: "Ausweisfoto ist erforderlich", errPassword: "Passwort min. 6 Zeichen",
+    errLogin: "Falsche E-Mail oder Passwort", errEmailUsed: "E-Mail bereits registriert",
+    errGenerico: "Fehler: ", errAdmin: "Falsche Anmeldedaten", errUnauthorized: "Zugriff nicht autorisiert",
+    emailVerifyMsg: "📧 Überprüfen Sie Ihre E-Mail und klicken Sie auf den Bestätigungslink.",
+    adminUsername: "👤 Benutzername", adminUsernamePh: "marco",
+    adminLoginBtn: "Als Admin anmelden 🔐", adminBack: "← Zurück",
+    hiUser: "HALLO", scanQR: "📷 Fahrrad-QR scannen",
+    tapBike: "👆 Oder tippen Sie auf ein Fahrrad", logout: "Abmelden",
+    scanTitle: "QR-Code des Fahrrads scannen", scanDesc: "Kamera auf den QR-Code am Rahmen richten",
+    scanManual: "Oder Code eingeben:", scanPh: "z.B.: PA-021", scanClose: "✕",
+    planMinutes: "Pro Minute", planDay: "Ganzer Tag",
+    planMinutesDesc: "Entsperren + /Min · Pause", planDayDesc: "ganzer Tag · kostenlose Pause",
+    continueBtn: "💳 Weiter", walkDistance: "von Ihrem aktuellen Standort",
+    rideInProgress: "FAHRT LÄUFT", ridePause: "PAUSE", totalCost: "Gesamtkosten",
+    unlock: "🔓 Entsperren", ridePerMin: "⏱️ Fahrt", pausePerMin: "⏸️ Pause", zone: "📍 Zone",
+    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Fortsetzen", endRide: "🏁 Fahrt beenden", free: "Kostenlos",
+    endRideTitle: "Parkfoto", photoRequired: "📸 Erforderlich",
+    photoDesc: "Foto vom geparkten Fahrrad machen", takePhoto: "Parkfoto aufnehmen",
+    photoChange: "✅ Tippen zum Ändern", confirmEnd: "✅ Fahrtende bestätigen",
+    saving: "⏳ Speichern...", backToRide: "← Zurück zur Fahrt",
+    rideComplete: "Fahrt abgeschlossen!", thankYou: "Danke für die Nutzung von PedalAgilla 🌊",
+    totalPaid: "GESAMT BEZAHLT", bikeLbl: "🚲 Fahrrad", zoneLbl: "📍 Zone", durationLbl: "⏱️ Dauer",
+    backToMap: "Zurück zur Karte 🌊", myProfile: "MEIN PROFIL", rates: "💶 Tarife",
+    unlockRate: "🔓 Entsperren", perMinRate: "⏱️ Pro Minute", pauseRate: "⏸️ Pause",
+    dayRate: "☀️ Ganzer Tag", pauseFree: "kostenlose Pause", assistance: "🆘 Hilfe",
+    callMarco: "📞 Marco anrufen:", whatsappMarco: "💬 WhatsApp Marco",
+    navMap: "Karte", navProfile: "Profil",
+    total: "GESAMT", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    cardName: "Name", cardNamePh: "Hans Müller", card: "Karte",
+    payBtn: "💳 Bezahlen", paying: "⏳ Verarbeitung...", cancel: "Abbrechen",
+    errName: "Namen eingeben", errPayment: "Fehler. Erneut versuchen.",
+    payment: "💳 Zahlung", min: "Min",
+  },
+  fr: {
+    appSubtitle: "E-BIKE SHARING · Lac Trasimène",
+    login: "Connexion", register: "S'inscrire",
+    email: "📧 E-mail", password: "🔑 Mot de passe",
+    emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
+    loginBtn: "Connexion 🚲", loginLoading: "⏳ Connexion...",
+    adminAccess: "🔐 Accès administrateur",
+    nome: "👤 Prénom *", cognome: "👤 Nom *", telefono: "📱 Téléphone *",
+    nomePh: "Jean", cognomePh: "Dupont", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 caractères",
+    documento: "📷 Pièce d'identité", docRequired: "Obligatoire", docTap: "Appuyer pour télécharger", docLoaded: "✅ Téléchargé",
+    createAccount: "Créer un compte 🌊", registerLoading: "⏳ Inscription...",
+    errEmail: "Entrez l'e-mail et le mot de passe", errCampi: "Remplissez tous les champs",
+    errNome: "Le prénom est obligatoire", errCognome: "Le nom est obligatoire",
+    errDoc: "La photo de la pièce d'identité est obligatoire", errPassword: "Mot de passe min. 6 caractères",
+    errLogin: "E-mail ou mot de passe incorrect", errEmailUsed: "E-mail déjà enregistré",
+    errGenerico: "Erreur : ", errAdmin: "Identifiants incorrects", errUnauthorized: "Accès non autorisé",
+    emailVerifyMsg: "📧 Vérifiez votre e-mail et cliquez sur le lien de vérification.",
+    adminUsername: "👤 Nom d'utilisateur", adminUsernamePh: "marco",
+    adminLoginBtn: "Connexion Admin 🔐", adminBack: "← Retour",
+    hiUser: "BONJOUR", scanQR: "📷 Scanner le QR du vélo",
+    tapBike: "👆 Ou appuyez sur un vélo sur la carte", logout: "Déconnexion",
+    scanTitle: "Scanner le QR du vélo", scanDesc: "Pointez la caméra vers le QR sur le cadre",
+    scanManual: "Ou entrez le code :", scanPh: "Ex : PA-021", scanClose: "✕",
+    planMinutes: "À la minute", planDay: "Journée complète",
+    planMinutesDesc: "déverrouillage + /min · pause", planDayDesc: "toute la journée · pause gratuite",
+    continueBtn: "💳 Continuer", walkDistance: "de votre position actuelle",
+    rideInProgress: "TRAJET EN COURS", ridePause: "PAUSE", totalCost: "Coût total",
+    unlock: "🔓 Déverrouillage", ridePerMin: "⏱️ Trajet", pausePerMin: "⏸️ Pause", zone: "📍 Zone",
+    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Reprendre", endRide: "🏁 Terminer le trajet", free: "Gratuit",
+    endRideTitle: "Photo de stationnement", photoRequired: "📸 Obligatoire",
+    photoDesc: "Prenez une photo du vélo garé", takePhoto: "Prendre la photo",
+    photoChange: "✅ Appuyer pour changer", confirmEnd: "✅ Confirmer la fin du trajet",
+    saving: "⏳ Sauvegarde...", backToRide: "← Retour au trajet",
+    rideComplete: "Trajet terminé !", thankYou: "Merci d'avoir choisi PedalAgilla 🌊",
+    totalPaid: "TOTAL PAYÉ", bikeLbl: "🚲 Vélo", zoneLbl: "📍 Zone", durationLbl: "⏱️ Durée",
+    backToMap: "Retour à la carte 🌊", myProfile: "MON PROFIL", rates: "💶 Tarifs",
+    unlockRate: "🔓 Déverrouillage", perMinRate: "⏱️ Par minute", pauseRate: "⏸️ Pause",
+    dayRate: "☀️ Journée", pauseFree: "pause gratuite", assistance: "🆘 Assistance",
+    callMarco: "📞 Appeler Marco :", whatsappMarco: "💬 WhatsApp Marco",
+    navMap: "Carte", navProfile: "Profil",
+    total: "TOTAL", testCard: "🧪 Test : 4242 4242 4242 4242 · 12/28 · 123",
+    cardName: "Nom", cardNamePh: "Jean Dupont", card: "Carte",
+    payBtn: "💳 Payer", paying: "⏳ Traitement...", cancel: "Annuler",
+    errName: "Entrez votre nom", errPayment: "Erreur. Réessayez.",
+    payment: "💳 Paiement", min: "min",
+  },
+  es: {
+    appSubtitle: "E-BIKE SHARING · Lago Trasimeno",
+    login: "Iniciar sesión", register: "Registrarse",
+    email: "📧 Correo", password: "🔑 Contraseña",
+    emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
+    loginBtn: "Entrar 🚲", loginLoading: "⏳ Entrando...",
+    adminAccess: "🔐 Acceso administrador",
+    nome: "👤 Nombre *", cognome: "👤 Apellido *", telefono: "📱 Teléfono *",
+    nomePh: "Carlos", cognomePh: "García", telefonoPh: "+39 333 1234567", passwordMin: "Mín. 6 caracteres",
+    documento: "📷 Documento", docRequired: "Obligatorio", docTap: "Toca para subir", docLoaded: "✅ Subido",
+    createAccount: "Crear cuenta 🌊", registerLoading: "⏳ Registrando...",
+    errEmail: "Introduce correo y contraseña", errCampi: "Rellena todos los campos",
+    errNome: "El nombre es obligatorio", errCognome: "El apellido es obligatorio",
+    errDoc: "La foto del documento es obligatoria", errPassword: "Contraseña mín. 6 caracteres",
+    errLogin: "Correo o contraseña incorrectos", errEmailUsed: "Correo ya registrado",
+    errGenerico: "Error: ", errAdmin: "Credenciales incorrectas", errUnauthorized: "Acceso no autorizado",
+    emailVerifyMsg: "📧 Revisa tu correo y haz clic en el enlace de verificación.",
+    adminUsername: "👤 Usuario", adminUsernamePh: "marco",
+    adminLoginBtn: "Entrar como Admin 🔐", adminBack: "← Volver",
+    hiUser: "HOLA", scanQR: "📷 Escanear QR bici",
+    tapBike: "👆 O toca una bici en el mapa", logout: "Salir",
+    scanTitle: "Escanear el QR de la bici", scanDesc: "Apunta la cámara al QR del cuadro",
+    scanManual: "O introduce el código:", scanPh: "Ej: PA-021", scanClose: "✕",
+    planMinutes: "Por minuto", planDay: "Día completo",
+    planMinutesDesc: "desbloqueo + /min · pausa", planDayDesc: "todo el día · pausa gratuita",
+    continueBtn: "💳 Continuar", walkDistance: "desde tu posición actual",
+    rideInProgress: "VIAJE EN CURSO", ridePause: "PAUSA", totalCost: "Coste total",
+    unlock: "🔓 Desbloqueo", ridePerMin: "⏱️ Viaje", pausePerMin: "⏸️ Pausa", zone: "📍 Zona",
+    pauseBtn: "⏸️ Pausa", resumeBtn: "▶️ Reanudar", endRide: "🏁 Terminar viaje", free: "Gratis",
+    endRideTitle: "Foto del aparcamiento", photoRequired: "📸 Obligatorio",
+    photoDesc: "Haz una foto a la bici aparcada", takePhoto: "Hacer foto",
+    photoChange: "✅ Toca para cambiar", confirmEnd: "✅ Confirmar fin del viaje",
+    saving: "⏳ Guardando...", backToRide: "← Volver al viaje",
+    rideComplete: "¡Viaje completado!", thankYou: "Gracias por elegir PedalAgilla 🌊",
+    totalPaid: "TOTAL PAGADO", bikeLbl: "🚲 Bici", zoneLbl: "📍 Zona", durationLbl: "⏱️ Duración",
+    backToMap: "Volver al mapa 🌊", myProfile: "MI PERFIL", rates: "💶 Tarifas",
+    unlockRate: "🔓 Desbloqueo", perMinRate: "⏱️ Por minuto", pauseRate: "⏸️ Pausa",
+    dayRate: "☀️ Día completo", pauseFree: "pausa gratis", assistance: "🆘 Asistencia",
+    callMarco: "📞 Llamar a Marco:", whatsappMarco: "💬 WhatsApp Marco",
+    navMap: "Mapa", navProfile: "Perfil",
+    total: "TOTAL", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    cardName: "Nombre", cardNamePh: "Carlos García", card: "Tarjeta",
+    payBtn: "💳 Pagar", paying: "⏳ Procesando...", cancel: "Cancelar",
+    errName: "Introduce tu nombre", errPayment: "Error. Inténtalo de nuevo.",
+    payment: "💳 Pago", min: "min",
+  },
+  nl: {
+    appSubtitle: "E-BIKE SHARING · Meer van Trasimeno",
+    login: "Inloggen", register: "Registreren",
+    email: "📧 E-mail", password: "🔑 Wachtwoord",
+    emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
+    loginBtn: "Inloggen 🚲", loginLoading: "⏳ Inloggen...",
+    adminAccess: "🔐 Beheerderstoegang",
+    nome: "👤 Voornaam *", cognome: "👤 Achternaam *", telefono: "📱 Telefoon *",
+    nomePh: "Jan", cognomePh: "de Vries", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 tekens",
+    documento: "📷 Identiteitsbewijs", docRequired: "Verplicht", docTap: "Tik om te uploaden", docLoaded: "✅ Geüpload",
+    createAccount: "Account aanmaken 🌊", registerLoading: "⏳ Registreren...",
+    errEmail: "Vul e-mail en wachtwoord in", errCampi: "Vul alle velden in",
+    errNome: "Voornaam is verplicht", errCognome: "Achternaam is verplicht",
+    errDoc: "Foto identiteitsbewijs is verplicht", errPassword: "Wachtwoord min. 6 tekens",
+    errLogin: "Verkeerd e-mail of wachtwoord", errEmailUsed: "E-mail al geregistreerd",
+    errGenerico: "Fout: ", errAdmin: "Verkeerde inloggegevens", errUnauthorized: "Toegang niet geautoriseerd",
+    emailVerifyMsg: "📧 Controleer uw e-mail en klik op de verificatielink.",
+    adminUsername: "👤 Gebruikersnaam", adminUsernamePh: "marco",
+    adminLoginBtn: "Inloggen als Admin 🔐", adminBack: "← Terug",
+    hiUser: "HAI", scanQR: "📷 Scan fiets QR",
+    tapBike: "👆 Of tik op een fiets op de kaart", logout: "Uitloggen",
+    scanTitle: "Scan de QR-code van de fiets", scanDesc: "Richt de camera op de QR-code op het frame",
+    scanManual: "Of voer de code in:", scanPh: "Bijv.: PA-021", scanClose: "✕",
+    planMinutes: "Per minuut", planDay: "Hele dag",
+    planMinutesDesc: "ontgrendeling + /min · pauze", planDayDesc: "hele dag · gratis pauze",
+    continueBtn: "💳 Doorgaan", walkDistance: "vanaf uw huidige locatie",
+    rideInProgress: "RIT BEZIG", ridePause: "PAUZE", totalCost: "Totale kosten",
+    unlock: "🔓 Ontgrendeling", ridePerMin: "⏱️ Rit", pausePerMin: "⏸️ Pauze", zone: "📍 Zone",
+    pauseBtn: "⏸️ Pauze", resumeBtn: "▶️ Hervatten", endRide: "🏁 Rit beëindigen", free: "Gratis",
+    endRideTitle: "Parkeerfoto", photoRequired: "📸 Verplicht",
+    photoDesc: "Maak een foto van de geparkeerde fiets", takePhoto: "Foto maken",
+    photoChange: "✅ Tik om te wijzigen", confirmEnd: "✅ Einde rit bevestigen",
+    saving: "⏳ Opslaan...", backToRide: "← Terug naar rit",
+    rideComplete: "Rit voltooid!", thankYou: "Bedankt voor het kiezen van PedalAgilla 🌊",
+    totalPaid: "TOTAAL BETAALD", bikeLbl: "🚲 Fiets", zoneLbl: "📍 Zone", durationLbl: "⏱️ Duur",
+    backToMap: "Terug naar kaart 🌊", myProfile: "MIJN PROFIEL", rates: "💶 Tarieven",
+    unlockRate: "🔓 Ontgrendeling", perMinRate: "⏱️ Per minuut", pauseRate: "⏸️ Pauze",
+    dayRate: "☀️ Hele dag", pauseFree: "gratis pauze", assistance: "🆘 Hulp",
+    callMarco: "📞 Bel Marco:", whatsappMarco: "💬 WhatsApp Marco",
+    navMap: "Kaart", navProfile: "Profiel",
+    total: "TOTAAL", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    cardName: "Naam", cardNamePh: "Jan de Vries", card: "Kaart",
+    payBtn: "💳 Betalen", paying: "⏳ Verwerken...", cancel: "Annuleren",
+    errName: "Vul uw naam in", errPayment: "Fout. Probeer opnieuw.",
+    payment: "💳 Betaling", min: "min",
+  },
+  cs: {
+    appSubtitle: "E-BIKE SHARING · Trasimenské jezero",
+    login: "Přihlásit se", register: "Registrovat se",
+    email: "📧 E-mail", password: "🔑 Heslo",
+    emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
+    loginBtn: "Přihlásit se 🚲", loginLoading: "⏳ Přihlašování...",
+    adminAccess: "🔐 Přístup administrátora",
+    nome: "👤 Jméno *", cognome: "👤 Příjmení *", telefono: "📱 Telefon *",
+    nomePh: "Jan", cognomePh: "Novák", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 znaků",
+    documento: "📷 Doklad totožnosti", docRequired: "Povinné", docTap: "Klepněte pro nahrání", docLoaded: "✅ Nahráno",
+    createAccount: "Vytvořit účet 🌊", registerLoading: "⏳ Registrace...",
+    errEmail: "Zadejte e-mail a heslo", errCampi: "Vyplňte všechna pole",
+    errNome: "Jméno je povinné", errCognome: "Příjmení je povinné",
+    errDoc: "Foto dokladu je povinné", errPassword: "Heslo min. 6 znaků",
+    errLogin: "Špatný e-mail nebo heslo", errEmailUsed: "E-mail již zaregistrován",
+    errGenerico: "Chyba: ", errAdmin: "Špatné přihlašovací údaje", errUnauthorized: "Přístup není povolen",
+    emailVerifyMsg: "📧 Zkontrolujte svůj e-mail a klikněte na ověřovací odkaz.",
+    adminUsername: "👤 Uživatelské jméno", adminUsernamePh: "marco",
+    adminLoginBtn: "Přihlásit jako Admin 🔐", adminBack: "← Zpět",
+    hiUser: "AHOJ", scanQR: "📷 Naskenovat QR kolo",
+    tapBike: "👆 Nebo klepněte na kolo na mapě", logout: "Odhlásit",
+    scanTitle: "Naskenovat QR kód kola", scanDesc: "Namiřte kameru na QR kód na rámu",
+    scanManual: "Nebo zadejte kód:", scanPh: "Např.: PA-021", scanClose: "✕",
+    planMinutes: "Za minutu", planDay: "Celý den",
+    planMinutesDesc: "odemknutí + /min · pauza", planDayDesc: "celý den · bezplatná pauza",
+    continueBtn: "💳 Pokračovat", walkDistance: "od vaší aktuální polohy",
+    rideInProgress: "JÍZDA PROBÍHÁ", ridePause: "PAUZA", totalCost: "Celkové náklady",
+    unlock: "🔓 Odemknutí", ridePerMin: "⏱️ Jízda", pausePerMin: "⏸️ Pauza", zone: "📍 Zóna",
+    pauseBtn: "⏸️ Pauza", resumeBtn: "▶️ Pokračovat", endRide: "🏁 Ukončit jízdu", free: "Zdarma",
+    endRideTitle: "Foto parkování", photoRequired: "📸 Povinné",
+    photoDesc: "Vyfoťte zaparkované kolo", takePhoto: "Vyfotit parkování",
+    photoChange: "✅ Klepněte pro změnu", confirmEnd: "✅ Potvrdit konec jízdy",
+    saving: "⏳ Ukládání...", backToRide: "← Zpět na jízdu",
+    rideComplete: "Jízda dokončena!", thankYou: "Děkujeme za výběr PedalAgilla 🌊",
+    totalPaid: "CELKEM ZAPLACENO", bikeLbl: "🚲 Kolo", zoneLbl: "📍 Zóna", durationLbl: "⏱️ Doba",
+    backToMap: "Zpět na mapu 🌊", myProfile: "MŮJ PROFIL", rates: "💶 Sazby",
+    unlockRate: "🔓 Odemknutí", perMinRate: "⏱️ Za minutu", pauseRate: "⏸️ Pauza",
+    dayRate: "☀️ Celý den", pauseFree: "bezplatná pauza", assistance: "🆘 Pomoc",
+    callMarco: "📞 Zavolat Marcovi:", whatsappMarco: "💬 WhatsApp Marco",
+    navMap: "Mapa", navProfile: "Profil",
+    total: "CELKEM", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    cardName: "Jméno", cardNamePh: "Jan Novák", card: "Karta",
+    payBtn: "💳 Zaplatit", paying: "⏳ Zpracování...", cancel: "Zrušit",
+    errName: "Zadejte své jméno", errPayment: "Chyba. Zkuste znovu.",
+    payment: "💳 Platba", min: "min",
+  }
+};
+ 
 const STRIPE_KEY = "pk_test_51Sx6QaIBfjLC7EABk7FoZen16MfAD8XhsofJ2mKaGsJLd116YlERXuYp3VTwrOsUJM9WjcUpQhzMJd7fbudZmkNG00y2uZJk7X";
 const stripeInstance = Stripe(STRIPE_KEY);
 const stripeElements = stripeInstance.elements();
@@ -65,8 +390,10 @@ const SBLOCCO = 1.00;
 const TARIFFA_MIN = 0.19;
 const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
-const QR_BASE_URL = "https://pedalagilla-app-k3zm.vercel.app/?bike=";
-const APP_URL = "https://pedalagilla-app-k3zm.vercel.app";
+const QR_BASE_URL = "https://pedalagilla-app-9aas.vercel.app/?bike=";
+const APP_URL = "https://pedalagilla-app-9aas.vercel.app";
+const LANG_LIST = ['it','en','de','fr','es','nl','cs'];
+const LANG_FLAGS = {it:'🇮🇹',en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷',es:'🇪🇸',nl:'🇳🇱',cs:'🇨🇿'};
 const checklist = ["🔗 Lubrificazione catena","🦶 Controllo pedali","🧹 Pulizia veicolo","🔋 Controllo batteria","🛞 Pressione pneumatici","🛑 Test freni","⚙️ Controllo cambio"];
 const initBikes = [
   {id:"PA-021",battery:88,status:"Disponibile",odometer:386.9,zone:"Passignano",model:"City Comfort",lat:43.1876,lng:12.1978,note:"",lastMaint:"15/03/2026",checks:{}},
@@ -98,6 +425,7 @@ const getRange = (battery) => Math.round((battery/100)*80);
 const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
 const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
 const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
+ 
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], zones=[], userPos=null }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
@@ -105,7 +433,6 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
   const zoneMarkersRef = React.useRef([]);
   const markersRef = React.useRef([]);
   const userMarkerRef = React.useRef(null);
-
   const calcDist = (lat1, lng1, lat2, lng2) => {
     const R = 6371000;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -113,15 +440,12 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
     const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   };
-
   const getDistText = (bike, pos) => {
     if (!pos) return "";
     const d = calcDist(pos.lat, pos.lng, bike.lat, bike.lng);
     const mins = Math.round(d / 80);
     return d < 1000 ? `🚶 ${Math.round(d)}m · ~${mins} min` : `🚶 ${(d/1000).toFixed(1)}km · ~${mins} min`;
   };
-
-  // Aggiorna zone
   React.useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
     zoneShapesRef.current.forEach(s => s?.setMap(null));
@@ -132,16 +456,10 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
     zones.forEach(zone => {
       let shape = null, center = null;
       if (zone.shape === "circle" && zone.center) {
-        shape = new window.google.maps.Circle({
-          map: mapInstanceRef.current, center: zone.center, radius: zone.radius || 200,
-          fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
-        });
+        shape = new window.google.maps.Circle({ map: mapInstanceRef.current, center: zone.center, radius: zone.radius || 200, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 });
         center = zone.center;
       } else if (zone.path?.length > 0) {
-        shape = new window.google.maps.Polygon({
-          map: mapInstanceRef.current, paths: zone.path,
-          fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5
-        });
+        shape = new window.google.maps.Polygon({ map: mapInstanceRef.current, paths: zone.path, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 });
         const bounds = new window.google.maps.LatLngBounds();
         zone.path.forEach(p => bounds.extend(p));
         const c = bounds.getCenter();
@@ -149,120 +467,52 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       }
       if (shape) zoneShapesRef.current.push(shape);
       if (center && zone.type !== "operativa" && icons[zone.type]) {
-        const marker = new window.google.maps.Marker({
-          position: center, map: mapInstanceRef.current,
-          label: { text: icons[zone.type], fontSize: "16px" },
-          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 }
-        });
+        const marker = new window.google.maps.Marker({ position: center, map: mapInstanceRef.current, label: { text: icons[zone.type], fontSize: "16px" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 } });
         zoneMarkersRef.current.push(marker);
       }
     });
   }, [zones, mapInstanceRef.current]);
-
-  // Centra sulla posizione utente appena arriva il GPS
   React.useEffect(() => {
     if (!mapInstanceRef.current || !userPos) return;
-    if (!mapInstanceRef.current._centeredOnUser) {
-      mapInstanceRef.current.setCenter(userPos);
-      mapInstanceRef.current.setZoom(14);
-      mapInstanceRef.current._centeredOnUser = true;
-    }
+    if (!mapInstanceRef.current._centeredOnUser) { mapInstanceRef.current.setCenter(userPos); mapInstanceRef.current.setZoom(14); mapInstanceRef.current._centeredOnUser = true; }
   }, [userPos]);
-
-  // Aggiorna InfoWindow distanza e marker utente quando cambia userPos
   React.useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
     markersRef.current.forEach(({ marker, iw, bike }) => {
       const distanceText = getDistText(bike, userPos);
-      iw.setContent(
-        `<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px">
-          <b style="color:#023047;font-size:14px">${bike.id}</b><br/>
-          <span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/>
-          <span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>
-          ${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}
-          <br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span>
-        </div>`
-      );
+      iw.setContent(`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}<br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`);
     });
     if (userPos && mapInstanceRef.current) {
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setPosition(userPos);
-      } else {
-        userMarkerRef.current = new window.google.maps.Marker({
-          position: userPos, map: mapInstanceRef.current, title: "La tua posizione",
-          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#219EBC", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 3 },
-          zIndex: 999
-        });
-      }
+      if (userMarkerRef.current) { userMarkerRef.current.setPosition(userPos); }
+      else { userMarkerRef.current = new window.google.maps.Marker({ position: userPos, map: mapInstanceRef.current, title: "La tua posizione", icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#219EBC", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 3 }, zIndex: 999 }); }
     }
   }, [userPos]);
-
-  // Inizializza mappa
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
       if (!window.google) { setTimeout(tryInit, 200); return; }
-      const initialCenter = window._userPosition || {lat:43.1500,lng:12.0800};
-      const initialZoom = window._userPosition ? 14 : 11;
-      const map = new window.google.maps.Map(mapRef.current, {
-        center: initialCenter, zoom: initialZoom, mapTypeId: "roadmap",
-        gestureHandling: "greedy",
-        styles: [
-          { featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },
-          { featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },
-          { featureType:"road", elementType:"geometry", stylers:[{color:"#ffffff"}] },
-          { featureType:"poi", stylers:[{visibility:"off"}] }
-        ]
-      });
+      const map = new window.google.maps.Map(mapRef.current, { center: window._userPosition || {lat:43.1500,lng:12.0800}, zoom: window._userPosition ? 14 : 11, mapTypeId: "roadmap", gestureHandling: "greedy", styles: [{ featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },{ featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },{ featureType:"road", elementType:"geometry", stylers:[{color:"#ffffff"}] },{ featureType:"poi", stylers:[{visibility:"off"}] }] });
       mapInstanceRef.current = map;
       bikes.forEach(bike => {
         const iw = new window.google.maps.InfoWindow({ content: "" });
-        const marker = new window.google.maps.Marker({
-          position: { lat: bike.lat, lng: bike.lng }, map, title: bike.id,
-          label: { text: `${bike.battery}%`, color: "#ffffff", fontSize: "10px", fontWeight: "bold" },
-          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 }
-        });
+        const marker = new window.google.maps.Marker({ position: { lat: bike.lat, lng: bike.lng }, map, title: bike.id, label: { text: `${bike.battery}%`, color: "#ffffff", fontSize: "10px", fontWeight: "bold" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 } });
         markersRef.current.push({ marker, iw, bike });
-        marker.addListener("click", () => {
-          const distanceText = getDistText(bike, userPos);
-          iw.setContent(
-            `<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px">
-              <b style="color:#023047;font-size:14px">${bike.id}</b><br/>
-              <span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/>
-              <span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>
-              ${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}
-              <br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span>
-            </div>`
-          );
-          iw.open(map, marker);
-          onBikeClick(bike);
-        });
+        marker.addListener("click", () => { const distanceText = getDistText(bike, userPos); iw.setContent(`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}<br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`); iw.open(map, marker); onBikeClick(bike); });
       });
       zones.forEach(zone => {
-        if (zone.shape === "circle" && zone.center) {
-          new window.google.maps.Circle({ map, center: zone.center, radius: zone.radius||200, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 });
-          const icons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
-          if (zone.type !== "operativa" && icons[zone.type]) {
-            new window.google.maps.Marker({ position: zone.center, map, label: { text: icons[zone.type], fontSize: "16px" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 } });
-          }
-        } else if (zone.path?.length > 0) {
-          new window.google.maps.Polygon({ map, paths: zone.path, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 });
-        }
+        if (zone.shape === "circle" && zone.center) { new window.google.maps.Circle({ map, center: zone.center, radius: zone.radius||200, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 }); const icons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" }; if (zone.type !== "operativa" && icons[zone.type]) { new window.google.maps.Marker({ position: zone.center, map, label: { text: icons[zone.type], fontSize: "16px" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 } }); } }
+        else if (zone.path?.length > 0) { new window.google.maps.Polygon({ map, paths: zone.path, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 }); }
       });
       tracks.forEach(track => {
-        if (track.points?.length > 1) {
-          new window.google.maps.Polyline({ path: track.points, geodesic: true, strokeColor: track.color||"#219EBC", strokeOpacity: 0.8, strokeWeight: 4, map });
-          new window.google.maps.Marker({ position: track.points[0], map, label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} });
-          new window.google.maps.Marker({ position: track.points[track.points.length-1], map, label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} });
-        }
+        if (track.points?.length > 1) { new window.google.maps.Polyline({ path: track.points, geodesic: true, strokeColor: track.color||"#219EBC", strokeOpacity: 0.8, strokeWeight: 4, map }); new window.google.maps.Marker({ position: track.points[0], map, label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} }); new window.google.maps.Marker({ position: track.points[track.points.length-1], map, label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} }); }
       });
     };
     tryInit();
   }, []);
-
   const style = fullscreen ? { position:"absolute", inset:0, width:"100%", height:"100%" } : { width:"100%", height, borderRadius:16 };
   return <div ref={mapRef} style={style} />;
 }
+ 
 function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
@@ -271,7 +521,7 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
   const markersRef = React.useRef([]);
   const zoneColors = { operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500" };
   const zoneIcons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
-const zoneTypeRef = React.useRef(zoneType);
+  const zoneTypeRef = React.useRef(zoneType);
   const zoneNameRef = React.useRef(zoneName);
   React.useEffect(()=>{ zoneTypeRef.current = zoneType; }, [zoneType]);
   React.useEffect(()=>{ zoneNameRef.current = zoneName; }, [zoneName]);
@@ -279,112 +529,55 @@ const zoneTypeRef = React.useRef(zoneType);
     if (!mapInstanceRef.current || !window.google) return;
     shapesRef.current.forEach(s=>{ if(s) s.setMap(null); });
     markersRef.current.forEach(m=>{ if(m) m.setMap(null); });
-  shapesRef.current = [];
+    shapesRef.current = [];
     zones.forEach((zone, idx) => {
-      let shape = null;
-      let center = null;
+      let shape = null, center = null;
       if (zone.shape==="circle" && zone.center) {
-        shape = new window.google.maps.Circle({
-          map:mapInstanceRef.current, center:zone.center, radius:zone.radius||200,
-          fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2,
-          draggable:true, editable:true
-        });
+        shape = new window.google.maps.Circle({ map:mapInstanceRef.current, center:zone.center, radius:zone.radius||200, fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2, draggable:true, editable:true });
         center = {lat:zone.center.lat, lng:zone.center.lng};
-        // Aggiorna marker quando cerchio si sposta
-        shape.addListener("center_changed", ()=>{
-          const newCenter = shape.getCenter();
-          if (markersRef.current[idx]) markersRef.current[idx].setPosition(newCenter);
-          zone.center = {lat:newCenter.lat(), lng:newCenter.lng()};
-        });
+        shape.addListener("center_changed", ()=>{ const newCenter = shape.getCenter(); if (markersRef.current[idx]) markersRef.current[idx].setPosition(newCenter); zone.center = {lat:newCenter.lat(), lng:newCenter.lng()}; });
         shape.addListener("radius_changed", ()=>{ zone.radius = shape.getRadius(); });
       } else if (zone.path && zone.path.length>0) {
-        shape = new window.google.maps.Polygon({
-          map:mapInstanceRef.current, paths:zone.path,
-          fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2,
-          draggable:true, editable:true
-        });
+        shape = new window.google.maps.Polygon({ map:mapInstanceRef.current, paths:zone.path, fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2, draggable:true, editable:true });
         const bounds = new window.google.maps.LatLngBounds();
         zone.path.forEach(p=>bounds.extend(p));
         const c = bounds.getCenter();
         center = {lat:c.lat(), lng:c.lng()};
       }
       if (shape) shapesRef.current[idx] = shape;
-      // Icona al centro (non per operativa)
       if (center && zone.type !== "operativa" && zoneIcons[zone.type]) {
-        const marker = new window.google.maps.Marker({
-          position:center, map:mapInstanceRef.current,
-          label:{text:zoneIcons[zone.type], fontSize:"20px", fontWeight:"bold"},
-          icon:{path:window.google.maps.SymbolPath.CIRCLE, scale:0, fillOpacity:0, strokeOpacity:0},
-          zIndex:10
-        });
+        const marker = new window.google.maps.Marker({ position:center, map:mapInstanceRef.current, label:{text:zoneIcons[zone.type], fontSize:"20px", fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE, scale:0, fillOpacity:0, strokeOpacity:0}, zIndex:10 });
         markersRef.current[idx] = marker;
-      } else {
-        markersRef.current[idx] = null;
-      }
+      } else { markersRef.current[idx] = null; }
     });
   }, [zones]);
-
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
       if (!window.google || !window.google.maps.drawing) { setTimeout(tryInit,200); return; }
-      const map = new window.google.maps.Map(mapRef.current, {
-        center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
-        styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
-      });
+      const map = new window.google.maps.Map(mapRef.current, { center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap", styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}] });
       mapInstanceRef.current = map;
-      const dm = new window.google.maps.drawing.DrawingManager({
-        drawingMode:null, drawingControl:false,
-        circleOptions:{fillColor:"#219EBC",fillOpacity:0.2,strokeColor:"#219EBC",strokeWeight:2,editable:false},
-        polygonOptions:{fillColor:"#219EBC",fillOpacity:0.2,strokeColor:"#219EBC",strokeWeight:2,editable:false}
-      });
+      const dm = new window.google.maps.drawing.DrawingManager({ drawingMode:null, drawingControl:false, circleOptions:{fillColor:"#219EBC",fillOpacity:0.2,strokeColor:"#219EBC",strokeWeight:2,editable:false}, polygonOptions:{fillColor:"#219EBC",fillOpacity:0.2,strokeColor:"#219EBC",strokeWeight:2,editable:false} });
       dm.setMap(map);
       drawingManagerRef.current = dm;
-     window.google.maps.event.addListener(dm,"circlecomplete",circle=>{
-        dm.setDrawingMode(null);
-        const zt = zoneTypeRef.current;
-        const zn = zoneNameRef.current;
-        const color = zoneColors[zt]||"#219EBC";
-        circle.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.2});
-        onZoneSaved({name:zn||"Nuova zona",type:zt,shape:"circle",color,center:{lat:circle.getCenter().lat(),lng:circle.getCenter().lng()},radius:circle.getRadius()});
-        circle.setMap(null);
-      });
-      window.google.maps.event.addListener(dm,"polygoncomplete",polygon=>{
-        dm.setDrawingMode(null);
-        const zt = zoneTypeRef.current;
-        const zn = zoneNameRef.current;
-        const color = zoneColors[zt]||"#219EBC";
-        polygon.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.2});
-        const path = polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
-        onZoneSaved({name:zn||"Nuova zona",type:zt,shape:"polygon",color,path});
-        polygon.setMap(null);
-      });
+      window.google.maps.event.addListener(dm,"circlecomplete",circle=>{ dm.setDrawingMode(null); const zt = zoneTypeRef.current; const zn = zoneNameRef.current; const color = zoneColors[zt]||"#219EBC"; circle.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.2}); onZoneSaved({name:zn||"Nuova zona",type:zt,shape:"circle",color,center:{lat:circle.getCenter().lat(),lng:circle.getCenter().lng()},radius:circle.getRadius()}); circle.setMap(null); });
+      window.google.maps.event.addListener(dm,"polygoncomplete",polygon=>{ dm.setDrawingMode(null); const zt = zoneTypeRef.current; const zn = zoneNameRef.current; const color = zoneColors[zt]||"#219EBC"; polygon.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.2}); const path = polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()})); onZoneSaved({name:zn||"Nuova zona",type:zt,shape:"polygon",color,path}); polygon.setMap(null); });
       redrawZones();
     };
     tryInit();
   }, []);
-
-  React.useEffect(() => {
-    if (mapInstanceRef.current) redrawZones();
-  }, [zones]);
-
+  React.useEffect(() => { if (mapInstanceRef.current) redrawZones(); }, [zones]);
   React.useEffect(() => {
     const activate = () => {
-      if (!drawingManagerRef.current || !window.google || !window.google.maps.drawing) {
-        if (drawingActive) setTimeout(activate, 300);
-        return;
-      }
-      drawingManagerRef.current.setDrawingMode(
-        drawingActive ? (drawingMode==="circle" ? window.google.maps.drawing.OverlayType.CIRCLE : window.google.maps.drawing.OverlayType.POLYGON) : null
-      );
+      if (!drawingManagerRef.current || !window.google || !window.google.maps.drawing) { if (drawingActive) setTimeout(activate, 300); return; }
+      drawingManagerRef.current.setDrawingMode(drawingActive ? (drawingMode==="circle" ? window.google.maps.drawing.OverlayType.CIRCLE : window.google.maps.drawing.OverlayType.POLYGON) : null);
     };
     activate();
   }, [drawingActive, drawingMode]);
-
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
-
-function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
+ 
+function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t }) {
   const cardRef = React.useRef(null);
   const cardEl = React.useRef(null);
   const [loading, setLoading] = React.useState(false);
@@ -396,39 +589,37 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel }) {
     card.mount(cardRef.current); cardEl.current = card;
   }, []);
   const handlePay = async () => {
-    if (!nome.trim()) { setError("Inserisci il tuo nome"); return; }
+    if (!nome.trim()) { setError(t('errName')); return; }
     setLoading(true); setError(null);
     try {
       const {paymentMethod,error:e} = await stripeInstance.createPaymentMethod({type:"card",card:cardEl.current,billing_details:{name:nome}});
       if (e) { setError(e.message); setLoading(false); return; }
       setTimeout(()=>{ setLoading(false); onSuccess(paymentMethod.id); },1500);
-    } catch(e) { setError("Errore. Riprova."); setLoading(false); }
+    } catch(e) { setError(t('errPayment')); setLoading(false); }
   };
   return (
     <div style={{padding:"20px 18px"}}>
       <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:16,textAlign:"center"}}>
-        <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>TOTALE</p>
+        <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{t('total')}</p>
         <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{amount.toFixed(2)}</p>
         <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,margin:0,...ds}}>{bike.id} · {plan} · {bike.zone}</p>
       </div>
       <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:10,marginBottom:14}}>
-        <p style={{color:C.blueGreen,fontSize:11,fontWeight:600,margin:0,...ds}}>🧪 Test: 4242 4242 4242 4242 · 12/28 · 123</p>
+        <p style={{color:C.blueGreen,fontSize:11,fontWeight:600,margin:0,...ds}}>{t('testCard')}</p>
       </div>
-      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>Nome</p>
-      <input value={nome} onChange={e=>setNome(e.target.value)} placeholder="Mario Rossi"
-        style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,marginBottom:12,background:C.white}} />
-      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>Carta</p>
+      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('cardName')}</p>
+      <input value={nome} onChange={e=>setNome(e.target.value)} placeholder={t('cardNamePh')} style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,marginBottom:12,background:C.white}} />
+      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('card')}</p>
       <div ref={cardRef} style={{background:C.white,padding:14,borderRadius:10,border:`1.5px solid ${C.skyBlue}`,marginBottom:12}} />
       {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
-      <button onClick={handlePay} disabled={loading}
-        style={{width:"100%",background:loading?`${C.blueGreen}80`:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:8}}>
-        {loading?"⏳ Elaborazione...":`💳 Paga €${amount.toFixed(2)}`}
+      <button onClick={handlePay} disabled={loading} style={{width:"100%",background:loading?`${C.blueGreen}80`:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:8}}>
+        {loading?t('paying'):`${t('payBtn')} €${amount.toFixed(2)}`}
       </button>
-      <button onClick={onCancel} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>Annulla</button>
+      <button onClick={onCancel} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('cancel')}</button>
     </div>
   );
 }
-
+ 
 function AuthScreen({ onLogin }) {
   const [mode, setMode] = React.useState("login");
   const [email, setEmail] = React.useState("");
@@ -442,51 +633,53 @@ function AuthScreen({ onLogin }) {
   const [error, setError] = React.useState(null);
   const [adminUser, setAdminUser] = React.useState("");
   const [adminPass, setAdminPass] = React.useState("");
+  const [lang, setLang] = React.useState(() => {
+    const l = navigator.language?.slice(0,2);
+    return LANG_LIST.includes(l) ? l : 'en';
+  });
+  const t = (k) => (TRANSLATIONS[lang] || TRANSLATIONS.en)[k] || k;
+ 
   const handleDocChange = (e) => {
     const file = e.target.files[0];
     if (file) { setDocFile(file); const r=new FileReader(); r.onload=ev=>setDocPreview(ev.target.result); r.readAsDataURL(file); }
   };
   const handleAdminLogin = async () => {
-  if (!adminUser||!adminPass) { setError("Inserisci credenziali"); return; }
-  setLoading(true); setError(null);
-  try {
-    await waitFB();
-    const {signInWithEmailAndPassword, doc, getDoc} = window.firebaseFunctions;
-    const cred = await signInWithEmailAndPassword(window.firebaseAuth, adminUser, adminPass);
-    const snap = await getDoc(doc(window.firebaseDb, "users", cred.user.uid));
-    const data = snap.data();
-    if (data?.type !== "admin") {
-      await window.firebaseFunctions.signOut(window.firebaseAuth);
-      setError("Accesso non autorizzato");
-      setLoading(false);
-      const [lang, setLang] = React.useState(()=>{ const l=navigator.language?.slice(0,2); return ['it','en','de','fr','es','nl','cs'].includes(l)?l:'en'; });
-const t = (k) => (TRANSLATIONS[lang]||TRANSLATIONS.en)[k] || k;
-const langs = [{code:'it',flag:'🇮🇹'},{code:'en',flag:'🇬🇧'},{code:'de',flag:'🇩🇪'},{code:'fr',flag:'🇫🇷'},{code:'es',flag:'🇪🇸'},{code:'nl',flag:'🇳🇱'},{code:'cs',flag:'🇨🇿'}];
-      return;
-    }
-    onLogin({type:"admin", nome:data.nome||"Admin", email:data.email||adminUser});
-  } catch(e) { setError("Credenziali errate"); }
-  setLoading(false);
-};
+    if (!adminUser||!adminPass) { setError(t('errAdmin')); return; }
+    setLoading(true); setError(null);
+    try {
+      await waitFB();
+      const {signInWithEmailAndPassword, doc, getDoc} = window.firebaseFunctions;
+      const cred = await signInWithEmailAndPassword(window.firebaseAuth, adminUser, adminPass);
+      const snap = await getDoc(doc(window.firebaseDb, "users", cred.user.uid));
+      const data = snap.data();
+      if (data?.type !== "admin") {
+        await window.firebaseFunctions.signOut(window.firebaseAuth);
+        setError(t('errUnauthorized'));
+        setLoading(false);
+        return;
+      }
+      onLogin({type:"admin", nome:data.nome||"Admin", email:data.email||adminUser});
+    } catch(e) { setError(t('errAdmin')); }
+    setLoading(false);
+  };
   const handleLogin = async () => {
-    if (!email||!password) { setError("Inserisci email e password"); return; }
+    if (!email||!password) { setError(t('errEmail')); return; }
     setLoading(true); setError(null);
     try {
       await waitFB();
       const {signInWithEmailAndPassword,doc,getDoc} = window.firebaseFunctions;
       const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
       const snap = await getDoc(doc(window.firebaseDb,"users",cred.user.uid));
-      
-onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
-    } catch(e) { setError("Email o password errati"); }
+      onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
+    } catch(e) { setError(t('errLogin')); }
     setLoading(false);
   };
   const handleRegister = async () => {
-    if (!nome.trim()) { setError("Il nome è obbligatorio"); return; }
-    if (!cognome.trim()) { setError("Il cognome è obbligatorio"); return; }
-    if (!email||!password||!telefono) { setError("Compila tutti i campi"); return; }
-    if (!docFile) { setError("La foto del documento è obbligatoria"); return; }
-    if (password.length<6) { setError("Password minimo 6 caratteri"); return; }
+    if (!nome.trim()) { setError(t('errNome')); return; }
+    if (!cognome.trim()) { setError(t('errCognome')); return; }
+    if (!email||!password||!telefono) { setError(t('errCampi')); return; }
+    if (!docFile) { setError(t('errDoc')); return; }
+    if (password.length<6) { setError(t('errPassword')); return; }
     setLoading(true); setError(null);
     try {
       await waitFB();
@@ -497,84 +690,74 @@ onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
       const docURL = await getDownloadURL(sRef);
       await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString()});
       await cred.user.sendEmailVerification();
-alert("📧 Controlla la tua email e clicca il link di verifica prima di accedere.");
-// Non fare login automatico, torna alla schermata di login
-setMode("login");
-setEmail("");
-setPassword("");
-    } catch(e) { setError(e.code==="auth/email-already-in-use"?"Email già registrata":"Errore: "+e.message); }
+      alert(t('emailVerifyMsg'));
+      setMode("login"); setEmail(""); setPassword("");
+    } catch(e) { setError(e.code==="auth/email-already-in-use"?t('errEmailUsed'):t('errGenerico')+e.message); }
     setLoading(false);
   };
   const inp = {width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10};
-  
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{width:390,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
-        <div style={{background:C.deepBlue,padding:"28px 24px 22px",textAlign:"center"}}>
-  <img src="https://pedalagilla-app-9aas.vercel.app/icons/icon-192x192.png" style={{width:160,height:160,objectFit:"contain",marginBottom:6}} alt="PedalAgilla"/>
-  </div>
-        <div style={{display:"flex",justifyContent:"center",gap:6,marginTop:10}}>
-  {langs.map(l=>(
-    <button key={l.code} onClick={()=>setLang(l.code)}
-      style={{background:lang===l.code?"rgba(255,255,255,0.25)":"transparent",border:`1px solid ${lang===l.code?"rgba(255,255,255,0.6)":"transparent"}`,borderRadius:8,padding:"3px 7px",cursor:"pointer",fontSize:18}}>
-      {l.flag}
-    </button>
-  ))}
-</div>
-        <div style={{padding:"22px 20px",maxHeight:"75vh",overflowY:"auto"}}>
+        <div style={{background:C.deepBlue,padding:"22px 24px 16px",textAlign:"center"}}>
+          <img src="https://pedalagilla-app-9aas.vercel.app/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
+          <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
+            {LANG_LIST.map(l=>(
+              <button key={l} onClick={()=>{setLang(l);setError(null);}}
+                style={{background:lang===l?"rgba(255,255,255,0.25)":"transparent",border:`1px solid ${lang===l?"rgba(255,255,255,0.5)":"transparent"}`,borderRadius:8,padding:"3px 6px",cursor:"pointer",fontSize:20,lineHeight:1}}>
+                {LANG_FLAGS[l]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{padding:"18px 20px",maxHeight:"72vh",overflowY:"auto"}}>
           {mode!=="adminLogin"&&(
             <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:18}}>
-              {[["login","Accedi"],["register","Registrati"]].map(([m,l])=>(
-                <button key={m} onClick={()=>{setMode(m);setError(null);}}
-                  style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
+              {[["login",t('login')],["register",t('register')]].map(([m,l])=>(
+                <button key={m} onClick={()=>{setMode(m);setError(null);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
           )}
           {mode==="login"&&<>
-            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>📧 Email</p>
-            <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="mario@example.com" style={inp} />
-            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>🔑 Password</p>
-            <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="••••••••" style={inp} />
+            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('email')}</p>
+            <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder={t('emailPlaceholder')} style={inp} />
+            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('password')}</p>
+            <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder={t('passwordPlaceholder')} style={inp} />
             {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
-            <button onClick={handleLogin} disabled={loading}
-              style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
-              {loading?"⏳ Accesso...":"Accedi 🚲"}
+            <button onClick={handleLogin} disabled={loading} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
+              {loading?t('loginLoading'):t('loginBtn')}
             </button>
-            <button onClick={()=>{setMode("adminLogin");setError(null);}}
-              style={{width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer"}}>
-              🔐 Accesso amministratore
+            <button onClick={()=>{setMode("adminLogin");setError(null);}} style={{width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer"}}>
+              {t('adminAccess')}
             </button>
           </>}
           {mode==="register"&&<>
-            {[["👤 Nome *",nome,setNome,"text","Mario"],["👤 Cognome *",cognome,setCognome,"text","Rossi"],["📧 Email *",email,setEmail,"email","mario@example.com"],["📱 Telefono *",telefono,setTelefono,"tel","+39 333 1234567"],["🔑 Password *",password,setPassword,"password","Minimo 6 caratteri"]].map(([label,val,setter,type,ph])=>(
+            {[[t('nome'),nome,setNome,"text",t('nomePh')],[t('cognome'),cognome,setCognome,"text",t('cognomePh')],[t('email'),email,setEmail,"email",t('emailPlaceholder')],[t('telefono'),telefono,setTelefono,"tel",t('telefonoPh')],[t('password'),password,setPassword,"password",t('passwordMin')]].map(([label,val,setter,type,ph])=>(
               <div key={label}>
                 <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{label}</p>
                 <input value={val} onChange={e=>setter(e.target.value)} type={type} placeholder={ph} style={inp} />
               </div>
             ))}
-            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"4px 0 6px",...ds}}>📷 Documento <span style={{color:C.warmOrange}}>*</span></p>
-            <div style={{border:`2px dashed ${docFile?C.blueGreen:C.warmOrange}`,borderRadius:12,padding:16,textAlign:"center",marginBottom:10,cursor:"pointer"}}
-              onClick={()=>document.getElementById("docInput").click()}>
-              {docPreview?<div><img src={docPreview} style={{width:"100%",borderRadius:8,maxHeight:100,objectFit:"cover",marginBottom:4}}/><p style={{color:C.blueGreen,fontSize:12,...ds,margin:0,fontWeight:600}}>✅ Caricato</p></div>
-                :<div><div style={{fontSize:32,marginBottom:4}}>📄</div><p style={{color:C.warmOrange,fontSize:13,...ds,fontWeight:600,margin:0}}>Tocca per caricare</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>Obbligatorio</p></div>}
+            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"4px 0 6px",...ds}}>{t('documento')} <span style={{color:C.warmOrange}}>*</span></p>
+            <div style={{border:`2px dashed ${docFile?C.blueGreen:C.warmOrange}`,borderRadius:12,padding:16,textAlign:"center",marginBottom:10,cursor:"pointer"}} onClick={()=>document.getElementById("docInput").click()}>
+              {docPreview?<div><img src={docPreview} style={{width:"100%",borderRadius:8,maxHeight:100,objectFit:"cover",marginBottom:4}}/><p style={{color:C.blueGreen,fontSize:12,...ds,margin:0,fontWeight:600}}>{t('docLoaded')}</p></div>
+                :<div><div style={{fontSize:32,marginBottom:4}}>📄</div><p style={{color:C.warmOrange,fontSize:13,...ds,fontWeight:600,margin:0}}>{t('docTap')}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{t('docRequired')}</p></div>}
               <input id="docInput" type="file" accept="image/*" onChange={handleDocChange} style={{display:"none"}} />
             </div>
             {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
-            <button onClick={handleRegister} disabled={loading}
-              style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
-              {loading?"⏳ Registrazione...":"Crea account 🌊"}
+            <button onClick={handleRegister} disabled={loading} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+              {loading?t('registerLoading'):t('createAccount')}
             </button>
           </>}
           {mode==="adminLogin"&&<>
-            <button onClick={()=>{setMode("login");setError(null);}} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,cursor:"pointer",...ds,fontWeight:600,marginBottom:14}}>← Torna</button>
-            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>👤 Username</p>
-            <input value={adminUser} onChange={e=>setAdminUser(e.target.value)} type="text" placeholder="marco" style={inp} />
-            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>🔑 Password</p>
-            <input value={adminPass} onChange={e=>setAdminPass(e.target.value)} type="password" placeholder="••••••••" style={inp} />
+            <button onClick={()=>{setMode("login");setError(null);}} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,cursor:"pointer",...ds,fontWeight:600,marginBottom:14}}>{t('adminBack')}</button>
+            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('adminUsername')}</p>
+            <input value={adminUser} onChange={e=>setAdminUser(e.target.value)} type="email" placeholder={t('adminUsernamePh')} style={inp} />
+            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('password')}</p>
+            <input value={adminPass} onChange={e=>setAdminPass(e.target.value)} type="password" placeholder={t('passwordPlaceholder')} style={inp} />
             {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
-            <button onClick={handleAdminLogin}
-              style={{width:"100%",background:`linear-gradient(90deg,${C.deepBlue},#034a6e)`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
-              Accedi come Admin 🔐
+            <button onClick={handleAdminLogin} style={{width:"100%",background:`linear-gradient(90deg,${C.deepBlue},#034a6e)`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+              {t('adminLoginBtn')}
             </button>
           </>}
         </div>
@@ -582,7 +765,7 @@ setPassword("");
     </div>
   );
 }
-
+ 
 function RideTimer({ bike, plan, user, rideId, onEnd }) {
   const [seconds, setSeconds] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
@@ -597,13 +780,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
   React.useEffect(() => { if (paused&&!showEndFlow) { const t=setInterval(()=>setPauseSeconds(s=>s+1),1000); return()=>clearInterval(t); } },[paused,showEndFlow]);
   React.useEffect(() => {
     if (!navigator.geolocation||showEndFlow) return;
-    const saveGPS = () => {
-      navigator.geolocation.getCurrentPosition(async pos=>{
-        const point={lat:pos.coords.latitude,lng:pos.coords.longitude,t:Date.now()};
-        trackRef.current.push(point);
-        if (rideId) { try { await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current}); } catch(e){} }
-      },()=>{},{enableHighAccuracy:true});
-    };
+    const saveGPS = () => { navigator.geolocation.getCurrentPosition(async pos=>{ const point={lat:pos.coords.latitude,lng:pos.coords.longitude,t:Date.now()}; trackRef.current.push(point); if (rideId) { try { await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current}); } catch(e){} } },()=>{},{enableHighAccuracy:true}); };
     saveGPS(); const t=setInterval(saveGPS,30000); return()=>clearInterval(t);
   },[showEndFlow]);
   const mins=Math.floor(seconds/60), secs=seconds%60, pauseMins=Math.floor(pauseSeconds/60);
@@ -612,7 +789,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
   const totalCost=rideCost+pauseCost;
   const handleParkPhoto=(e)=>{ const file=e.target.files[0]; if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);} };
   const handleEndConfirm=async()=>{
-    if(!parkPhoto){alert("Scatta una foto al parcheggio!");return;}
+    if(!parkPhoto){alert("📸");return;}
     setUploading(true);
     try {
       await waitFB();
@@ -635,8 +812,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
           <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>📸 Obbligatorio</p>
           <p style={{color:"#888",fontSize:12,...ds,margin:0}}>Scatta una foto alla bici parcheggiata</p>
         </div>
-        <div style={{border:`2px dashed ${parkPhoto?C.blueGreen:C.warmOrange}`,borderRadius:14,padding:20,textAlign:"center",marginBottom:16,cursor:"pointer"}}
-          onClick={()=>document.getElementById("parkInput").click()}>
+        <div style={{border:`2px dashed ${parkPhoto?C.blueGreen:C.warmOrange}`,borderRadius:14,padding:20,textAlign:"center",marginBottom:16,cursor:"pointer"}} onClick={()=>document.getElementById("parkInput").click()}>
           {parkPreview?<div><img src={parkPreview} style={{width:"100%",borderRadius:10,maxHeight:200,objectFit:"cover",marginBottom:8}}/><p style={{color:C.blueGreen,fontSize:13,...ds,fontWeight:600,margin:0}}>✅ Tocca per cambiare</p></div>
             :<div><div style={{fontSize:48,marginBottom:8}}>📸</div><p style={{color:C.warmOrange,fontSize:14,...ds,fontWeight:600,margin:0}}>Scatta foto parcheggio</p></div>}
           <input id="parkInput" type="file" accept="image/*" capture="environment" onChange={handleParkPhoto} style={{display:"none"}} />
@@ -649,8 +825,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
             </div>
           ))}
         </div>
-        <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading}
-          style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
+        <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading} style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
           {uploading?"⏳ Salvataggio...":"✅ Conferma fine corsa"}
         </button>
         <button onClick={()=>setShowEndFlow(false)} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>← Torna alla corsa</button>
@@ -692,7 +867,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd }) {
     </div>
   );
 }
-
+ 
 function ClienteApp({ user, onLogout }) {
   const bikes = initBikes.filter(b=>b.status==="Disponibile");
   const [tab, setTab] = React.useState("mappa");
@@ -709,47 +884,22 @@ function ClienteApp({ user, onLogout }) {
   const qrIntervalRef = React.useRef(null);
   const [clientZones, setClientZones] = React.useState([]);
   const [userPos, setUserPos] = React.useState(null);
-
-  React.useEffect(()=>{
-    if (!navigator.geolocation) return;
-    navigator.geolocation.watchPosition(pos=>{
-      setUserPos({lat:pos.coords.latitude, lng:pos.coords.longitude});
-    },()=>{},{enableHighAccuracy:true});
-  },[]);
-  // GPS utente per distanza a piedi
-  React.useEffect(()=>{
-    if (!navigator.geolocation) return;
-    navigator.geolocation.watchPosition(pos=>{
-      window._userPosition = {lat:pos.coords.latitude, lng:pos.coords.longitude};
-    },()=>{},{enableHighAccuracy:true});
-  },[]);
-
-  // Carica zone da Firebase
+  const [lang, setLang] = React.useState(() => { const l = navigator.language?.slice(0,2); return LANG_LIST.includes(l) ? l : 'en'; });
+  const t = (k) => (TRANSLATIONS[lang] || TRANSLATIONS.en)[k] || k;
+ 
+  React.useEffect(()=>{ if (!navigator.geolocation) return; navigator.geolocation.watchPosition(pos=>{ setUserPos({lat:pos.coords.latitude, lng:pos.coords.longitude}); window._userPosition = {lat:pos.coords.latitude, lng:pos.coords.longitude}; },()=>{},{enableHighAccuracy:true}); },[]);
   React.useEffect(()=>{
     const load = async () => {
-      try {
-        await waitFB();
-        const {doc,getDoc} = window.firebaseFunctions;
-        const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
-        if(snap.exists()) setClientZones(snap.data().zones||[]);
-        else setClientZones(DEFAULT_ZONES);
-      } catch(e){ setClientZones(DEFAULT_ZONES); }
+      try { await waitFB(); const {doc,getDoc} = window.firebaseFunctions; const snap = await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()) setClientZones(snap.data().zones||[]); else setClientZones(DEFAULT_ZONES); } catch(e){ setClientZones(DEFAULT_ZONES); }
     };
     load();
   },[]);
   React.useEffect(() => {
-    if (!showQRScanner) {
-      clearInterval(qrIntervalRef.current);
-      const video = document.getElementById("qrVideo");
-      if (video&&video.srcObject) { video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject=null; }
-      return;
-    }
+    if (!showQRScanner) { clearInterval(qrIntervalRef.current); const video = document.getElementById("qrVideo"); if (video&&video.srcObject) { video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject=null; } return; }
     navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(stream=>{
-      const video=document.getElementById("qrVideo");
-      if(video){video.srcObject=stream;video.play();}
+      const video=document.getElementById("qrVideo"); if(video){video.srcObject=stream;video.play();}
       qrIntervalRef.current=setInterval(()=>{
-        const video=document.getElementById("qrVideo");
-        const canvas=document.getElementById("qrCanvas");
+        const video=document.getElementById("qrVideo"); const canvas=document.getElementById("qrCanvas");
         if(!video||!canvas||!window.jsQR) return;
         canvas.width=video.videoWidth; canvas.height=video.videoHeight;
         const ctx=canvas.getContext("2d"); ctx.drawImage(video,0,0);
@@ -765,17 +915,13 @@ function ClienteApp({ user, onLogout }) {
   },[]);
   const payAmount=plan==="giornata"?TARIFFA_GIORNATA:SBLOCCO;
   const plans=[
-    {id:"minuti",label:"Al minuto",icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)} sblocco + €${TARIFFA_MIN}/min · pausa €${TARIFFA_PAUSA}/min`},
-    {id:"giornata",label:"Giornata intera",icon:"☀️",desc:`€${TARIFFA_GIORNATA.toFixed(2)} tutto il giorno · pausa gratuita`},
+    {id:"minuti",label:t('planMinutes'),icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)} ${t('planMinutesDesc').replace('sblocco','').replace('odemknutí','').replace('Entsperren','').replace('déverrouillage','').replace('desbloqueo','').replace('ontgrendeling','').replace('unlock','')} €${TARIFFA_MIN}/min`},
+    {id:"giornata",label:t('planDay'),icon:"☀️",desc:`€${TARIFFA_GIORNATA.toFixed(2)} ${t('planDayDesc')}`},
   ];
   const handleBikeClick=(bike)=>{setSelectedBike(bike);setShowPlan(true);};
   const handlePaySuccess=async()=>{
     setShowPayment(false);setShowPlan(false);
-    try {
-      await waitFB(); const {collection,addDoc}=window.firebaseFunctions;
-      const rideDoc=await addDoc(collection(window.firebaseDb,"rides"),{bikeId:selectedBike.id,userId:user.uid||"",userName:`${user.nome||""} ${user.cognome||""}`.trim()||"Cliente",userEmail:user.email||"",zone:selectedBike.zone,plan,status:"In corso",startTime:new Date().toISOString(),track:[],cost:0});
-      setCurrentRideId(rideDoc.id);
-    } catch(e){console.error(e);}
+    try { await waitFB(); const {collection,addDoc}=window.firebaseFunctions; const rideDoc=await addDoc(collection(window.firebaseDb,"rides"),{bikeId:selectedBike.id,userId:user.uid||"",userName:`${user.nome||""} ${user.cognome||""}`.trim()||"Cliente",userEmail:user.email||"",zone:selectedBike.zone,plan,status:"In corso",startTime:new Date().toISOString(),track:[],cost:0}); setCurrentRideId(rideDoc.id); } catch(e){console.error(e);}
     setRiding(true);setConfirmed(selectedBike);
   };
   const handleEndRide=(secs,cost)=>{setRiding(false);setRideSummary({bike:confirmed,secs,cost});setShowSummary(true);};
@@ -785,18 +931,16 @@ function ClienteApp({ user, onLogout }) {
       <div style={{width:390,minHeight:844,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
         {showQRScanner&&(
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.95)",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-            <button onClick={()=>setShowQRScanner(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>✕</button>
+            <button onClick={()=>setShowQRScanner(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>{t('scanClose')}</button>
             <div style={{fontSize:60,marginBottom:20}}>📷</div>
-            <p style={{color:C.white,fontSize:18,fontWeight:700,fontFamily:"Lora",marginBottom:8}}>Scansiona il QR della bici</p>
-            <p style={{color:"rgba(255,255,255,0.6)",fontSize:13,...ds,marginBottom:20,textAlign:"center",padding:"0 30px"}}>Inquadra il QR code sul telaio della bici</p>
+            <p style={{color:C.white,fontSize:18,fontWeight:700,fontFamily:"Lora",marginBottom:8}}>{t('scanTitle')}</p>
+            <p style={{color:"rgba(255,255,255,0.6)",fontSize:13,...ds,marginBottom:20,textAlign:"center",padding:"0 30px"}}>{t('scanDesc')}</p>
             <video id="qrVideo" style={{width:260,height:260,borderRadius:16,objectFit:"cover",border:`3px solid ${C.blueGreen}`,marginBottom:20}} autoPlay playsInline muted/>
             <canvas id="qrCanvas" style={{display:"none"}}/>
             <div style={{background:C.white,borderRadius:16,padding:16,width:260,textAlign:"center"}}>
-              <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>Oppure inserisci il codice:</p>
-              <input placeholder="Es: PA-021"
-                style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
-                onChange={e=>{ const val=e.target.value.toUpperCase().trim(); const bike=bikes.find(b=>b.id===val); if(bike){setShowQRScanner(false);setSelectedBike(bike);setShowPlan(true);} }}
-              />
+              <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>{t('scanManual')}</p>
+              <input placeholder={t('scanPh')} style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
+                onChange={e=>{ const val=e.target.value.toUpperCase().trim(); const bike=bikes.find(b=>b.id===val); if(bike){setShowQRScanner(false);setSelectedBike(bike);setShowPlan(true);} }}/>
             </div>
           </div>
         )}
@@ -805,22 +949,21 @@ function ClienteApp({ user, onLogout }) {
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,overflowY:"auto",padding:24}}>
             <div style={{textAlign:"center",marginBottom:20}}>
               <div style={{width:80,height:80,borderRadius:40,background:`linear-gradient(135deg,${C.blueGreen},${C.deepBlue})`,margin:"0 auto 16px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🏁</div>
-              <h2 style={{color:C.deepBlue,fontSize:22,fontWeight:700,fontFamily:"Lora",margin:"0 0 4px"}}>Corsa completata!</h2>
-              <p style={{color:"#888",fontSize:13,...ds}}>Grazie per aver scelto PedalAgilla 🌊</p>
+              <h2 style={{color:C.deepBlue,fontSize:22,fontWeight:700,fontFamily:"Lora",margin:"0 0 4px"}}>{t('rideComplete')}</h2>
+              <p style={{color:"#888",fontSize:13,...ds}}>{t('thankYou')}</p>
             </div>
             <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:20,marginBottom:16,textAlign:"center"}}>
-              <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>TOTALE PAGATO</p>
+              <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{t('totalPaid')}</p>
               <p style={{color:C.sunYellow,fontSize:40,fontWeight:700,margin:0,...ds}}>€{rideSummary.cost.toFixed(2)}</p>
             </div>
-            {[["🚲 Bici",rideSummary.bike.id],["📍 Zona",rideSummary.bike.zone],["⏱️ Durata",`${Math.floor(rideSummary.secs/60)}min`]].map(([k,v])=>(
+            {[[t('bikeLbl'),rideSummary.bike.id],[t('zoneLbl'),rideSummary.bike.zone],[t('durationLbl'),`${Math.floor(rideSummary.secs/60)}${t('min')}`]].map(([k,v])=>(
               <div key={k} style={{display:"flex",justifyContent:"space-between",borderBottom:`1px solid ${C.skyBlue}20`,paddingBottom:10,marginBottom:10}}>
                 <span style={{color:"#888",fontSize:13,...ds}}>{k}</span>
                 <span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{v}</span>
               </div>
             ))}
-            <button onClick={()=>{setShowSummary(false);setRideSummary(null);setConfirmed(null);}}
-              style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
-              Torna alla mappa 🌊
+            <button onClick={()=>{setShowSummary(false);setRideSummary(null);setConfirmed(null);}} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
+              {t('backToMap')}
             </button>
           </div>
         )}
@@ -830,10 +973,10 @@ function ClienteApp({ user, onLogout }) {
               <>
                 <div style={{background:C.deepBlue,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <button onClick={()=>setShowPayment(false)} style={{background:"none",border:"none",color:C.skyBlue,fontSize:22,cursor:"pointer"}}>←</button>
-                  <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>💳 Pagamento</p>
+                  <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>{t('payment')}</p>
                   <div style={{width:30}}/>
                 </div>
-                <PaymentForm amount={payAmount} bike={selectedBike} plan={plan==="giornata"?"Giornata":"Al minuto"} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)}/>
+                <PaymentForm amount={payAmount} bike={selectedBike} plan={plan==="giornata"?t('planDay'):t('planMinutes')} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
               </>
             ):(
               <>
@@ -854,9 +997,8 @@ function ClienteApp({ user, onLogout }) {
                       </div>
                     </div>
                   </div>
-                  {plans.map(p=>(
-                    <div key={p.id} onClick={()=>setPlan(p.id)}
-                      style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"14px 16px",marginBottom:10,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14}}>
+                  {[{id:"minuti",label:t('planMinutes'),icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)} + €${TARIFFA_MIN}/min`},{id:"giornata",label:t('planDay'),icon:"☀️",desc:`€${TARIFFA_GIORNATA.toFixed(2)} - ${t('free')}`}].map(p=>(
+                    <div key={p.id} onClick={()=>setPlan(p.id)} style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"14px 16px",marginBottom:10,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14}}>
                       <div style={{fontSize:28}}>{p.icon}</div>
                       <div style={{flex:1}}>
                         <p style={{color:plan===p.id?C.white:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{p.label}</p>
@@ -872,20 +1014,19 @@ function ClienteApp({ user, onLogout }) {
                     const a = Math.sin(dLat/2)**2 + Math.cos(userPos.lat*Math.PI/180) * Math.cos(selectedBike.lat*Math.PI/180) * Math.sin(dLng/2)**2;
                     const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
                     const mins = Math.round(d / 80);
-                    const distText = d < 1000 ? `${Math.round(d)}m · ~${mins} min a piedi` : `${(d/1000).toFixed(1)}km · ~${mins} min a piedi`;
+                    const distText = d < 1000 ? `${Math.round(d)}m · ~${mins} min` : `${(d/1000).toFixed(1)}km · ~${mins} min`;
                     return (
                       <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
                         <span style={{fontSize:20}}>🚶</span>
                         <div>
                           <p style={{color:C.blueGreen,fontSize:13,fontWeight:700,margin:0,...ds}}>{distText}</p>
-                          <p style={{color:"#aaa",fontSize:11,margin:0,...ds}}>dalla tua posizione attuale</p>
+                          <p style={{color:"#aaa",fontSize:11,margin:0,...ds}}>{t('walkDistance')}</p>
                         </div>
                       </div>
                     );
                   })()}
-                  <button onClick={()=>setShowPayment(true)}
-                    style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
-                    💳 Continua — {plan==="giornata"?`€${payAmount.toFixed(2)}`:`€${SBLOCCO.toFixed(2)} sblocco`}
+                  <button onClick={()=>setShowPayment(true)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
+                    {t('continueBtn')} — {plan==="giornata"?`€${payAmount.toFixed(2)}`:`€${SBLOCCO.toFixed(2)}`}
                   </button>
                 </div>
               </>
@@ -897,14 +1038,14 @@ function ClienteApp({ user, onLogout }) {
             <div style={{position:"absolute",top:0,left:0,right:0,zIndex:10,background:"linear-gradient(180deg,rgba(2,48,71,0.9) 0%,transparent 100%)",padding:"12px 18px 40px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
-                  <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>CIAO {user.nome?.toUpperCase()}!</p>
+                  <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>{t('hiUser')} {user.nome?.toUpperCase()}!</p>
                   <h1 style={{color:C.white,fontSize:16,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>PedalAgilla 🌊</h1>
                 </div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{background:"rgba(33,158,188,0.85)",borderRadius:10,padding:"5px 10px"}}>
                     <span style={{color:C.white,fontSize:11,...ds,fontWeight:600}}>{bikes.length} 🚲</span>
                   </div>
-                  <button onClick={onLogout} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:10,padding:"6px 12px",color:C.white,fontSize:11,...ds,cursor:"pointer"}}>Esci</button>
+                  <button onClick={onLogout} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:10,padding:"6px 12px",color:C.white,fontSize:11,...ds,cursor:"pointer"}}>{t('logout')}</button>
                 </div>
               </div>
             </div>
@@ -912,13 +1053,12 @@ function ClienteApp({ user, onLogout }) {
               <MapView bikes={bikes} onBikeClick={handleBikeClick} fullscreen={true} zones={clientZones} userPos={userPos}/>
             </div>
             <div style={{position:"absolute",bottom:80,left:12,right:12,zIndex:10}}>
-              <button onClick={()=>setShowQRScanner(true)}
-                style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                📷 Scansiona QR bici
+              <button onClick={()=>setShowQRScanner(true)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                {t('scanQR')}
               </button>
               <div style={{background:"rgba(2,48,71,0.88)",borderRadius:16,padding:"8px 14px",backdropFilter:"blur(8px)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:0}}>👆 Oppure tocca una bici sulla mappa</p>
+                  <p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:0}}>{t('tapBike')}</p>
                   <div style={{display:"flex",gap:6}}>
                     {[[C.blueGreen,"≥80%"],[C.sunYellow,"50%"],[C.warmOrange,"<50%"]].map(([c,l])=>(
                       <div key={l} style={{display:"flex",alignItems:"center",gap:3}}>
@@ -937,10 +1077,10 @@ function ClienteApp({ user, onLogout }) {
             <div style={{background:C.deepBlue,padding:"12px 22px 16px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
-                  <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>IL MIO PROFILO</p>
+                  <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>{t('myProfile')}</p>
                   <h1 style={{color:C.white,fontSize:18,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>PedalAgilla 🌊</h1>
                 </div>
-                <button onClick={onLogout} style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:10,padding:"6px 12px",color:C.skyBlue,fontSize:11,...ds,cursor:"pointer"}}>Esci</button>
+                <button onClick={onLogout} style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:10,padding:"6px 12px",color:C.skyBlue,fontSize:11,...ds,cursor:"pointer"}}>{t('logout')}</button>
               </div>
             </div>
             <div style={{padding:"16px 18px 0"}}>
@@ -950,8 +1090,8 @@ function ClienteApp({ user, onLogout }) {
                 <p style={{color:C.skyBlue,fontSize:12,margin:"4px 0 0",...ds}}>{user.email}</p>
               </div>
               <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-                <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 10px",fontFamily:"Lora"}}>💶 Tariffe</p>
-                {[["🔓 Sblocco",`€${SBLOCCO.toFixed(2)}`],["⏱️ Al minuto",`€${TARIFFA_MIN}`],["⏸️ Pausa",`€${TARIFFA_PAUSA}/min`],["☀️ Giornata",`€${TARIFFA_GIORNATA.toFixed(2)} (pausa gratis)`]].map(([k,v])=>(
+                <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 10px",fontFamily:"Lora"}}>{t('rates')}</p>
+                {[[t('unlockRate'),`€${SBLOCCO.toFixed(2)}`],[t('perMinRate'),`€${TARIFFA_MIN}`],[t('pauseRate'),`€${TARIFFA_PAUSA}/min`],[t('dayRate'),`€${TARIFFA_GIORNATA.toFixed(2)} (${t('pauseFree')})`]].map(([k,v])=>(
                   <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
                     <span style={{color:"#888",fontSize:13,...ds}}>{k}</span>
                     <span style={{color:C.blueGreen,fontSize:13,...ds,fontWeight:700}}>{v}</span>
@@ -959,17 +1099,16 @@ function ClienteApp({ user, onLogout }) {
                 ))}
               </div>
               <div style={{background:`${C.warmOrange}10`,border:`1px solid ${C.warmOrange}30`,borderRadius:14,padding:16}}>
-                <p style={{color:C.warmOrange,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>🆘 Assistenza</p>
-                <a href={`tel:${MARCO_TEL}`} style={{display:"block",background:C.warmOrange,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>📞 Chiama Marco: {MARCO_TEL}</a>
-                <a href={`https://wa.me/${MARCO_WA}`} style={{display:"block",background:"#25D366",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>💬 WhatsApp Marco</a>
+                <p style={{color:C.warmOrange,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>{t('assistance')}</p>
+                <a href={`tel:${MARCO_TEL}`} style={{display:"block",background:C.warmOrange,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>{t('callMarco')} {MARCO_TEL}</a>
+                <a href={`https://wa.me/${MARCO_WA}`} style={{display:"block",background:"#25D366",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>{t('whatsappMarco')}</a>
               </div>
             </div>
           </div>
         )}
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"10px 0 18px",zIndex:20}}>
-          {[["mappa","🗺️","Mappa"],["profilo","👤","Profilo"]].map(([id,icon,label])=>(
-            <button key={id} className="btn" onClick={()=>setTab(id)}
-              style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+          {[["mappa","🗺️",t('navMap')],["profilo","👤",t('navProfile')]].map(([id,icon,label])=>(
+            <button key={id} className="btn" onClick={()=>setTab(id)} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
               <span style={{fontSize:24}}>{icon}</span>
               <span style={{color:tab===id?C.blueGreen:"#bbb",fontSize:11,...ds,fontWeight:tab===id?600:400}}>{label}</span>
               {tab===id&&<div style={{width:20,height:3,borderRadius:2,background:C.blueGreen}}/>}
@@ -980,7 +1119,7 @@ function ClienteApp({ user, onLogout }) {
     </div>
   );
 }
-
+ 
 function AdminApp({ user, onLogout }) {
   const [tab, setTab] = React.useState("dashboard");
   const [bikes, setBikes] = React.useState(initBikes);
@@ -1002,19 +1141,14 @@ function AdminApp({ user, onLogout }) {
   const [zoneName, setZoneName] = React.useState("");
   const [savedZones, setSavedZones] = React.useState(DEFAULT_ZONES);
   const [zoneFilters, setZoneFilters] = React.useState({operativa:true,sosta:true,lenta:true,fuori:true});
-
-  // Salva zone su Firebase quando cambiano
+ 
   React.useEffect(()=>{
     const saveZones = async () => {
-      try {
-        await waitFB();
-        const {doc,setDoc} = window.firebaseFunctions;
-        await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()});
-      } catch(e){ console.log("Errore salvataggio zone:",e); }
+      try { await waitFB(); const {doc,setDoc} = window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()}); } catch(e){ console.log("Errore salvataggio zone:",e); }
     };
     if(savedZones!==DEFAULT_ZONES) saveZones();
   },[savedZones]);
-
+ 
   const today = new Date().toLocaleDateString("it-IT");
   const todayRides = rides.filter(r=>r.date===today);
   const monthRides = rides;
@@ -1027,44 +1161,24 @@ function AdminApp({ user, onLogout }) {
   const filteredBikes = filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>b.battery<50);
   const mapBikes = mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
   const visibleZones = savedZones.filter(z=>zoneFilters[z.type]);
-
+ 
   React.useEffect(()=>{
-    const load=async()=>{
-      await waitFB(); const {collection,onSnapshot}=window.firebaseFunctions;
-      onSnapshot(collection(window.firebaseDb,"rides"),snap=>{
-        setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; }));
-      });
-    }; load();
+    const load=async()=>{ await waitFB(); const {collection,onSnapshot}=window.firebaseFunctions; onSnapshot(collection(window.firebaseDb,"rides"),snap=>{ setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; })); }); }; load();
   },[]);
-
-  const loadUsers=async()=>{
-    setLoadingUsers(true);
-    try{ await waitFB(); const {collection,getDocs}=window.firebaseFunctions; const snap=await getDocs(collection(window.firebaseDb,"users")); setFbUsers(snap.docs.map(d=>({id:d.id,...d.data()}))); } catch(e){console.error(e);}
-    setLoadingUsers(false);
-  };
+ 
+  const loadUsers=async()=>{ setLoadingUsers(true); try{ await waitFB(); const {collection,getDocs}=window.firebaseFunctions; const snap=await getDocs(collection(window.firebaseDb,"users")); setFbUsers(snap.docs.map(d=>({id:d.id,...d.data()}))); } catch(e){console.error(e);} setLoadingUsers(false); };
   React.useEffect(()=>{if(tab==="utenti")loadUsers();},[tab]);
-
   const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
   const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
   const toggleStatus=(bikeId)=>{setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b));};
-  const forceEndRide=async(ride)=>{
-    const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2));
-    if(importoStr===null) return;
-    const importoForced=parseFloat(importoStr)||0;
-    try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true}); }
-    catch(e){alert("Errore: "+e.message);}
-  };
-  const exportExcel=()=>{
-    const data=fbUsers.map(u=>({"Nome":u.nome||"","Cognome":u.cognome||"","Email":u.email||"","Telefono":u.telefono||"","Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):""}));
-    if(!data.length){alert("Nessun utente da esportare");return;}
-    const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,"Utenti",ws); XLSX.writeFile(wb,"utenti_pedalagilla.xlsx");
-  };
-
+  const forceEndRide=async(ride)=>{ const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); if(importoStr===null) return; const importoForced=parseFloat(importoStr)||0; try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true}); } catch(e){alert("Errore: "+e.message);} };
+  const exportExcel=()=>{ const data=fbUsers.map(u=>({"Nome":u.nome||"","Cognome":u.cognome||"","Email":u.email||"","Telefono":u.telefono||"","Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):""})); if(!data.length){alert("Nessun utente da esportare");return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,"Utenti",ws); XLSX.writeFile(wb,"utenti_pedalagilla.xlsx"); };
+ 
   return(
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <style>{css}</style>
       <div style={{width:390,minHeight:844,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
-
+ 
         {showTrack&&selectedRide&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,display:"flex",flexDirection:"column"}}>
             <div style={{background:C.deepBlue,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1074,37 +1188,18 @@ function AdminApp({ user, onLogout }) {
             </div>
             <div style={{flex:1,position:"relative"}}>
               <MapView bikes={[]} onBikeClick={()=>{}} fullscreen={true} tracks={selectedRide.track&&selectedRide.track.length>1?[{points:selectedRide.track,color:"#219EBC"}]:[]}/>
-              {(!selectedRide.track||selectedRide.track.length<2)&&(
-                <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
-                  <div style={{background:"rgba(245,249,251,0.95)",borderRadius:20,padding:30,textAlign:"center"}}>
-                    <div style={{fontSize:40,marginBottom:10}}>🗺️</div>
-                    <p style={{color:C.deepBlue,fontSize:14,...ds,fontWeight:600}}>Nessun tracciato GPS</p>
-                    <p style={{color:"#aaa",fontSize:12,...ds}}>Il GPS si attiva durante la corsa</p>
-                  </div>
-                </div>
-              )}
+              {(!selectedRide.track||selectedRide.track.length<2)&&(<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}><div style={{background:"rgba(245,249,251,0.95)",borderRadius:20,padding:30,textAlign:"center"}}><div style={{fontSize:40,marginBottom:10}}>🗺️</div><p style={{color:C.deepBlue,fontSize:14,...ds,fontWeight:600}}>Nessun tracciato GPS</p><p style={{color:"#aaa",fontSize:12,...ds}}>Il GPS si attiva durante la corsa</p></div></div>)}
             </div>
             <div style={{background:C.white,padding:"14px 18px",borderTop:`1px solid ${C.skyBlue}20`}}>
               <div style={{display:"flex",justifyContent:"space-between"}}>
-                <div>
-                  <p style={{color:C.deepBlue,fontWeight:700,fontSize:14,...ds,margin:0}}>{selectedRide.user}</p>
-                  <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{selectedRide.date} · {selectedRide.zone}</p>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <p style={{color:C.blueGreen,fontWeight:700,fontSize:16,...ds,margin:0}}>€{(selectedRide.cost||0).toFixed(2)}</p>
-                  <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{Math.floor((selectedRide.duration||0)/60)}min</p>
-                </div>
+                <div><p style={{color:C.deepBlue,fontWeight:700,fontSize:14,...ds,margin:0}}>{selectedRide.user}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{selectedRide.date} · {selectedRide.zone}</p></div>
+                <div style={{textAlign:"right"}}><p style={{color:C.blueGreen,fontWeight:700,fontSize:16,...ds,margin:0}}>€{(selectedRide.cost||0).toFixed(2)}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{Math.floor((selectedRide.duration||0)/60)}min</p></div>
               </div>
-              {selectedRide.parkPhotoURL&&(
-                <div style={{marginTop:12}}>
-                  <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 6px",...ds}}>📸 Foto parcheggio</p>
-                  <img src={selectedRide.parkPhotoURL} style={{width:"100%",borderRadius:12,maxHeight:160,objectFit:"cover"}} alt="Parcheggio"/>
-                </div>
-              )}
+              {selectedRide.parkPhotoURL&&(<div style={{marginTop:12}}><p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 6px",...ds}}>📸 Foto parcheggio</p><img src={selectedRide.parkPhotoURL} style={{width:"100%",borderRadius:12,maxHeight:160,objectFit:"cover"}} alt="Parcheggio"/></div>)}
             </div>
           </div>
         )}
-
+ 
         {showBikeDetail&&selBike&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:200,display:"flex",flexDirection:"column",overflowY:"auto"}}>
             <div style={{background:C.deepBlue,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1115,21 +1210,13 @@ function AdminApp({ user, onLogout }) {
             <div style={{padding:"16px 18px"}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
                 {[["⚡",`${selBike.battery}%`,"Batteria",getBattColor(selBike.battery)],["🛣️",`${selBike.odometer.toFixed(0)}`,"Km",C.blueGreen],["📅",selBike.lastMaint,"Ultima mant.",C.deepBlue]].map(([icon,val,label,color],i)=>(
-                  <div key={i} style={{background:C.white,borderRadius:12,padding:"10px 8px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-                    <div style={{fontSize:16,marginBottom:2}}>{icon}</div>
-                    <div style={{color,fontSize:12,fontWeight:700,...ds}}>{val}</div>
-                    <div style={{color:"#aaa",fontSize:9,...ds}}>{label}</div>
-                  </div>
+                  <div key={i} style={{background:C.white,borderRadius:12,padding:"10px 8px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:16,marginBottom:2}}>{icon}</div><div style={{color,fontSize:12,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:9,...ds}}>{label}</div></div>
                 ))}
               </div>
               <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div>
-                    <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>Stato</p>
-                    <p style={{color:getStatusColor(selBike.status),fontSize:12,margin:"2px 0 0",...ds}}>● {selBike.status}</p>
-                  </div>
-                  <button onClick={()=>{toggleStatus(selBike.id);setSelBike(p=>({...p,status:p.status==="Disponibile"?"Manutenzione":"Disponibile"}));}}
-                    style={{background:selBike.status==="Disponibile"?C.warmOrange:C.blueGreen,border:"none",borderRadius:10,padding:"8px 14px",color:C.white,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>
+                  <div><p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>Stato</p><p style={{color:getStatusColor(selBike.status),fontSize:12,margin:"2px 0 0",...ds}}>● {selBike.status}</p></div>
+                  <button onClick={()=>{toggleStatus(selBike.id);setSelBike(p=>({...p,status:p.status==="Disponibile"?"Manutenzione":"Disponibile"}));}} style={{background:selBike.status==="Disponibile"?C.warmOrange:C.blueGreen,border:"none",borderRadius:10,padding:"8px 14px",color:C.white,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>
                     {selBike.status==="Disponibile"?"🔧 Manutenzione":"✅ In servizio"}
                   </button>
                 </div>
@@ -1137,23 +1224,19 @@ function AdminApp({ user, onLogout }) {
               <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 8px",...ds,letterSpacing:1,textTransform:"uppercase",opacity:0.6}}>Checklist</p>
               <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
                 {checklist.map(item=>(
-                  <div key={item} onClick={()=>setEditChecks(prev=>({...prev,[item]:!prev[item]}))}
-                    style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:`1px solid ${C.skyBlue}15`,cursor:"pointer"}}>
-                    <div style={{width:22,height:22,borderRadius:6,border:`2px solid ${editChecks[item]?C.blueGreen:C.skyBlue+"50"}`,background:editChecks[item]?C.blueGreen:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:C.white,flexShrink:0}}>
-                      {editChecks[item]?"✓":""}
-                    </div>
+                  <div key={item} onClick={()=>setEditChecks(prev=>({...prev,[item]:!prev[item]}))} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:`1px solid ${C.skyBlue}15`,cursor:"pointer"}}>
+                    <div style={{width:22,height:22,borderRadius:6,border:`2px solid ${editChecks[item]?C.blueGreen:C.skyBlue+"50"}`,background:editChecks[item]?C.blueGreen:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:C.white,flexShrink:0}}>{editChecks[item]?"✓":""}</div>
                     <span style={{color:editChecks[item]?C.blueGreen:C.deepBlue,fontSize:13,...ds}}>{item}</span>
                   </div>
                 ))}
               </div>
               <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 8px",...ds,letterSpacing:1,textTransform:"uppercase",opacity:0.6}}>Note tecniche</p>
-              <textarea value={editNote} onChange={e=>setEditNote(e.target.value)} placeholder="Note tecniche..."
-                style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,minHeight:80,resize:"vertical",marginBottom:14}}/>
+              <textarea value={editNote} onChange={e=>setEditNote(e.target.value)} placeholder="Note tecniche..." style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,minHeight:80,resize:"vertical",marginBottom:14}}/>
               <button onClick={saveBike} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>💾 Salva modifiche</button>
             </div>
           </div>
         )}
-
+ 
         <div style={{background:C.deepBlue,padding:"10px 24px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{color:C.skyBlue,fontSize:12,...ds,fontWeight:600}}>{new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</span>
           <div style={{width:110,height:18,background:"rgba(0,0,0,0.4)",borderRadius:10}}/>
@@ -1161,19 +1244,15 @@ function AdminApp({ user, onLogout }) {
         </div>
         <div style={{background:C.deepBlue,padding:"10px 22px 14px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <p style={{color:C.sunYellow,fontSize:10,margin:0,letterSpacing:2,...ds}}>🔐 ADMIN</p>
-              <h1 style={{color:C.white,fontSize:18,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>PedalAgilla 🌊</h1>
-            </div>
+            <div><p style={{color:C.sunYellow,fontSize:10,margin:0,letterSpacing:2,...ds}}>🔐 ADMIN</p><h1 style={{color:C.white,fontSize:18,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>PedalAgilla 🌊</h1></div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               <p style={{color:C.sunYellow,fontSize:11,...ds,fontWeight:500,margin:0}}>● {available} libere</p>
               <button onClick={onLogout} style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:10,padding:"6px 12px",color:C.skyBlue,fontSize:11,...ds,cursor:"pointer"}}>Esci</button>
             </div>
           </div>
         </div>
-
+ 
         <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
-
           {tab==="dashboard"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
               {[{label:"Flotta",value:bikes.length,icon:"🚲",accent:C.blueGreen},{label:"Batteria media",value:`${avg}%`,icon:"⚡",accent:C.blueGreen},{label:"Critiche",value:low,icon:"🔴",accent:C.warmOrange},{label:"Manutenzione",value:maint,icon:"🔧",accent:C.sunYellow}].map((k,i)=>(
@@ -1188,166 +1267,48 @@ function AdminApp({ user, onLogout }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:0,fontFamily:"Lora"}}>💶 Incassi</p>
                 <div style={{display:"flex",gap:6}}>
-                  {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(
-                    <button key={v} onClick={()=>setIncassiPeriod(v)}
-                      style={{background:incassiPeriod===v?C.deepBlue:"#f0f0f0",border:"none",borderRadius:8,padding:"4px 10px",color:incassiPeriod===v?C.white:"#888",fontSize:11,...ds,cursor:"pointer"}}>{l}</button>
-                  ))}
+                  {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>setIncassiPeriod(v)} style={{background:incassiPeriod===v?C.deepBlue:"#f0f0f0",border:"none",borderRadius:8,padding:"4px 10px",color:incassiPeriod===v?C.white:"#888",fontSize:11,...ds,cursor:"pointer"}}>{l}</button>))}
                 </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <div style={{background:`linear-gradient(135deg,${C.blueGreen},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-                  <p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>INCASSI</p>
-                  <p style={{color:C.sunYellow,fontSize:20,fontWeight:700,margin:0,...ds}}>€{(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)}</p>
-                </div>
-                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-                  <p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>CORSE</p>
-                  <p style={{color:C.blueGreen,fontSize:20,fontWeight:700,margin:0,...ds}}>{incassiPeriod==="oggi"?todayRides.length:monthRides.length}</p>
-                </div>
+                <div style={{background:`linear-gradient(135deg,${C.blueGreen},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>INCASSI</p><p style={{color:C.sunYellow,fontSize:20,fontWeight:700,margin:0,...ds}}>€{(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)}</p></div>
+                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>CORSE</p><p style={{color:C.blueGreen,fontSize:20,fontWeight:700,margin:0,...ds}}>{incassiPeriod==="oggi"?todayRides.length:monthRides.length}</p></div>
               </div>
             </div>
-            {bikes.filter(b=>b.status==="Manutenzione").length>0&&(
-              <div style={{background:`${C.sunYellow}10`,border:`1px solid ${C.sunYellow}40`,borderRadius:14,padding:"12px 14px",marginBottom:12}}>
-                <p style={{color:C.sunYellow,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>🔧 In manutenzione</p>
-                {bikes.filter(b=>b.status==="Manutenzione").map(bike=>(
-                  <div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)}
-                    style={{display:"flex",justifyContent:"space-between",padding:"6px 8px",background:"rgba(255,255,255,0.5)",borderRadius:8,marginBottom:4}}>
-                    <span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{bike.id} · {bike.zone}</span>
-                    <span style={{color:"#888",fontSize:11,...ds}}>{bike.battery}% ›</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {bikes.slice(0,4).map(bike=>(
-              <div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)}
-                style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-                <div style={{width:38,height:38,borderRadius:19,background:`${getBattColor(bike.battery)}20`,border:`2px solid ${getBattColor(bike.battery)}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🚲</div>
-                <div style={{flex:1}}>
-                  <div style={{display:"flex",justifyContent:"space-between"}}>
-                    <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span>
-                    <span style={{color:getBattColor(bike.battery),fontSize:12,fontWeight:700,...ds}}>{bike.battery}%</span>
-                  </div>
-                  <div style={{height:3,background:"#eee",borderRadius:2,margin:"4px 0",overflow:"hidden"}}>
-                    <div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:2}}/>
-                  </div>
-                  <div style={{display:"flex",gap:10}}>
-                    <span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span>
-                    <span style={{color:"#aaa",fontSize:11,...ds}}>📍 {bike.zone}</span>
-                  </div>
-                </div>
-                <span style={{color:C.blueGreen,fontSize:16}}>›</span>
-              </div>
-            ))}
+            {bikes.filter(b=>b.status==="Manutenzione").length>0&&(<div style={{background:`${C.sunYellow}10`,border:`1px solid ${C.sunYellow}40`,borderRadius:14,padding:"12px 14px",marginBottom:12}}><p style={{color:C.sunYellow,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>🔧 In manutenzione</p>{bikes.filter(b=>b.status==="Manutenzione").map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{display:"flex",justifyContent:"space-between",padding:"6px 8px",background:"rgba(255,255,255,0.5)",borderRadius:8,marginBottom:4}}><span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{bike.id} · {bike.zone}</span><span style={{color:"#888",fontSize:11,...ds}}>{bike.battery}% ›</span></div>))}</div>)}
+            {bikes.slice(0,4).map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}><div style={{width:38,height:38,borderRadius:19,background:`${getBattColor(bike.battery)}20`,border:`2px solid ${getBattColor(bike.battery)}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:12,fontWeight:700,...ds}}>{bike.battery}%</span></div><div style={{height:3,background:"#eee",borderRadius:2,margin:"4px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:2}}/></div><div style={{display:"flex",gap:10}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#aaa",fontSize:11,...ds}}>📍 {bike.zone}</span></div></div><span style={{color:C.blueGreen,fontSize:16}}>›</span></div>))}
           </div>}
-
+ 
           {tab==="mappa"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"flex",gap:8,marginBottom:10}}>
-              {["Tutti","Disponibile","Manutenzione"].map(f=>(
-                <button key={f} className="btn" onClick={()=>setMapFilter(f)}
-                  style={{background:mapFilter===f?C.deepBlue:C.white,border:`1.5px solid ${mapFilter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:mapFilter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>
-              ))}
+              {["Tutti","Disponibile","Manutenzione"].map(f=>(<button key={f} className="btn" onClick={()=>setMapFilter(f)} style={{background:mapFilter===f?C.deepBlue:C.white,border:`1.5px solid ${mapFilter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:mapFilter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>))}
             </div>
-            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
-              <MapView bikes={mapBikes} onBikeClick={b=>openBikeDetail(b)} height={300}/>
-            </div>
-            {mapBikes.sort((a,b)=>a.battery-b.battery).map(bike=>(
-              <div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)}
-                style={{background:C.white,border:`1px solid ${getBattColor(bike.battery)}30`,borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <span style={{color:C.deepBlue,fontWeight:700,fontSize:13,fontFamily:"Lora"}}>{bike.id}</span>
-                  <span style={{color:"#aaa",fontSize:11,...ds,marginLeft:8}}>📍 {bike.zone}</span>
-                </div>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span>
-                  <span style={{color:getBattColor(bike.battery),fontWeight:700,fontSize:12,...ds}}>{bike.battery}%</span>
-                </div>
-              </div>
-            ))}
+            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><MapView bikes={mapBikes} onBikeClick={b=>openBikeDetail(b)} height={300}/></div>
+            {mapBikes.sort((a,b)=>a.battery-b.battery).map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,border:`1px solid ${getBattColor(bike.battery)}30`,borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><span style={{color:C.deepBlue,fontWeight:700,fontSize:13,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:"#aaa",fontSize:11,...ds,marginLeft:8}}>📍 {bike.zone}</span></div><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:getBattColor(bike.battery),fontWeight:700,fontSize:12,...ds}}>{bike.battery}%</span></div></div>))}
           </div>}
-
+ 
           {tab==="bici"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"flex",gap:8,marginBottom:12,overflowX:"auto"}}>
-              {["Tutti","Disponibile","Manutenzione","Batteria Bassa"].map(f=>(
-                <button key={f} className="btn" onClick={()=>setFilter(f)}
-                  style={{background:filter===f?C.deepBlue:C.white,border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:filter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>
-              ))}
+              {["Tutti","Disponibile","Manutenzione","Batteria Bassa"].map(f=>(<button key={f} className="btn" onClick={()=>setFilter(f)} style={{background:filter===f?C.deepBlue:C.white,border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:filter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>))}
             </div>
-            {filteredBikes.map(bike=>(
-              <div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)}
-                style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getStatusColor(bike.status)}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",justifyContent:"space-between"}}>
-                      <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span>
-                      <span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span>
-                    </div>
-                    <div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}>
-                      <div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/>
-                    </div>
-                    <div style={{display:"flex",justifyContent:"space-between"}}>
-                      <span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span>
-                      <span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span>
-                    </div>
-                    {bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}
-                  </div>
-                  <span style={{color:C.blueGreen,fontSize:18}}>›</span>
-                </div>
-              </div>
-            ))}
+            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
           </div>}
-
+ 
           {tab==="corse"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"flex",gap:8,marginBottom:12}}>
-              {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(
-                <button key={v} onClick={()=>setIncassiPeriod(v)}
-                  style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>
-              ))}
+              {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>setIncassiPeriod(v)} style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>))}
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
-              {[["💶",(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)+"€","Incassi",C.sunYellow],
-                ["🏁",(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata").length,"Completate",C.blueGreen],
-                ["🚴",rides.filter(r=>r.status==="In corso").length,"In corso",C.warmOrange]].map(([icon,val,label,color])=>(
-                <div key={label} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-                  <div style={{fontSize:18,marginBottom:4}}>{icon}</div>
-                  <div style={{color,fontSize:18,fontWeight:700,...ds}}>{val}</div>
-                  <div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div>
-                </div>
-              ))}
+              {[["💶",(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)+"€","Incassi",C.sunYellow],["🏁",(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata").length,"Completate",C.blueGreen],["🚴",rides.filter(r=>r.status==="In corso").length,"In corso",C.warmOrange]].map(([icon,val,label,color])=>(<div key={label} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:18,marginBottom:4}}>{icon}</div><div style={{color,fontSize:18,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div></div>))}
             </div>
             {rides.filter(r=>r.status==="In corso").length>0&&<>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>🔴 In corso</p>
-              {rides.filter(r=>r.status==="In corso").map(ride=>(
-                <div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                    <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span>
-                    <button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button>
-                  </div>
-                  <p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p>
-                  <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ Iniziata: {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p>
-                  <p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>
-                    💶 Stimato: €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min
-                  </p>
-                  <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button>
-                </div>
-              ))}
+              {rides.filter(r=>r.status==="In corso").map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p><p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>💶 €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min</p><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button></div>))}
             </>}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"12px 0 8px",...ds,opacity:0.5}}>Completate</p>
-            {(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status!=="In corso").map(ride=>(
-              <div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span>
-                  <span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span>
-                </div>
-                <p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p>
-                <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 8px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  <button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>
-                  {ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}
-                </div>
-              </div>
-            ))}
+            {(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status!=="In corso").map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 8px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>{ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}</div></div>))}
           </div>}
-
+ 
           {tab==="utenti"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>Utenti ({fbUsers.length})</p>
@@ -1355,200 +1316,66 @@ function AdminApp({ user, onLogout }) {
             </div>
             {loadingUsers&&<p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:20}}>⏳ Caricamento...</p>}
             {!loadingUsers&&fbUsers.length===0&&<div style={{textAlign:"center",padding:30}}><div style={{fontSize:40,marginBottom:10}}>👥</div><p style={{color:"#aaa",fontSize:13,...ds}}>Nessun utente</p></div>}
-            {fbUsers.map((u,i)=>(
-              <div key={i} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-                  <div style={{width:40,height:40,borderRadius:20,background:`${C.blueGreen}20`,border:`2px solid ${C.blueGreen}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👤</div>
-                  <div style={{flex:1}}>
-                    <p style={{color:C.deepBlue,fontWeight:700,fontSize:14,margin:0,fontFamily:"Lora"}}>{u.nome} {u.cognome}</p>
-                    <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):"—"}</p>
-                  </div>
-                </div>
-                <p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 4px"}}>📧 {u.email}</p>
-                <p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 6px"}}>📱 {u.telefono||"—"}</p>
-                {u.docURL&&<div style={{marginTop:8}}>
-                  <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 4px",...ds}}>📄 Documento</p>
-                  <img src={u.docURL} style={{width:"100%",borderRadius:10,maxHeight:120,objectFit:"cover",cursor:"pointer"}} onClick={()=>window.open(u.docURL,"_blank")} alt="Documento"/>
-                </div>}
-              </div>
-            ))}
+            {fbUsers.map((u,i)=>(<div key={i} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}><div style={{width:40,height:40,borderRadius:20,background:`${C.blueGreen}20`,border:`2px solid ${C.blueGreen}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👤</div><div style={{flex:1}}><p style={{color:C.deepBlue,fontWeight:700,fontSize:14,margin:0,fontFamily:"Lora"}}>{u.nome} {u.cognome}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):"—"}</p></div></div><p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 4px"}}>📧 {u.email}</p><p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 6px"}}>📱 {u.telefono||"—"}</p>{u.docURL&&<div style={{marginTop:8}}><p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 4px",...ds}}>📄 Documento</p><img src={u.docURL} style={{width:"100%",borderRadius:10,maxHeight:120,objectFit:"cover",cursor:"pointer"}} onClick={()=>window.open(u.docURL,"_blank")} alt="Documento"/></div>}</div>))}
           </div>}
-
+ 
           {tab==="zone"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 12px",...ds,opacity:0.5}}>Gestione zone</p>
-
-            {/* Filtri visibilità */}
             <div style={{background:C.white,borderRadius:14,padding:12,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 10px",...ds}}>👁️ Mostra sulla mappa</p>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                {[["operativa","🟢 Operativa","#00C853"],["sosta","🅿️ Sosta","#2196F3"],["lenta","🐢 Vel. ridotta","#FFB703"],["fuori","⛔ Fuori zona","#FB8500"]].map(([id,label,color])=>(
-                  <div key={id} onClick={()=>setZoneFilters(prev=>({...prev,[id]:!prev[id]}))}
-                    style={{background:zoneFilters[id]?color+"20":"#f5f5f5",borderRadius:10,padding:"8px 12px",cursor:"pointer",border:`2px solid ${zoneFilters[id]?color:"transparent"}`,display:"flex",alignItems:"center",gap:6}}>
-                    <div style={{width:10,height:10,borderRadius:5,background:zoneFilters[id]?color:"#ccc"}}/>
-                    <p style={{color:zoneFilters[id]?C.deepBlue:"#aaa",fontSize:11,...ds,fontWeight:600,margin:0}}>{label}</p>
-                  </div>
-                ))}
+                {[["operativa","🟢 Operativa","#00C853"],["sosta","🅿️ Sosta","#2196F3"],["lenta","🐢 Vel. ridotta","#FFB703"],["fuori","⛔ Fuori zona","#FB8500"]].map(([id,label,color])=>(<div key={id} onClick={()=>setZoneFilters(prev=>({...prev,[id]:!prev[id]}))} style={{background:zoneFilters[id]?color+"20":"#f5f5f5",borderRadius:10,padding:"8px 12px",cursor:"pointer",border:`2px solid ${zoneFilters[id]?color:"transparent"}`,display:"flex",alignItems:"center",gap:6}}><div style={{width:10,height:10,borderRadius:5,background:zoneFilters[id]?color:"#ccc"}}/><p style={{color:zoneFilters[id]?C.deepBlue:"#aaa",fontSize:11,...ds,fontWeight:600,margin:0}}>{label}</p></div>))}
               </div>
             </div>
-
-            {/* Disegna nuova zona */}
             <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>✏️ Disegna nuova zona</p>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-                {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([zid,label,color])=>(
-                  <div key={zid} onClick={()=>setZoneType(zid)}
-                    style={{background:zoneType===zid?color:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${zoneType===zid?color:"transparent"}`}}>
-                    <p style={{color:zoneType===zid?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
-                  </div>
-                ))}
+                {[["operativa","🟢 Operativa","#00C853"],["sosta","🔵 Sosta","#2196F3"],["lenta","🟡 Vel. ridotta","#FFB703"],["fuori","🔴 Fuori zona","#FB8500"]].map(([zid,label,color])=>(<div key={zid} onClick={()=>setZoneType(zid)} style={{background:zoneType===zid?color:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${zoneType===zid?color:"transparent"}`}}><p style={{color:zoneType===zid?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p></div>))}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-                {[["circle","⭕ Cerchio"],["polygon","⬡ Poligono"]].map(([mid,label])=>(
-                  <div key={mid} onClick={()=>setDrawingMode(mid)}
-                    style={{background:drawingMode===mid?C.deepBlue:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${drawingMode===mid?C.deepBlue:"transparent"}`}}>
-                    <p style={{color:drawingMode===mid?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p>
-                  </div>
-                ))}
+                {[["circle","⭕ Cerchio"],["polygon","⬡ Poligono"]].map(([mid,label])=>(<div key={mid} onClick={()=>setDrawingMode(mid)} style={{background:drawingMode===mid?C.deepBlue:"#f5f5f5",borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"center",border:`2px solid ${drawingMode===mid?C.deepBlue:"transparent"}`}}><p style={{color:drawingMode===mid?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:0}}>{label}</p></div>))}
               </div>
-              <input value={zoneName} onChange={e=>setZoneName(e.target.value)} placeholder="Nome zona (es. Centro Passignano)"
-                style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
-              <button onClick={()=>setDrawingActive(true)}
-                style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"12px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
-                ✏️ Inizia a disegnare
-              </button>
-              <button onClick={async()=>{
-                try {
-                  await waitFB();
-                  const {doc,setDoc} = window.firebaseFunctions;
-                  await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()});
-                  alert("✅ Zone salvate!");
-                } catch(e){ alert("Errore: "+e.message); }
-              }} style={{width:"100%",background:`linear-gradient(90deg,${C.sunYellow},${C.warmOrange})`,border:"none",borderRadius:12,padding:"12px",color:C.deepBlue,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>
-                💾 Salva zone su Firebase
-              </button>
+              <input value={zoneName} onChange={e=>setZoneName(e.target.value)} placeholder="Nome zona (es. Centro Passignano)" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
+              <button onClick={()=>setDrawingActive(true)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"12px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>✏️ Inizia a disegnare</button>
+              <button onClick={async()=>{ try { await waitFB(); const {doc,setDoc} = window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()}); alert("✅ Zone salvate!"); } catch(e){ alert("Errore: "+e.message); } }} style={{width:"100%",background:`linear-gradient(90deg,${C.sunYellow},${C.warmOrange})`,border:"none",borderRadius:12,padding:"12px",color:C.deepBlue,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>💾 Salva zone su Firebase</button>
             </div>
-
-            {/* Mappa zone */}
-            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
-              <ZoneMapEditor
-                zones={visibleZones}
-                zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName}
-                onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);setZoneName("");}}
-              />
-            </div>
-
-            {/* Zone salvate */}
+            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><ZoneMapEditor zones={visibleZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName} onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);setZoneName("");}}/></div>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone ({savedZones.length})</p>
-            {savedZones.map((zone,i)=>(
-              <div key={i} style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/>
-                  <div>
-                    <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>{zone.name}</p>
-                    <p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{zone.type} · {zone.shape}</p>
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>{
-                    const nuovoNome = window.prompt("Nuovo nome zona:", zone.name);
-                    if(nuovoNome&&nuovoNome.trim()) setSavedZones(prev=>prev.map((z,idx)=>idx===i?{...z,name:nuovoNome.trim()}:z));
-                  }} style={{background:`${C.blueGreen}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.blueGreen,fontSize:12,cursor:"pointer",...ds}}>✏️</button>
-                  <button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))}
-                    style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>🗑️</button>
-                </div>
-              </div>
-            ))}
+            {savedZones.map((zone,i)=>(<div key={i} style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/><div><p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds}}>{zone.name}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{zone.type} · {zone.shape}</p></div></div><div style={{display:"flex",gap:6}}><button onClick={()=>{ const n=window.prompt("Nuovo nome zona:",zone.name); if(n&&n.trim()) setSavedZones(prev=>prev.map((z,idx)=>idx===i?{...z,name:n.trim()}:z)); }} style={{background:`${C.blueGreen}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.blueGreen,fontSize:12,cursor:"pointer",...ds}}>✏️</button><button onClick={()=>setSavedZones(prev=>prev.filter((_,idx)=>idx!==i))} style={{background:`${C.warmOrange}15`,border:"none",borderRadius:8,padding:"5px 10px",color:C.warmOrange,fontSize:12,cursor:"pointer",...ds}}>🗑️</button></div></div>))}
           </div>}
-
+ 
           {tab==="qr"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{background:C.white,borderRadius:16,padding:20,marginBottom:16,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",textAlign:"center"}}>
               <p style={{color:C.deepBlue,fontSize:15,fontWeight:700,margin:"0 0 4px",fontFamily:"Lora"}}>📱 QR Scarica l'app</p>
               <p style={{color:"#aaa",fontSize:12,...ds,margin:"0 0 14px"}}>Mettilo su cartelli, volantini e hotel!</p>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`}
-                style={{width:180,height:180,borderRadius:12,border:`3px solid ${C.skyBlue}30`,marginBottom:14}} alt="QR App"/>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`} style={{width:180,height:180,borderRadius:12,border:`3px solid ${C.skyBlue}30`,marginBottom:14}} alt="QR App"/>
               <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 10px"}}>{APP_URL}</p>
-              <a href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`}
-                target="_blank" style={{display:"block",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,borderRadius:12,padding:"12px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>
-                🖨️ Stampa QR in alta qualità
-              </a>
+              <a href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(APP_URL)}&bgcolor=ffffff&color=023047&qzone=2`} target="_blank" style={{display:"block",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,borderRadius:12,padding:"12px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>🖨️ Stampa QR in alta qualità</a>
             </div>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 14px",...ds,opacity:0.5}}>QR Code bici</p>
-            <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:14,padding:14,marginBottom:16}}>
-              <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>💡 Come usare</p>
-              <p style={{color:"#888",fontSize:12,...ds,margin:0}}>Stampa il QR di ogni bici e attaccalo al telaio. Il cliente lo scansiona per sbloccarla.</p>
-            </div>
-            {initBikes.map(bike=>(
-              <div key={bike.id} style={{background:C.white,borderRadius:14,padding:16,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                  <div>
-                    <p style={{color:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{bike.id}</p>
-                    <p style={{color:"#aaa",fontSize:12,...ds,margin:"2px 0 0"}}>📍 {bike.zone} · {bike.model}</p>
-                    <p style={{color:getStatusColor(bike.status),fontSize:11,...ds,margin:"2px 0 0"}}>● {bike.status}</p>
-                  </div>
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=1`}
-                    style={{width:100,height:100,borderRadius:8,border:`2px solid ${C.skyBlue}30`}} alt={`QR ${bike.id}`}/>
-                </div>
-                <a href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=2`}
-                  target="_blank" style={{display:"block",background:C.deepBlue,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>
-                  🖨️ Stampa QR {bike.id}
-                </a>
-                <div style={{background:"#f5f5f5",borderRadius:8,padding:"8px 12px"}}>
-                  <p style={{color:"#aaa",fontSize:10,...ds,margin:0,wordBreak:"break-all"}}>{QR_BASE_URL+bike.id}</p>
-                </div>
-              </div>
-            ))}
+            <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:14,padding:14,marginBottom:16}}><p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>💡 Come usare</p><p style={{color:"#888",fontSize:12,...ds,margin:0}}>Stampa il QR di ogni bici e attaccalo al telaio.</p></div>
+            {initBikes.map(bike=>(<div key={bike.id} style={{background:C.white,borderRadius:14,padding:16,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div><p style={{color:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{bike.id}</p><p style={{color:"#aaa",fontSize:12,...ds,margin:"2px 0 0"}}>📍 {bike.zone} · {bike.model}</p><p style={{color:getStatusColor(bike.status),fontSize:11,...ds,margin:"2px 0 0"}}>● {bike.status}</p></div><img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=1`} style={{width:100,height:100,borderRadius:8,border:`2px solid ${C.skyBlue}30`}} alt={`QR ${bike.id}`}/></div><a href={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(QR_BASE_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=2`} target="_blank" style={{display:"block",background:C.deepBlue,borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",marginBottom:8}}>🖨️ Stampa QR {bike.id}</a><div style={{background:"#f5f5f5",borderRadius:8,padding:"8px 12px"}}><p style={{color:"#aaa",fontSize:10,...ds,margin:0,wordBreak:"break-all"}}>{QR_BASE_URL+bike.id}</p></div></div>))}
           </div>}
-
+ 
           {tab==="stats"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>⚡ Batteria flotta</p>
-              {[["≥80%",bikes.filter(b=>b.battery>=80).length,C.blueGreen],["50-79%",bikes.filter(b=>b.battery>=50&&b.battery<80).length,C.sunYellow],["<50%",bikes.filter(b=>b.battery<50).length,C.warmOrange]].map(([range,count,color])=>(
-                <div key={range} style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{color:"#888",fontSize:12,...ds}}>{range}</span>
-                    <span style={{color,fontSize:12,...ds,fontWeight:700}}>{count} bici</span>
-                  </div>
-                  <div style={{height:8,background:"#eee",borderRadius:4,overflow:"hidden"}}>
-                    <div style={{width:`${(count/bikes.length)*100}%`,height:"100%",background:color,borderRadius:4}}/>
-                  </div>
-                </div>
-              ))}
+              {[["≥80%",bikes.filter(b=>b.battery>=80).length,C.blueGreen],["50-79%",bikes.filter(b=>b.battery>=50&&b.battery<80).length,C.sunYellow],["<50%",bikes.filter(b=>b.battery<50).length,C.warmOrange]].map(([range,count,color])=>(<div key={range} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:"#888",fontSize:12,...ds}}>{range}</span><span style={{color,fontSize:12,...ds,fontWeight:700}}>{count} bici</span></div><div style={{height:8,background:"#eee",borderRadius:4,overflow:"hidden"}}><div style={{width:`${(count/bikes.length)*100}%`,height:"100%",background:color,borderRadius:4}}/></div></div>))}
             </div>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>📍 Corse per zona</p>
-              {["Passignano","Castiglione","Tuoro","Magione","Panicale"].map(zona=>{
-                const count=rides.filter(r=>r.zone===zona).length; const total=rides.length||1;
-                return <div key={zona} style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{color:"#888",fontSize:12,...ds}}>{zona}</span>
-                    <span style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:700}}>{count} corse</span>
-                  </div>
-                  <div style={{height:6,background:"#eee",borderRadius:3,overflow:"hidden"}}>
-                    <div style={{width:`${(count/total)*100}%`,height:"100%",background:C.blueGreen,borderRadius:3}}/>
-                  </div>
-                </div>;
-              })}
+              {["Passignano","Castiglione","Tuoro","Magione","Panicale"].map(zona=>{ const count=rides.filter(r=>r.zone===zona).length; const total=rides.length||1; return <div key={zona} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:"#888",fontSize:12,...ds}}>{zona}</span><span style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:700}}>{count} corse</span></div><div style={{height:6,background:"#eee",borderRadius:3,overflow:"hidden"}}><div style={{width:`${(count/total)*100}%`,height:"100%",background:C.blueGreen,borderRadius:3}}/></div></div>; })}
             </div>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:18,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>🛣️ Top km percorsi</p>
-              {[...bikes].sort((a,b)=>b.odometer-a.odometer).slice(0,5).map((bike,i)=>(
-                <div key={bike.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{color:i===0?C.sunYellow:"#ccc",fontSize:13,...ds,fontWeight:700}}>#{i+1}</span>
-                    <span style={{color:C.deepBlue,fontSize:13,...ds}}>{bike.id} · {bike.zone}</span>
-                  </div>
-                  <span style={{color:C.blueGreen,fontSize:13,fontWeight:700,...ds}}>{bike.odometer.toFixed(0)} km</span>
-                </div>
-              ))}
+              {[...bikes].sort((a,b)=>b.odometer-a.odometer).slice(0,5).map((bike,i)=>(<div key={bike.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{color:i===0?C.sunYellow:"#ccc",fontSize:13,...ds,fontWeight:700}}>#{i+1}</span><span style={{color:C.deepBlue,fontSize:13,...ds}}>{bike.id} · {bike.zone}</span></div><span style={{color:C.blueGreen,fontSize:13,fontWeight:700,...ds}}>{bike.odometer.toFixed(0)} km</span></div>))}
             </div>
           </div>}
-
         </div>
-
+ 
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"8px 0 16px",zIndex:20}}>
           {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["stats","📊","Stats"]].map(([tid,icon,label])=>(
-            <button key={tid} className="btn" onClick={()=>setTab(tid)}
-              style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <button key={tid} className="btn" onClick={()=>setTab(tid)} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <span style={{fontSize:16}}>{icon}</span>
               <span style={{color:tab===tid?C.blueGreen:"#bbb",fontSize:8,...ds,fontWeight:tab===tid?600:400}}>{label}</span>
               {tab===tid&&<div style={{width:14,height:3,borderRadius:2,background:C.blueGreen}}/>}
@@ -1559,7 +1386,7 @@ function AdminApp({ user, onLogout }) {
     </div>
   );
 }
-
+ 
 function Main() {
   const [user, setUser] = React.useState(null);
   const handleLogin=(u)=>setUser(u);
@@ -1568,10 +1395,10 @@ function Main() {
   if(user.type==="admin") return <AdminApp user={user} onLogout={handleLogout}/>;
   return <ClienteApp user={user} onLogout={handleLogout}/>;
 }
-
+ 
 ReactDOM.createRoot(document.getElementById('root')).render(<Main/>);
 </script>
-  <script>
+<script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js');
