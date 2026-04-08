@@ -106,6 +106,8 @@ const TRANSLATIONS = {
     terms4: "Accetto il trattamento dei miei dati personali (GDPR)",
     termsError: "Devi accettare tutti i termini per procedere",
     termsTitle: "📋 Termini e Condizioni",
+    errVerify: "📧 Email non verificata. Controlla la tua casella e clicca il link di verifica.",
+    resendVerify: "Reinvia email di verifica",
   },
   en: {
     appSubtitle: "E-BIKE SHARING · Lake Trasimeno",
@@ -158,6 +160,8 @@ const TRANSLATIONS = {
     terms4: "I accept the processing of my personal data (GDPR)",
     termsError: "You must accept all terms to proceed",
     termsTitle: "📋 Terms and Conditions",
+    errVerify: "📧 Email not verified. Check your inbox and click the verification link.",
+    resendVerify: "Resend verification email",
   },
   de: {
     appSubtitle: "E-BIKE SHARING · Trasimenischer See",
@@ -210,6 +214,8 @@ const TRANSLATIONS = {
     terms4: "Ich akzeptiere die Verarbeitung meiner Daten (DSGVO)",
     termsError: "Sie müssen alle Bedingungen akzeptieren",
     termsTitle: "📋 Nutzungsbedingungen",
+    errVerify: "📧 E-Mail nicht bestätigt. Überprüfen Sie Ihren Posteingang und klicken Sie auf den Bestätigungslink.",
+    resendVerify: "Bestätigungs-E-Mail erneut senden",
   },
   fr: {
     appSubtitle: "E-BIKE SHARING · Lac Trasimène",
@@ -262,6 +268,8 @@ const TRANSLATIONS = {
     terms4: "J'accepte le traitement de mes données personnelles (RGPD)",
     termsError: "Vous devez accepter toutes les conditions",
     termsTitle: "📋 Conditions Générales",
+    errVerify: "📧 E-mail non vérifié. Vérifiez votre boîte mail et cliquez sur le lien de vérification.",
+    resendVerify: "Renvoyer l'e-mail de vérification",
   },
   es: {
     appSubtitle: "E-BIKE SHARING · Lago Trasimeno",
@@ -314,6 +322,8 @@ const TRANSLATIONS = {
     terms4: "Acepto el tratamiento de mis datos personales (RGPD)",
     termsError: "Debes aceptar todos los términos para continuar",
     termsTitle: "📋 Términos y Condiciones",
+    errVerify: "📧 Correo no verificado. Revisa tu bandeja de entrada y haz clic en el enlace de verificación.",
+    resendVerify: "Reenviar correo de verificación",
   },
   nl: {
     appSubtitle: "E-BIKE SHARING · Meer van Trasimeno",
@@ -366,6 +376,8 @@ const TRANSLATIONS = {
     terms4: "Ik accepteer de verwerking van mijn persoonsgegevens (AVG)",
     termsError: "U moet alle voorwaarden accepteren om door te gaan",
     termsTitle: "📋 Gebruiksvoorwaarden",
+    errVerify: "📧 E-mail niet geverifieerd. Controleer uw inbox en klik op de verificatielink.",
+    resendVerify: "Verificatie-e-mail opnieuw sturen",
   },
   cs: {
     appSubtitle: "E-BIKE SHARING · Trasimenské jezero",
@@ -418,6 +430,8 @@ const TRANSLATIONS = {
     terms4: "Přijímám zpracování svých osobních údajů (GDPR)",
     termsError: "Pro pokračování musíte přijmout všechny podmínky",
     termsTitle: "📋 Podmínky používání",
+    errVerify: "📧 E-mail není ověřen. Zkontrolujte svou schránku a klikněte na ověřovací odkaz.",
+    resendVerify: "Znovu odeslat ověřovací e-mail",
   }
 };
 
@@ -951,6 +965,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
   const [terms, setTerms] = React.useState({t1:false,t2:false,t3:false,t4:false});
   const [docVerifying, setDocVerifying] = React.useState(false);
   const [showTermsModal, setShowTermsModal] = React.useState(false);
+  const [showResend, setShowResend] = React.useState(false);
   const [docWarning, setDocWarning] = React.useState(null);
   const handleDocChange = async (e) => {
     const file = e.target.files[0];
@@ -1028,6 +1043,13 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       await waitFB();
       const {signInWithEmailAndPassword,doc,getDoc} = window.firebaseFunctions;
       const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
+      if (!cred.user.emailVerified) {
+        await window.firebaseFunctions.signOut(window.firebaseAuth);
+        setError(t('errVerify'));
+        setShowResend(true);
+        setLoading(false);
+        return;
+      }
       const snap = await getDoc(doc(window.firebaseDb,"users",cred.user.uid));
       onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
     } catch(e) { setError(t('errLogin')); }
@@ -1074,7 +1096,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
           {mode!=="adminLogin"&&(
             <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:18}}>
               {[["login",t('login')],["register",t('register')]].map(([m,l])=>(
-                <button key={m} onClick={()=>{setMode(m);setError(null);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
+                <button key={m} onClick={()=>{setMode(m);setError(null);setShowResend(false);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
           )}
@@ -1084,6 +1106,21 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('password')}</p>
             <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder={t('passwordPlaceholder')} style={inp} />
             {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
+            {showResend&&(
+              <button onClick={async()=>{
+                try {
+                  const {signInWithEmailAndPassword,signOut} = window.firebaseFunctions;
+                  const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
+                  await cred.user.sendEmailVerification();
+                  await signOut(window.firebaseAuth);
+                  setError(null);
+                  setShowResend(false);
+                  alert(t('emailVerifyMsg'));
+                } catch(e){ setError(t('errLogin')); }
+              }} style={{width:"100%",background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:10,padding:10,color:C.deepBlue,fontSize:12,...ds,fontWeight:600,cursor:"pointer",marginBottom:8}}>
+                📧 {t('resendVerify')}
+              </button>
+            )}
             <button onClick={handleLogin} disabled={loading} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
               {loading?t('loginLoading'):t('loginBtn')}
             </button>
