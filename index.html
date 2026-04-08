@@ -974,54 +974,13 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
   const [showTermsModal, setShowTermsModal] = React.useState(false);
   const [showResend, setShowResend] = React.useState(false);
   const [docWarning, setDocWarning] = React.useState(null);
-  const handleDocChange = async (e) => {
+  const handleDocChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setDocFile(file);
     setDocWarning(null);
     const r = new FileReader();
-    r.onload = async (ev) => {
-      setDocPreview(ev.target.result);
-      // AI verification
-      setDocVerifying(true);
-      try {
-        const base64 = ev.target.result.split(',')[1];
-        const mediaType = file.type || 'image/jpeg';
-        const resp = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 100,
-            messages: [{
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-                { type: "text", text: "Is this image an official identity document (ID card, passport, driver's license)? Reply only with YES or NO." }
-              ]
-            }]
-          })
-        });
-        const data = await resp.json();
-        const answer = data?.content?.[0]?.text?.trim().toUpperCase() || "";
-        if (answer.includes("NO")) {
-          setDocWarning("⚠️ L'immagine non sembra un documento d'identità valido. Carica carta d'identità, passaporto o patente.");
-          // Notify admin via Firestore
-          try {
-            await waitFB();
-            const {collection, addDoc} = window.firebaseFunctions;
-            await addDoc(collection(window.firebaseDb, "docWarnings"), {
-              email, nome, cognome,
-              warning: "Documento non riconosciuto dall'AI",
-              timestamp: new Date().toISOString()
-            });
-          } catch(e) {}
-        }
-      } catch(e) {
-        // Silent fail - don't block registration if AI check fails
-      }
-      setDocVerifying(false);
-    };
+    r.onload = (ev) => { setDocPreview(ev.target.result); };
     r.readAsDataURL(file);
   };
   const handleAdminLogin = async () => {
@@ -1078,7 +1037,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       const sRef = ref(window.firebaseStorage,`documenti/${cred.user.uid}`);
       await uploadBytes(sRef,docFile);
       const docURL = await getDownloadURL(sRef);
-      await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString()});
+      await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString(),docReviewed:false});
       setMode("login"); setEmail(""); setPassword("");
       alert(t('registerSuccess'));
     } catch(e) { setError(e.code==="auth/email-already-in-use"?t('errEmailUsed'):t('errGenerico')+e.message); }
@@ -1122,7 +1081,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
                   await signOut(window.firebaseAuth);
                   setError(null);
                   setShowResend(false);
-                  alert(t('emailVerifyMsg'));
+                  // email verify disabled
                 } catch(e){ setError(t('errLogin')); }
               }} style={{width:"100%",background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:10,padding:10,color:C.deepBlue,fontSize:12,...ds,fontWeight:600,cursor:"pointer",marginBottom:8}}>
                 📧 {t('resendVerify')}
@@ -1148,8 +1107,6 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
                 :<div><div style={{fontSize:32,marginBottom:4}}>📄</div><p style={{color:C.warmOrange,fontSize:13,...ds,fontWeight:600,margin:0}}>{t('docTap')}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{t('docRequired')}</p></div>}
               <input id="docInput" type="file" accept="image/*" onChange={handleDocChange} style={{display:"none"}} />
             </div>
-            {docVerifying && <p style={{color:C.blueGreen,fontSize:12,...ds,margin:"0 0 8px",textAlign:"center"}}>🔍 Verifica documento in corso...</p>}
-            {docWarning && <p style={{color:C.warmOrange,fontSize:11,...ds,margin:"0 0 8px",lineHeight:"1.4"}}>{docWarning}</p>}
             {showTermsModal && (
               <div style={{position:"fixed",inset:0,background:"rgba(2,48,71,0.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
                 <div style={{background:C.bgLight,borderRadius:24,width:"100%",maxWidth:500,maxHeight:"85vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.4)"}}>
@@ -1767,7 +1724,33 @@ function AdminApp({ user, onLogout, t }) {
             </div>
             {loadingUsers&&<p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:20}}>⏳ Caricamento...</p>}
             {!loadingUsers&&fbUsers.length===0&&<div style={{textAlign:"center",padding:30}}><div style={{fontSize:40,marginBottom:10}}>👥</div><p style={{color:"#aaa",fontSize:13,...ds}}>Nessun utente</p></div>}
-            {fbUsers.map((u,i)=>(<div key={i} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}><div style={{width:40,height:40,borderRadius:20,background:`${C.blueGreen}20`,border:`2px solid ${C.blueGreen}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👤</div><div style={{flex:1}}><p style={{color:C.deepBlue,fontWeight:700,fontSize:14,margin:0,fontFamily:"Lora"}}>{u.nome} {u.cognome}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):"—"}</p></div></div><p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 4px"}}>📧 {u.email}</p><p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 6px"}}>📱 {u.telefono||"—"}</p>{u.docURL&&<div style={{marginTop:8}}><p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 4px",...ds}}>📄 Documento</p><img src={u.docURL} style={{width:"100%",borderRadius:10,maxHeight:120,objectFit:"cover",cursor:"pointer"}} onClick={()=>window.open(u.docURL,"_blank")} alt="Documento"/></div>}</div>))}
+            {fbUsers.map((u,i)=>(<div key={i} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}><div style={{width:40,height:40,borderRadius:20,background:`${C.blueGreen}20`,border:`2px solid ${C.blueGreen}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👤</div><div style={{flex:1}}><p style={{color:C.deepBlue,fontWeight:700,fontSize:14,margin:0,fontFamily:"Lora"}}>{u.nome} {u.cognome}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):"—"}</p></div></div><p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 4px"}}>📧 {u.email}</p><p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 6px"}}>📱 {u.telefono||"—"}</p>{u.docURL&&<div style={{marginTop:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                    <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:0,...ds}}>📄 Documento</p>
+                    {u.docReviewed===false && <span style={{background:C.warmOrange,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>⚠️ DA VERIFICARE</span>}
+                    {u.docReviewed===true && <span style={{background:C.blueGreen,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>✅ VERIFICATO</span>}
+                  </div>
+                  <img src={u.docURL} style={{width:"100%",borderRadius:10,maxHeight:160,objectFit:"cover",cursor:"pointer",marginBottom:6}} onClick={()=>window.open(u.docURL,"_blank")} alt="Documento"/>
+                  {u.docReviewed===false && <div style={{display:"flex",gap:8}}>
+                    <button onClick={async()=>{
+                      try {
+                        await waitFB();
+                        const {doc,updateDoc} = window.firebaseFunctions;
+                        await updateDoc(doc(window.firebaseDb,"users",u.id),{docReviewed:true});
+                        loadUsers();
+                      } catch(e){alert("Errore: "+e.message);}
+                    }} style={{flex:1,background:C.blueGreen,border:"none",borderRadius:8,padding:"7px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>✅ Approva</button>
+                    <button onClick={async()=>{
+                      if(!window.confirm("Eliminare questo utente?")) return;
+                      try {
+                        await waitFB();
+                        const {doc,updateDoc} = window.firebaseFunctions;
+                        await updateDoc(doc(window.firebaseDb,"users",u.id),{docReviewed:"rejected",type:"sospeso"});
+                        loadUsers();
+                      } catch(e){alert("Errore: "+e.message);}
+                    }} style={{flex:1,background:C.warmOrange,border:"none",borderRadius:8,padding:"7px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>❌ Rifiuta</button>
+                  </div>}
+                </div>}</div>))}
           </div>}
 
           {tab==="zone"&&<div className="slide" style={{padding:"16px 18px 0"}}>
