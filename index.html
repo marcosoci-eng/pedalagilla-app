@@ -1563,7 +1563,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   );
 }
 
-function AdminApp({ user, onLogout }) {
+function AdminApp({ user, onLogout, t }) {
+  if (!t) t = (k) => k;
   const [tab, setTab] = React.useState("dashboard");
   const [bikes, setBikes] = React.useState(initBikes);
   const [selBike, setSelBike] = React.useState(null);
@@ -1840,7 +1841,7 @@ function Main() {
   const handleLogin=(u)=>setUser(u);
   const handleLogout=()=>{ if(window.firebaseAuth) window.firebaseFunctions.signOut(window.firebaseAuth).catch(()=>{}); setUser(null); };
   if(!user) return <AuthScreen onLogin={handleLogin} lang={lang} setLang={setLang} t={t}/>;
-  if(user.type==="admin") return <AdminApp user={user} onLogout={handleLogout}/>;
+  if(user.type==="admin") return <AdminApp user={user} onLogout={handleLogout} t={t}/>;
   return <ClienteApp user={user} onLogout={handleLogout} lang={lang} setLang={setLang} t={t}/>;
 }
 
