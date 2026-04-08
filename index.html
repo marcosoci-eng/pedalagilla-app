@@ -726,8 +726,8 @@ const SBLOCCO = 1.00;
 const TARIFFA_MIN = 0.19;
 const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
-const QR_BASE_URL = "https://pedalagilla-app-9aas.vercel.app/?bike=";
-const APP_URL = "https://pedalagilla-app-9aas.vercel.app";
+const QR_BASE_URL = "https://www.pedalagilla.it/?bike=";
+const APP_URL = "https://www.pedalagilla.it";
 const LANG_LIST = ['it','en','de','fr','es','nl','cs'];
 const LANG_FLAGS = {it:'🇮🇹',en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷',es:'🇪🇸',nl:'🇳🇱',cs:'🇨🇿'};
 const checklist = ["🔗 Lubrificazione catena","🦶 Controllo pedali","🧹 Pulizia veicolo","🔋 Controllo batteria","🛞 Pressione pneumatici","🛑 Test freni","⚙️ Controllo cambio"];
@@ -1046,7 +1046,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{width:390,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
         <div style={{background:C.deepBlue,padding:"22px 24px 16px",textAlign:"center"}}>
-          <img src="https://pedalagilla-app-9aas.vercel.app/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
+          <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
           <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
             {LANG_LIST.map(l=>(
               <button key={l} onClick={()=>{setLang(l);setError(null);}}
