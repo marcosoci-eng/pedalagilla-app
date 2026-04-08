@@ -101,7 +101,7 @@ const TRANSLATIONS = {
     errName: "Inserisci il tuo nome", errPayment: "Errore. Riprova.",
     payment: "💳 Pagamento", min: "min",
     terms1: "Ho letto e accetto i Termini e Condizioni di PedalAgilla",
-    terms2: "Accetto la penale di €50/giorno per parcheggio fuori zona o in proprietà private",
+    terms2: "Accetto la penale di €50/giorno per parcheggio fuori dall'area operativa o in proprietà/rimesse private (non si applica ai parcheggi pubblici nelle zone sosta indicate nell'app)",
     terms3: "Confermo di avere almeno 18 anni",
     terms4: "Accetto il trattamento dei miei dati personali (GDPR)",
     termsError: "Devi accettare tutti i termini per procedere",
@@ -153,7 +153,7 @@ const TRANSLATIONS = {
     errName: "Enter your name", errPayment: "Error. Try again.",
     payment: "💳 Payment", min: "min",
     terms1: "I have read and accept the PedalAgilla Terms and Conditions",
-    terms2: "I accept the €50/day penalty for parking outside the zone or on private property",
+    terms2: "I accept the €50/day penalty for parking outside the operating area or in private property/garages (does not apply to public parking in the designated parking zones in the app)",
     terms3: "I confirm I am at least 18 years old",
     terms4: "I accept the processing of my personal data (GDPR)",
     termsError: "You must accept all terms to proceed",
@@ -205,7 +205,7 @@ const TRANSLATIONS = {
     errName: "Namen eingeben", errPayment: "Fehler. Erneut versuchen.",
     payment: "💳 Zahlung", min: "Min",
     terms1: "Ich habe die Nutzungsbedingungen von PedalAgilla gelesen und akzeptiere sie",
-    terms2: "Ich akzeptiere die Strafe von €50/Tag für Parken außerhalb der Zone oder auf Privatgrundstücken",
+    terms2: "Ich akzeptiere die Strafe von €50/Tag für Parken außerhalb der Betriebszone oder auf Privatgrundstücken/Garagen (gilt nicht für öffentliche Parkplätze in den in der App markierten Zonen)",
     terms3: "Ich bestätige, mindestens 18 Jahre alt zu sein",
     terms4: "Ich akzeptiere die Verarbeitung meiner Daten (DSGVO)",
     termsError: "Sie müssen alle Bedingungen akzeptieren",
@@ -257,7 +257,7 @@ const TRANSLATIONS = {
     errName: "Entrez votre nom", errPayment: "Erreur. Réessayez.",
     payment: "💳 Paiement", min: "min",
     terms1: "J'ai lu et j'accepte les Conditions Générales de PedalAgilla",
-    terms2: "J'accepte la pénalité de €50/jour pour stationnement hors zone ou sur propriété privée",
+    terms2: "J'accepte la pénalité de €50/jour pour stationnement hors de la zone opérationnelle ou sur propriété/garage privé (ne s'applique pas aux parkings publics dans les zones indiquées dans l'app)",
     terms3: "Je confirme avoir au moins 18 ans",
     terms4: "J'accepte le traitement de mes données personnelles (RGPD)",
     termsError: "Vous devez accepter toutes les conditions",
@@ -309,7 +309,7 @@ const TRANSLATIONS = {
     errName: "Introduce tu nombre", errPayment: "Error. Inténtalo de nuevo.",
     payment: "💳 Pago", min: "min",
     terms1: "He leído y acepto los Términos y Condiciones de PedalAgilla",
-    terms2: "Acepto la sanción de €50/día por aparcamiento fuera de zona o en propiedad privada",
+    terms2: "Acepto la sanción de €50/día por aparcamiento fuera de la zona operativa o en propiedad/garaje privado (no se aplica a los aparcamientos públicos en las zonas de estacionamiento indicadas en la app)",
     terms3: "Confirmo tener al menos 18 años",
     terms4: "Acepto el tratamiento de mis datos personales (RGPD)",
     termsError: "Debes aceptar todos los términos para continuar",
@@ -361,7 +361,7 @@ const TRANSLATIONS = {
     errName: "Vul uw naam in", errPayment: "Fout. Probeer opnieuw.",
     payment: "💳 Betaling", min: "min",
     terms1: "Ik heb de Gebruiksvoorwaarden van PedalAgilla gelezen en accepteer ze",
-    terms2: "Ik accepteer de boete van €50/dag voor parkeren buiten de zone of op privéterrein",
+    terms2: "Ik accepteer de boete van €50/dag voor parkeren buiten de operationele zone of op privéterrein/garage (geldt niet voor openbaar parkeren in de in de app aangeduide parkeerzones)",
     terms3: "Ik bevestig minimaal 18 jaar oud te zijn",
     terms4: "Ik accepteer de verwerking van mijn persoonsgegevens (AVG)",
     termsError: "U moet alle voorwaarden accepteren om door te gaan",
@@ -413,7 +413,7 @@ const TRANSLATIONS = {
     errName: "Zadejte své jméno", errPayment: "Chyba. Zkuste znovu.",
     payment: "💳 Platba", min: "min",
     terms1: "Přečetl/a jsem si Podmínky používání PedalAgilla a přijímám je",
-    terms2: "Přijímám sankci €50/den za parkování mimo zónu nebo na soukromém pozemku",
+    terms2: "Přijímám sankci €50/den za parkování mimo provozní zónu nebo na soukromém pozemku/v garáži (nevztahuje se na veřejná parkoviště v parkovacích zónách označených v aplikaci)",
     terms3: "Potvrzuji, že mám alespoň 18 let",
     terms4: "Přijímám zpracování svých osobních údajů (GDPR)",
     termsError: "Pro pokračování musíte přijmout všechny podmínky",
@@ -676,9 +676,57 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
   const [adminUser, setAdminUser] = React.useState("");
   const [adminPass, setAdminPass] = React.useState("");
   const [terms, setTerms] = React.useState({t1:false,t2:false,t3:false,t4:false});
-  const handleDocChange = (e) => {
+  const [docVerifying, setDocVerifying] = React.useState(false);
+  const [docWarning, setDocWarning] = React.useState(null);
+  const handleDocChange = async (e) => {
     const file = e.target.files[0];
-    if (file) { setDocFile(file); const r=new FileReader(); r.onload=ev=>setDocPreview(ev.target.result); r.readAsDataURL(file); }
+    if (!file) return;
+    setDocFile(file);
+    setDocWarning(null);
+    const r = new FileReader();
+    r.onload = async (ev) => {
+      setDocPreview(ev.target.result);
+      // AI verification
+      setDocVerifying(true);
+      try {
+        const base64 = ev.target.result.split(',')[1];
+        const mediaType = file.type || 'image/jpeg';
+        const resp = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 100,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+                { type: "text", text: "Is this image an official identity document (ID card, passport, driver's license)? Reply only with YES or NO." }
+              ]
+            }]
+          })
+        });
+        const data = await resp.json();
+        const answer = data?.content?.[0]?.text?.trim().toUpperCase() || "";
+        if (answer.includes("NO")) {
+          setDocWarning("⚠️ L'immagine non sembra un documento d'identità valido. Carica carta d'identità, passaporto o patente.");
+          // Notify admin via Firestore
+          try {
+            await waitFB();
+            const {collection, addDoc} = window.firebaseFunctions;
+            await addDoc(collection(window.firebaseDb, "docWarnings"), {
+              email, nome, cognome,
+              warning: "Documento non riconosciuto dall'AI",
+              timestamp: new Date().toISOString()
+            });
+          } catch(e) {}
+        }
+      } catch(e) {
+        // Silent fail - don't block registration if AI check fails
+      }
+      setDocVerifying(false);
+    };
+    r.readAsDataURL(file);
   };
   const handleAdminLogin = async () => {
     if (!adminUser||!adminPass) { setError(t('errAdmin')); return; }
@@ -782,6 +830,8 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
                 :<div><div style={{fontSize:32,marginBottom:4}}>📄</div><p style={{color:C.warmOrange,fontSize:13,...ds,fontWeight:600,margin:0}}>{t('docTap')}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"2px 0 0"}}>{t('docRequired')}</p></div>}
               <input id="docInput" type="file" accept="image/*" onChange={handleDocChange} style={{display:"none"}} />
             </div>
+            {docVerifying && <p style={{color:C.blueGreen,fontSize:12,...ds,margin:"0 0 8px",textAlign:"center"}}>🔍 Verifica documento in corso...</p>}
+            {docWarning && <p style={{color:C.warmOrange,fontSize:11,...ds,margin:"0 0 8px",lineHeight:"1.4"}}>{docWarning}</p>}
             <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:14,marginBottom:10}}>
               <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 10px",...ds}}>{t('termsTitle')}</p>
               {[['t1',t('terms1')],['t2',t('terms2')],['t3',t('terms3')],['t4',t('terms4')]].map(([key,label])=>(
