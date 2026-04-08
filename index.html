@@ -18,7 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc, onSnapshot, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
   const firebaseConfig = {
@@ -34,7 +34,7 @@
   window.firebaseDb = getFirestore(app);
   window.firebaseStorage = getStorage(app);
   window.firebaseFunctions = {
-    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification,
     doc, setDoc, getDoc, collection, getDocs, addDoc, onSnapshot, updateDoc, query, orderBy,
     ref, uploadBytes, getDownloadURL
   };
@@ -1043,13 +1043,14 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       await waitFB();
       const {signInWithEmailAndPassword,doc,getDoc} = window.firebaseFunctions;
       const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
-      if (!cred.user.emailVerified) {
-        await window.firebaseFunctions.signOut(window.firebaseAuth);
-        setError(t('errVerify'));
-        setShowResend(true);
-        setLoading(false);
-        return;
-      }
+      // EMAIL VERIFICATION CHECK - temporaneamente disabilitato
+      // if (!cred.user.emailVerified) {
+      //   await window.firebaseFunctions.signOut(window.firebaseAuth);
+      //   setError(t('errVerify'));
+      //   setShowResend(true);
+      //   setLoading(false);
+      //   return;
+      // }
       const snap = await getDoc(doc(window.firebaseDb,"users",cred.user.uid));
       onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
     } catch(e) { setError(t('errLogin')); }
@@ -1065,13 +1066,13 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
     setLoading(true); setError(null);
     try {
       await waitFB();
-      const {createUserWithEmailAndPassword,doc,setDoc,ref,uploadBytes,getDownloadURL} = window.firebaseFunctions;
+      const {createUserWithEmailAndPassword,doc,setDoc,ref,uploadBytes,getDownloadURL,sendEmailVerification} = window.firebaseFunctions;
       const cred = await createUserWithEmailAndPassword(window.firebaseAuth,email,password);
       const sRef = ref(window.firebaseStorage,`documenti/${cred.user.uid}`);
       await uploadBytes(sRef,docFile);
       const docURL = await getDownloadURL(sRef);
       await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString()});
-      await cred.user.sendEmailVerification();
+      await sendEmailVerification(cred.user);
       alert(t('emailVerifyMsg'));
       setMode("login"); setEmail(""); setPassword("");
     } catch(e) { setError(e.code==="auth/email-already-in-use"?t('errEmailUsed'):t('errGenerico')+e.message); }
@@ -1111,7 +1112,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
                 try {
                   const {signInWithEmailAndPassword,signOut} = window.firebaseFunctions;
                   const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
-                  await cred.user.sendEmailVerification();
+                  await sendEmailVerification(cred.user);
                   await signOut(window.firebaseAuth);
                   setError(null);
                   setShowResend(false);
