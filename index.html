@@ -95,7 +95,7 @@ const TRANSLATIONS = {
     dayRate: "☀️ Giornata", pauseFree: "pausa gratis", assistance: "🆘 Assistenza",
     callMarco: "📞 Chiama Marco:", whatsappMarco: "💬 WhatsApp Marco",
     navMap: "Mappa", navProfile: "Profilo",
-    total: "TOTALE", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    total: "TOTALE", testCard: "",
     cardName: "Nome", cardNamePh: "Mario Rossi", card: "Carta",
     payBtn: "💳 Paga", paying: "⏳ Elaborazione...", cancel: "Annulla",
     errName: "Inserisci il tuo nome", errPayment: "Errore. Riprova.",
@@ -150,7 +150,7 @@ const TRANSLATIONS = {
     dayRate: "☀️ Full day", pauseFree: "free pause", assistance: "🆘 Assistance",
     callMarco: "📞 Call Marco:", whatsappMarco: "💬 WhatsApp Marco",
     navMap: "Map", navProfile: "Profile",
-    total: "TOTAL", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    total: "TOTAL", testCard: "",
     cardName: "Name", cardNamePh: "John Smith", card: "Card",
     payBtn: "💳 Pay", paying: "⏳ Processing...", cancel: "Cancel",
     errName: "Enter your name", errPayment: "Error. Try again.",
@@ -205,7 +205,7 @@ const TRANSLATIONS = {
     dayRate: "☀️ Ganzer Tag", pauseFree: "kostenlose Pause", assistance: "🆘 Hilfe",
     callMarco: "📞 Marco anrufen:", whatsappMarco: "💬 WhatsApp Marco",
     navMap: "Karte", navProfile: "Profil",
-    total: "GESAMT", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    total: "GESAMT", testCard: "",
     cardName: "Name", cardNamePh: "Hans Müller", card: "Karte",
     payBtn: "💳 Bezahlen", paying: "⏳ Verarbeitung...", cancel: "Abbrechen",
     errName: "Namen eingeben", errPayment: "Fehler. Erneut versuchen.",
@@ -260,7 +260,7 @@ const TRANSLATIONS = {
     dayRate: "☀️ Journée", pauseFree: "pause gratuite", assistance: "🆘 Assistance",
     callMarco: "📞 Appeler Marco :", whatsappMarco: "💬 WhatsApp Marco",
     navMap: "Carte", navProfile: "Profil",
-    total: "TOTAL", testCard: "🧪 Test : 4242 4242 4242 4242 · 12/28 · 123",
+    total: "TOTAL", testCard: "",
     cardName: "Nom", cardNamePh: "Jean Dupont", card: "Carte",
     payBtn: "💳 Payer", paying: "⏳ Traitement...", cancel: "Annuler",
     errName: "Entrez votre nom", errPayment: "Erreur. Réessayez.",
@@ -315,7 +315,7 @@ const TRANSLATIONS = {
     dayRate: "☀️ Día completo", pauseFree: "pausa gratis", assistance: "🆘 Asistencia",
     callMarco: "📞 Llamar a Marco:", whatsappMarco: "💬 WhatsApp Marco",
     navMap: "Mapa", navProfile: "Perfil",
-    total: "TOTAL", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    total: "TOTAL", testCard: "",
     cardName: "Nombre", cardNamePh: "Carlos García", card: "Tarjeta",
     payBtn: "💳 Pagar", paying: "⏳ Procesando...", cancel: "Cancelar",
     errName: "Introduce tu nombre", errPayment: "Error. Inténtalo de nuevo.",
@@ -370,7 +370,7 @@ const TRANSLATIONS = {
     dayRate: "☀️ Hele dag", pauseFree: "gratis pauze", assistance: "🆘 Hulp",
     callMarco: "📞 Bel Marco:", whatsappMarco: "💬 WhatsApp Marco",
     navMap: "Kaart", navProfile: "Profiel",
-    total: "TOTAAL", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    total: "TOTAAL", testCard: "",
     cardName: "Naam", cardNamePh: "Jan de Vries", card: "Kaart",
     payBtn: "💳 Betalen", paying: "⏳ Verwerken...", cancel: "Annuleren",
     errName: "Vul uw naam in", errPayment: "Fout. Probeer opnieuw.",
@@ -425,7 +425,7 @@ const TRANSLATIONS = {
     dayRate: "☀️ Celý den", pauseFree: "bezplatná pauza", assistance: "🆘 Pomoc",
     callMarco: "📞 Zavolat Marcovi:", whatsappMarco: "💬 WhatsApp Marco",
     navMap: "Mapa", navProfile: "Profil",
-    total: "CELKEM", testCard: "🧪 Test: 4242 4242 4242 4242 · 12/28 · 123",
+    total: "CELKEM", testCard: "",
     cardName: "Jméno", cardNamePh: "Jan Novák", card: "Karta",
     payBtn: "💳 Zaplatit", paying: "⏳ Zpracování...", cancel: "Zrušit",
     errName: "Zadejte své jméno", errPayment: "Chyba. Zkuste znovu.",
@@ -715,7 +715,7 @@ Max. 25 km/h; bez cestujících; bez alkoholu/drog; helma doporučena; dodržova
 Příslušný soud: Modena, Itálie. Platí italské právo.`
 };
 
-const STRIPE_KEY = "pk_test_51Sx6QaIBfjLC7EABk7FoZen16MfAD8XhsofJ2mKaGsJLd116YlERXuYp3VTwrOsUJM9WjcUpQhzMJd7fbudZmkNG00y2uZJk7X";
+const STRIPE_KEY = "pk_live_51Sx6QaIBfjLC7EABTMhjj2CIIiX6SvonHXOK04P9aWB5YNPycW8Z80liP9DRk4yOgDPVRLlBqwDisS4phwMUZc9x00wj7ZHLIi";
 const stripeInstance = Stripe(STRIPE_KEY);
 const stripeElements = stripeInstance.elements();
 const C = { blueGreen:"#219EBC", deepBlue:"#023047", skyBlue:"#8ECAE6", sunYellow:"#FFB703", warmOrange:"#FB8500", white:"#FFFFFF", bgLight:"#F5F9FB" };
@@ -940,9 +940,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t }) {
         <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{amount.toFixed(2)}</p>
         <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,margin:0,...ds}}>{bike.id} · {plan} · {bike.zone}</p>
       </div>
-      <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:10,marginBottom:14}}>
-        <p style={{color:C.blueGreen,fontSize:11,fontWeight:600,margin:0,...ds}}>{t('testCard')}</p>
-      </div>
+
       <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('cardName')}</p>
       <input value={nome} onChange={e=>setNome(e.target.value)} placeholder={t('cardNamePh')} style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,marginBottom:12,background:C.white}} />
       <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('card')}</p>
