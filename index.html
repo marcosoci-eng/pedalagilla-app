@@ -715,6 +715,38 @@ Max. 25 km/h; bez cestujících; bez alkoholu/drog; helma doporučena; dodržova
 Příslušný soud: Modena, Itálie. Platí italské právo.`
 };
 
+const COMING_SOON = false; // ← metti true per nascondere l'app, false per mostrarla
+
+function ComingSoonScreen() {
+  return (
+    <div style={{minHeight:"100vh",background:`linear-gradient(160deg,#023047 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{width:390,background:"#F5F9FB",borderRadius:40,border:`6px solid #023047`,overflow:"hidden",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`,textAlign:"center"}}>
+        <div style={{background:"#023047",padding:"32px 24px 28px"}}>
+          <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
+        </div>
+        <div style={{padding:"32px 28px 36px"}}>
+          <h1 style={{color:"#023047",fontSize:28,fontWeight:700,fontFamily:"Lora",margin:"0 0 12px"}}>Prossimamente</h1>
+          <h2 style={{color:"#219EBC",fontSize:18,fontWeight:600,fontFamily:"Lora",margin:"0 0 20px"}}>Coming Soon</h2>
+          <p style={{color:"#888",fontSize:14,fontFamily:"'DM Sans',sans-serif",margin:"0 0 8px",lineHeight:"1.6"}}>
+            Il servizio di e-bike sharing al Lago Trasimeno sta arrivando.
+          </p>
+          <p style={{color:"#aaa",fontSize:13,fontFamily:"'DM Sans',sans-serif",margin:"0 0 28px",lineHeight:"1.6"}}>
+            E-bike sharing service at Lake Trasimeno — coming soon.
+          </p>
+          <div style={{background:"#023047",borderRadius:16,padding:"16px 20px",marginBottom:16}}>
+            <p style={{color:"#8ECAE6",fontSize:11,fontFamily:"'DM Sans',sans-serif",margin:"0 0 4px",letterSpacing:2}}>CONTATTI</p>
+            <a href="mailto:info@pedalagilla.it" style={{color:"#FFB703",fontSize:14,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none"}}>info@pedalagilla.it</a>
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:16}}>
+            <a href="https://www.instagram.com" style={{background:"#FB8500",borderRadius:12,padding:"10px 20px",color:"#fff",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none"}}>Instagram</a>
+            <a href={`https://wa.me/393495240422`} style={{background:"#25D366",borderRadius:12,padding:"10px 20px",color:"#fff",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none"}}>WhatsApp</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const STRIPE_KEY = "pk_live_51Sx6QaIBfjLC7EABTMhjj2CIIiX6SvonHXOK04P9aWB5YNPycW8Z80liP9DRk4yOgDPVRLlBqwDisS4phwMUZc9x00wj7ZHLIi";
 const stripeInstance = Stripe(STRIPE_KEY);
 const stripeElements = stripeInstance.elements();
@@ -1833,7 +1865,7 @@ function Main() {
   return <ClienteApp user={user} onLogout={handleLogout} lang={lang} setLang={setLang} t={t}/>;
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<Main/>);
+ReactDOM.createRoot(document.getElementById('root')).render(COMING_SOON ? <ComingSoonScreen/> : <Main/>);
 </script>
 <script>
   if ('serviceWorker' in navigator) {
