@@ -1577,14 +1577,29 @@ function AdminApp({ user, onLogout, t }) {
   const [drawingActive, setDrawingActive] = React.useState(false);
   const [zoneName, setZoneName] = React.useState("");
   const [savedZones, setSavedZones] = React.useState(DEFAULT_ZONES);
+const [zonesLoaded, setZonesLoaded] = React.useState(false);
   const [zoneFilters, setZoneFilters] = React.useState({operativa:true,sosta:true,lenta:true,fuori:true});
 
   React.useEffect(()=>{
-    const saveZones = async () => {
-      try { await waitFB(); const {doc,setDoc} = window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()}); } catch(e){ console.log("Errore salvataggio zone:",e); }
-    };
-    if(savedZones!==DEFAULT_ZONES) saveZones();
-  },[savedZones]);
+  const loadZones = async () => {
+    try {
+      await waitFB();
+      const {doc,getDoc} = window.firebaseFunctions;
+      const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
+      if(snap.exists()) setSavedZones(snap.data().zones||DEFAULT_ZONES);
+    } catch(e){ console.log("Errore caricamento zone:",e); }
+    setZonesLoaded(true);
+  };
+  loadZones();
+},[]);
+
+React.useEffect(()=>{
+  if(!zonesLoaded) return;
+  const saveZones = async () => {
+    try { await waitFB(); const {doc,setDoc} = window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()}); } catch(e){ console.log("Errore salvataggio zone:",e); }
+  };
+  saveZones();
+},[savedZones]);
 
   const today = new Date().toLocaleDateString("it-IT");
   const todayRides = rides.filter(r=>r.date===today);
