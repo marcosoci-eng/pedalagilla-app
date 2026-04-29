@@ -988,6 +988,41 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString(),docReviewed:false});
       await sendEmailVerification(cred.user);
       await window.firebaseFunctions.signOut(window.firebaseAuth);
+      // Notifica admin via Resend
+      try {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer re_Ew6sn1Mi_Aufj9CcLkK6sFpZdL9sDQ98V"
+          },
+          body: JSON.stringify({
+            from: "PedalAgilla <noreply@pedalagilla.it>",
+            to: ["info@pedalagilla.com"],
+            subject: `🚲 Nuovo utente registrato: ${nome} ${cognome}`,
+            html: `
+              <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;background:#f5f9fb;border-radius:16px">
+                <div style="background:#023047;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px">
+                  <h1 style="color:#fff;margin:0;font-size:22px">🚲 PedalAgilla</h1>
+                  <p style="color:#8ECAE6;margin:6px 0 0;font-size:13px">Nuovo utente registrato</p>
+                </div>
+                <table style="width:100%;border-collapse:collapse">
+                  <tr><td style="padding:8px 0;color:#666;font-size:13px;width:120px">👤 Nome</td><td style="padding:8px 0;color:#023047;font-weight:700;font-size:13px">${nome} ${cognome}</td></tr>
+                  <tr><td style="padding:8px 0;color:#666;font-size:13px">📧 Email</td><td style="padding:8px 0;color:#023047;font-weight:700;font-size:13px">${email}</td></tr>
+                  <tr><td style="padding:8px 0;color:#666;font-size:13px">📱 Telefono</td><td style="padding:8px 0;color:#023047;font-weight:700;font-size:13px">${telefono}</td></tr>
+                  <tr><td style="padding:8px 0;color:#666;font-size:13px">📅 Data</td><td style="padding:8px 0;color:#023047;font-weight:700;font-size:13px">${new Date().toLocaleString("it-IT")}</td></tr>
+                </table>
+                <div style="background:#FFF8E1;border:1px solid #FFB703;border-radius:10px;padding:14px;margin-top:16px">
+                  <p style="color:#7a5800;font-size:12px;margin:0">⚠️ <strong>Documento da verificare</strong> — accedi al pannello admin per approvare o rifiutare il documento d'identità.</p>
+                </div>
+                <div style="text-align:center;margin-top:20px">
+                  <a href="https://www.pedalagilla.it" style="background:#023047;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700">Apri pannello admin →</a>
+                </div>
+              </div>
+            `
+          })
+        });
+      } catch(emailErr) { console.warn("Notifica email fallita:", emailErr); }
       setMode("login"); setEmail(""); setPassword("");
       alert(t('registerSuccess'));
     } catch(e) { setError(e.code==="auth/email-already-in-use"?t('errEmailUsed'):t('errGenerico')+e.message); }
