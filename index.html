@@ -1559,14 +1559,17 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const sendBikeCommand = async (bikeId, type) => {
     try {
       await waitFB();
-      const {doc, collection, addDoc} = window.firebaseFunctions;
-      // bikeId app = PA-027, bikeId server = PED027
+      const {collection, addDoc} = window.firebaseFunctions;
       const pedId = bikeId.replace('PA-', 'PED');
-      await addDoc(collection(window.firebaseDb, 'bikes', pedId, 'commands'), {
+      const cmdRef = collection(window.firebaseDb, 'bikes', pedId, 'commands');
+      const result = await addDoc(cmdRef, {
         type, status: 'pending', createdAt: new Date().toISOString()
       });
-      console.log(`Comando ${type} inviato a ${pedId}`);
-    } catch(e) { console.error('Errore comando IoT:', e); }
+      console.log(`✅ Comando ${type} inviato a ${pedId}, doc:`, result.id);
+    } catch(e) {
+      console.error('❌ Errore comando IoT:', e.code, e.message);
+      alert(`Errore sblocco: ${e.message}`);
+    }
   };
 
   const handleFreeStart = async () => {
