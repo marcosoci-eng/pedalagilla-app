@@ -1549,8 +1549,24 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       }
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
+      // Sblocca tutte le bici
+      for(const bike of bks) await sendBikeCommand(bike.id, 'unlock');
     } catch(e){console.error(e);}
     setRiding(true);
+  };
+
+  // ── COMANDI IoT ──
+  const sendBikeCommand = async (bikeId, type) => {
+    try {
+      await waitFB();
+      const {doc, collection, addDoc} = window.firebaseFunctions;
+      // bikeId app = PA-027, bikeId server = PED027
+      const pedId = bikeId.replace('PA-', 'PED');
+      await addDoc(collection(window.firebaseDb, 'bikes', pedId, 'commands'), {
+        type, status: 'pending', createdAt: new Date().toISOString()
+      });
+      console.log(`Comando ${type} inviato a ${pedId}`);
+    } catch(e) { console.error('Errore comando IoT:', e); }
   };
 
   const handleFreeStart = async () => {
@@ -1571,6 +1587,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           promoCode:promoApplied?.code||null, promoType:promoApplied?.type||null, isFree:true,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
+        // Sblocca bici
+        await sendBikeCommand(bike.id, 'unlock');
       }
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
@@ -1578,6 +1596,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   };
 
   const handleEndRide=(secs,cost,bikeId)=>{
+    // Blocca bici
+    sendBikeCommand(bikeId, 'lock');
     setConfirmed(prev=>{
       const remaining=prev.filter(b=>b.id!==bikeId);
       if(remaining.length===0){
@@ -2147,8 +2167,24 @@ function AdminApp({ user, onLogout, t }) {
   const mapBikes=mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
   const visibleZones=savedZones.filter(z=>zoneFilters[z.type]);
 
+  const [bikesRealtime, setBikesRealtime] = React.useState({});
+
   React.useEffect(()=>{
     const load=async()=>{ await waitFB(); const {collection,onSnapshot}=window.firebaseFunctions; onSnapshot(collection(window.firebaseDb,"rides"),snap=>{ setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; })); }); };
+    load();
+  },[]);
+
+  // GPS real-time dalla collection bikes
+  React.useEffect(()=>{
+    const load = async () => {
+      await waitFB();
+      const {collection, onSnapshot} = window.firebaseFunctions;
+      onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
+        const positions = {};
+        snap.docs.forEach(d => { positions[d.id] = d.data(); });
+        setBikesRealtime(positions);
+      });
+    };
     load();
   },[]);
 
@@ -2269,7 +2305,36 @@ function AdminApp({ user, onLogout, t }) {
             <div style={{display:"flex",gap:8,marginBottom:10}}>
               {["Tutti","Disponibile","Manutenzione"].map(f=>(<button key={f} className="btn" onClick={()=>setMapFilter(f)} style={{background:mapFilter===f?C.deepBlue:C.white,border:`1.5px solid ${mapFilter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:mapFilter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>))}
             </div>
-            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><MapView bikes={mapBikes} onBikeClick={b=>openBikeDetail(b)} height={300}/></div>
+            {Object.keys(bikesRealtime).length>0&&(
+              <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:"8px 14px",marginBottom:10}}>
+                <p style={{color:C.blueGreen,fontSize:12,fontWeight:600,margin:0,...ds}}>📡 {Object.keys(bikesRealtime).filter(k=>bikesRealtime[k].online).length} bici online in tempo reale</p>
+              </div>
+            )}
+            <div style={{height:300,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}>
+              <MapView bikes={mapBikes.map(b=>{
+                const pedId = b.id.replace('PA-','PED');
+                const rt = bikesRealtime[pedId];
+                return rt?.lat ? {...b, lat:rt.lat, lng:rt.lng, battery:rt.battery||b.battery} : b;
+              })} onBikeClick={b=>openBikeDetail(b)} height={300}/>
+            </div>
+            {/* Ciclisti attivi */}
+            {rides.filter(r=>r.status==="In corso").length>0&&(
+              <div style={{background:`${C.warmOrange}10`,border:`1px solid ${C.warmOrange}30`,borderRadius:12,padding:"10px 14px",marginBottom:10}}>
+                <p style={{color:C.warmOrange,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>🚴 Ciclisti attivi</p>
+                {rides.filter(r=>r.status==="In corso").map(ride=>{
+                  const pedId = ride.bike?.replace('PA-','PED');
+                  const rt = pedId ? bikesRealtime[pedId] : null;
+                  return(
+                    <div key={ride.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600}}>{ride.bike} · {ride.user}</span>
+                      <span style={{color:rt?.speed>0?C.blueGreen:"#aaa",fontSize:11,...ds}}>
+                        {rt ? `${rt.speed||0} km/h · ⚡${rt.battery||0}%` : "📡 attesa GPS"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {mapBikes.sort((a,b)=>a.battery-b.battery).map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,border:`1px solid ${getBattColor(bike.battery)}30`,borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><span style={{color:C.deepBlue,fontWeight:700,fontSize:13,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:"#aaa",fontSize:11,...ds,marginLeft:8}}>📍 {bike.zone}</span></div><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:getBattColor(bike.battery),fontWeight:700,fontSize:12,...ds}}>{bike.battery}%</span></div></div>))}
           </div>}
 
