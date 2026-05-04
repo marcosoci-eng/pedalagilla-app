@@ -1589,6 +1589,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   const handlePaySuccess=async(paymentMethodId)=>{
     setShowPayment(false); setShowPlan(false);
+    console.log("💳 handlePaySuccess chiamato");
     try {
       await waitFB();
       const {collection,addDoc,doc,updateDoc,getDoc}=window.firebaseFunctions;
@@ -1609,6 +1610,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           isFree: isFree||false,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
+        console.log(`✅ Ride creata: ${rideDoc.id} per ${bike.id}, status: In corso`);
       }
       // Aggiorna rimborso hotel su Firebase
       if (hotelCashback > 0 && promoApplied?.code) {
