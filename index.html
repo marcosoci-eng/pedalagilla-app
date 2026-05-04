@@ -1467,12 +1467,18 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   // Recupera corsa attiva al login
   React.useEffect(()=>{
     const restore = async () => {
+      console.log("🔄 Restore avviato, user.uid:", user?.uid);
       try {
         await waitFB();
         const {collection, getDocs} = window.firebaseFunctions;
         const ridesSnap = await getDocs(collection(window.firebaseDb, "rides"));
+        console.log("📦 Tot rides:", ridesSnap.docs.length);
         const activeRides = ridesSnap.docs
-          .filter(d => d.data().status === "In corso" && d.data().userId === user.uid)
+          .filter(d => {
+            const data = d.data();
+            console.log(`  ride ${d.id}: status=${data.status}, userId=${data.userId}`);
+            return data.status === "In corso" && data.userId === user.uid;
+          })
           .map(d => ({id: d.id, ...d.data()}));
         console.log("🔍 Corse attive trovate:", activeRides.length);
         if (activeRides.length > 0) {
