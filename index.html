@@ -1143,11 +1143,11 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, onEnd, t }) {
-  const [seconds, setSeconds] = React.useState(0);
+function RideTimer({ bike, plan, user, rideId, initialSeconds=0, onEnd, t }) {
+  const [seconds, setSeconds] = React.useState(initialSeconds);
   const [paused, setPaused] = React.useState(false);
   const [pauseSeconds, setPauseSeconds] = React.useState(0);
-  const startTimeRef = React.useRef(Date.now());
+  const startTimeRef = React.useRef(Date.now() - initialSeconds * 1000);
   const pauseStartRef = React.useRef(null);
   const totalPausedRef = React.useRef(0);
   const [showEndFlow, setShowEndFlow] = React.useState(false);
@@ -1434,7 +1434,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [rideSummary, setRideSummary] = React.useState(null);
   const [showQRScanner, setShowQRScanner] = React.useState(false);
   const [addingBike, setAddingBike] = React.useState(false);
-  const [restoringRide, setRestoringRide] = React.useState(true); // controlla corsa attiva al login
+  const [restoringRide, setRestoringRide] = React.useState(true);
+  const [restoredElapsed, setRestoredElapsed] = React.useState(0); // controlla corsa attiva al login
   const qrIntervalRef = React.useRef(null);
   const [clientZones, setClientZones] = React.useState([]);
   const [userPos, setUserPos] = React.useState(null);
@@ -1473,13 +1474,17 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         const {collection, getDocs} = window.firebaseFunctions;
         const ridesSnap = await getDocs(collection(window.firebaseDb, "rides"));
         console.log("📦 Tot rides:", ridesSnap.docs.length);
-        const activeRides = ridesSnap.docs
+        const allActiveRides = ridesSnap.docs
           .filter(d => {
             const data = d.data();
-            console.log(`  ride ${d.id}: status=${data.status}, userId=${data.userId}`);
             return data.status === "In corso" && data.userId === user.uid;
           })
           .map(d => ({id: d.id, ...d.data()}));
+        // Deduplica per bikeId — tieni la più recente
+        const seenBikes = new Set();
+        const activeRides = allActiveRides
+          .sort((a,b) => new Date(b.startTime||0) - new Date(a.startTime||0))
+          .filter(r => { if(seenBikes.has(r.bikeId)) return false; seenBikes.add(r.bikeId); return true; });
         console.log("🔍 Corse attive trovate:", activeRides.length);
         if (activeRides.length > 0) {
           const rideIds = activeRides.map(r => ({bikeId: r.bikeId, rideId: r.id}));
@@ -1487,9 +1492,13 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
             const found = initBikes.find(b => b.id === r.bikeId);
             return found || {id: r.bikeId, zone: r.zone||"", battery: 80, status: "Disponibile", lat: 43.15, lng: 12.08};
           });
+          // Calcola secondi già trascorsi
+          const startTime = new Date(activeRides[0].startTime).getTime();
+          const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
           setCurrentRideIds(rideIds);
           setConfirmed(bks);
           setPlan(activeRides[0].plan || "minuti");
+          setRestoredElapsed(elapsedSeconds);
           setRiding(true);
         }
       } catch(e) { console.error("Errore ripristino corsa:", e); }
@@ -1754,7 +1763,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} initialSeconds={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t}/>
             :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t}/>
         )}
 
