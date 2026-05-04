@@ -1147,14 +1147,38 @@ function RideTimer({ bike, plan, user, rideId, onEnd, t }) {
   const [seconds, setSeconds] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
   const [pauseSeconds, setPauseSeconds] = React.useState(0);
+  const startTimeRef = React.useRef(Date.now());
+  const pauseStartRef = React.useRef(null);
+  const totalPausedRef = React.useRef(0);
   const [showEndFlow, setShowEndFlow] = React.useState(false);
   const [parkPhoto, setParkPhoto] = React.useState(null);
   const [parkPreview, setParkPreview] = React.useState(null);
   const [uploading, setUploading] = React.useState(false);
   const trackRef = React.useRef([]);
   const isGiornata = plan==="giornata";
-  React.useEffect(() => { if (!paused&&!showEndFlow) { const i=setInterval(()=>setSeconds(s=>s+1),1000); return()=>clearInterval(i); } },[paused,showEndFlow]);
-  React.useEffect(() => { if (paused&&!showEndFlow) { const i=setInterval(()=>setPauseSeconds(s=>s+1),1000); return()=>clearInterval(i); } },[paused,showEndFlow]);
+  React.useEffect(() => {
+    const i = setInterval(() => {
+      if (!paused) {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current - totalPausedRef.current) / 1000);
+        setSeconds(elapsed);
+      } else {
+        if (pauseStartRef.current) {
+          setPauseSeconds(Math.floor((Date.now() - pauseStartRef.current) / 1000));
+        }
+      }
+    }, 500);
+    return () => clearInterval(i);
+  }, [paused]);
+
+  const handlePauseToggle = () => {
+    if (!paused) {
+      pauseStartRef.current = Date.now();
+    } else {
+      totalPausedRef.current += Date.now() - pauseStartRef.current;
+      pauseStartRef.current = null;
+    }
+    setPaused(p => !p);
+  };
   React.useEffect(() => {
     if (!navigator.geolocation||showEndFlow) return;
     const saveGPS = () => { navigator.geolocation.getCurrentPosition(async pos=>{ const point={lat:pos.coords.latitude,lng:pos.coords.longitude,t:Date.now()}; trackRef.current.push(point); if (rideId) { try { await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current}); } catch(e){} } },()=>{},{enableHighAccuracy:true}); };
@@ -1234,7 +1258,7 @@ function RideTimer({ bike, plan, user, rideId, onEnd, t }) {
             </div>
           ))}
         </div>
-        <button onClick={()=>setPaused(p=>!p)} style={{width:"100%",background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:14,color:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
+        <button onClick={handlePauseToggle} style={{width:"100%",background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:14,color:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
           {paused?t('resumeBtn'):t('pauseBtn')}
         </button>
         <button onClick={()=>setShowEndFlow(true)} style={{width:"100%",background:C.warmOrange,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
@@ -1395,10 +1419,10 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 // CLIENTEAPP — con multi-bici (Opzione B)
 // ═══════════════════════════════════════════════════════
 function ClienteApp({ user, onLogout, lang, setLang, t }) {
-  const bikes = initBikes.filter(b=>b.status==="Disponibile");
+  const [allBikes, setAllBikes] = React.useState(initBikes);
+  const [activeBikeIds, setActiveBikeIds] = React.useState([]); // bici in corsa da altri utenti
   const [tab, setTab] = React.useState("mappa");
   const [selectedBike, setSelectedBike] = React.useState(null);
-  // ── MULTI-BICI: array di bici selezionate ──
   const [selectedBikes, setSelectedBikes] = React.useState([]);
   const [showPlan, setShowPlan] = React.useState(false);
   const [plan, setPlan] = React.useState("minuti");
@@ -1409,15 +1433,65 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [showSummary, setShowSummary] = React.useState(false);
   const [rideSummary, setRideSummary] = React.useState(null);
   const [showQRScanner, setShowQRScanner] = React.useState(false);
-  const [addingBike, setAddingBike] = React.useState(false); // scanner per aggiungere bici extra
+  const [addingBike, setAddingBike] = React.useState(false);
+  const [restoringRide, setRestoringRide] = React.useState(true); // controlla corsa attiva al login
   const qrIntervalRef = React.useRef(null);
   const [clientZones, setClientZones] = React.useState([]);
   const [userPos, setUserPos] = React.useState(null);
 
+  // Bici disponibili = non in corsa da altri utenti
+  const bikes = allBikes.filter(b => b.status==="Disponibile" && !activeBikeIds.includes(b.id));
+
   React.useEffect(()=>{ if (!navigator.geolocation) return; navigator.geolocation.watchPosition(pos=>{ setUserPos({lat:pos.coords.latitude,lng:pos.coords.longitude}); window._userPosition={lat:pos.coords.latitude,lng:pos.coords.longitude}; },()=>{},{enableHighAccuracy:true}); },[]);
+
   React.useEffect(()=>{
     const load=async()=>{ try { await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const snap=await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()) setClientZones(snap.data().zones||[]); else setClientZones(DEFAULT_ZONES); } catch(e){ setClientZones(DEFAULT_ZONES); } };
     load();
+  },[]);
+
+  // Ascolta corse attive per escludere bici occupate
+  React.useEffect(()=>{
+    const load = async () => {
+      await waitFB();
+      const {collection, onSnapshot} = window.firebaseFunctions;
+      onSnapshot(collection(window.firebaseDb, "rides"), snap => {
+        const active = snap.docs
+          .filter(d => d.data().status === "In corso")
+          .map(d => d.data().bikeId);
+        setActiveBikeIds(active);
+      });
+    };
+    load();
+  },[]);
+
+  // Recupera corsa attiva al login
+  React.useEffect(()=>{
+    const restore = async () => {
+      try {
+        await waitFB();
+        const {collection, query, getDocs} = window.firebaseFunctions;
+        const ridesRef = collection(window.firebaseDb, "rides");
+        const snap = await getDocs(ridesRef);
+        const activeRides = snap.docs
+          .filter(d => d.data().status === "In corso" && d.data().userId === user.uid)
+          .map(d => ({id: d.id, ...d.data()}));
+        if (activeRides.length > 0) {
+          // Ripristina corsa
+          const rideIds = activeRides.map(r => ({bikeId: r.bikeId, rideId: r.id}));
+          const bks = activeRides.map(r => {
+            const found = initBikes.find(b => b.id === r.bikeId);
+            return found || {id: r.bikeId, zone: r.zone, battery: 80, status: "Disponibile", lat: 43.15, lng: 12.08};
+          });
+          setCurrentRideIds(rideIds);
+          setConfirmed(bks);
+          setPlan(activeRides[0].plan || "minuti");
+          setRiding(true);
+        }
+      } catch(e) { console.error("Errore ripristino corsa:", e); }
+      setRestoringRide(false);
+    };
+    if (user?.uid) restore();
+    else setRestoringRide(false);
   },[]);
 
   // QR scanner — usato sia per prima bici che per aggiungerne altre
@@ -1617,6 +1691,14 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <style>{css}</style>
       <div style={{width:390,minHeight:844,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
+
+        {/* Caricamento ripristino corsa */}
+        {restoringRide&&(
+          <div style={{position:"absolute",inset:0,background:C.deepBlue,zIndex:500,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:100,height:100,objectFit:"contain",marginBottom:20}} alt="PedalAgilla"/>
+            <p style={{color:C.skyBlue,fontSize:14,...ds}}>⏳ Caricamento...</p>
+          </div>
+        )}
 
         {/* QR Scanner */}
         {showQRScanner&&(
