@@ -1469,26 +1469,22 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     const restore = async () => {
       try {
         await waitFB();
-        const {collection, getDocs, query, where} = window.firebaseFunctions;
-        const snap = await getDocs(collection(window.firebaseDb, "bikesStatus"));
-        const myBikes = snap.docs.filter(d => d.data().inUse && d.data().userId === user.uid);
-        if (myBikes.length > 0) {
-          // Cerca la corsa attiva su Firestore
-          const ridesSnap = await getDocs(collection(window.firebaseDb, "rides"));
-          const activeRides = ridesSnap.docs
-            .filter(d => d.data().status === "In corso" && d.data().userId === user.uid)
-            .map(d => ({id: d.id, ...d.data()}));
-          if (activeRides.length > 0) {
-            const rideIds = activeRides.map(r => ({bikeId: r.bikeId, rideId: r.id}));
-            const bks = activeRides.map(r => {
-              const found = initBikes.find(b => b.id === r.bikeId);
-              return found || {id: r.bikeId, zone: r.zone||"", battery: 80, status: "Disponibile", lat: 43.15, lng: 12.08};
-            });
-            setCurrentRideIds(rideIds);
-            setConfirmed(bks);
-            setPlan(activeRides[0].plan || "minuti");
-            setRiding(true);
-          }
+        const {collection, getDocs} = window.firebaseFunctions;
+        const ridesSnap = await getDocs(collection(window.firebaseDb, "rides"));
+        const activeRides = ridesSnap.docs
+          .filter(d => d.data().status === "In corso" && d.data().userId === user.uid)
+          .map(d => ({id: d.id, ...d.data()}));
+        console.log("🔍 Corse attive trovate:", activeRides.length);
+        if (activeRides.length > 0) {
+          const rideIds = activeRides.map(r => ({bikeId: r.bikeId, rideId: r.id}));
+          const bks = activeRides.map(r => {
+            const found = initBikes.find(b => b.id === r.bikeId);
+            return found || {id: r.bikeId, zone: r.zone||"", battery: 80, status: "Disponibile", lat: 43.15, lng: 12.08};
+          });
+          setCurrentRideIds(rideIds);
+          setConfirmed(bks);
+          setPlan(activeRides[0].plan || "minuti");
+          setRiding(true);
         }
       } catch(e) { console.error("Errore ripristino corsa:", e); }
       setRestoringRide(false);
@@ -1656,9 +1652,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     try {
       await waitFB();
       const {doc, setDoc} = window.firebaseFunctions;
-      const pedId = bikeId.replace('PA-', 'PED');
       await setDoc(doc(window.firebaseDb, 'bikesStatus', bikeId), {
-        inUse, updatedAt: new Date().toISOString()
+        inUse, userId: inUse ? (user.uid||"") : null, updatedAt: new Date().toISOString()
       }, {merge: true});
     } catch(e) { console.error('Errore setBikeInUse:', e); }
   };
