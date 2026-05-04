@@ -1449,15 +1449,15 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     load();
   },[]);
 
-  // Ascolta corse attive per escludere bici occupate
+  // Ascolta bici occupate da bikesStatus
   React.useEffect(()=>{
     const load = async () => {
       await waitFB();
       const {collection, onSnapshot} = window.firebaseFunctions;
-      onSnapshot(collection(window.firebaseDb, "rides"), snap => {
+      onSnapshot(collection(window.firebaseDb, "bikesStatus"), snap => {
         const active = snap.docs
-          .filter(d => d.data().status === "In corso")
-          .map(d => d.data().bikeId);
+          .filter(d => d.data().inUse === true)
+          .map(d => d.id); // id è bikeId tipo PA-027
         setActiveBikeIds(active);
       });
     };
@@ -1469,23 +1469,26 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     const restore = async () => {
       try {
         await waitFB();
-        const {collection, query, getDocs} = window.firebaseFunctions;
-        const ridesRef = collection(window.firebaseDb, "rides");
-        const snap = await getDocs(ridesRef);
-        const activeRides = snap.docs
-          .filter(d => d.data().status === "In corso" && d.data().userId === user.uid)
-          .map(d => ({id: d.id, ...d.data()}));
-        if (activeRides.length > 0) {
-          // Ripristina corsa
-          const rideIds = activeRides.map(r => ({bikeId: r.bikeId, rideId: r.id}));
-          const bks = activeRides.map(r => {
-            const found = initBikes.find(b => b.id === r.bikeId);
-            return found || {id: r.bikeId, zone: r.zone, battery: 80, status: "Disponibile", lat: 43.15, lng: 12.08};
-          });
-          setCurrentRideIds(rideIds);
-          setConfirmed(bks);
-          setPlan(activeRides[0].plan || "minuti");
-          setRiding(true);
+        const {collection, getDocs, query, where} = window.firebaseFunctions;
+        const snap = await getDocs(collection(window.firebaseDb, "bikesStatus"));
+        const myBikes = snap.docs.filter(d => d.data().inUse && d.data().userId === user.uid);
+        if (myBikes.length > 0) {
+          // Cerca la corsa attiva su Firestore
+          const ridesSnap = await getDocs(collection(window.firebaseDb, "rides"));
+          const activeRides = ridesSnap.docs
+            .filter(d => d.data().status === "In corso" && d.data().userId === user.uid)
+            .map(d => ({id: d.id, ...d.data()}));
+          if (activeRides.length > 0) {
+            const rideIds = activeRides.map(r => ({bikeId: r.bikeId, rideId: r.id}));
+            const bks = activeRides.map(r => {
+              const found = initBikes.find(b => b.id === r.bikeId);
+              return found || {id: r.bikeId, zone: r.zone||"", battery: 80, status: "Disponibile", lat: 43.15, lng: 12.08};
+            });
+            setCurrentRideIds(rideIds);
+            setConfirmed(bks);
+            setPlan(activeRides[0].plan || "minuti");
+            setRiding(true);
+          }
         }
       } catch(e) { console.error("Errore ripristino corsa:", e); }
       setRestoringRide(false);
@@ -1624,7 +1627,10 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
       // Sblocca tutte le bici
-      for(const bike of bks) await sendBikeCommand(bike.id, 'unlock');
+      for(const bike of bks) {
+        await sendBikeCommand(bike.id, 'unlock');
+        await setBikeInUse(bike.id, true);
+      }
     } catch(e){console.error(e);}
     setRiding(true);
   };
@@ -1646,6 +1652,17 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     }
   };
 
+  const setBikeInUse = async (bikeId, inUse) => {
+    try {
+      await waitFB();
+      const {doc, setDoc} = window.firebaseFunctions;
+      const pedId = bikeId.replace('PA-', 'PED');
+      await setDoc(doc(window.firebaseDb, 'bikesStatus', bikeId), {
+        inUse, updatedAt: new Date().toISOString()
+      }, {merge: true});
+    } catch(e) { console.error('Errore setBikeInUse:', e); }
+  };
+
   const handleFreeStart = async () => {
     setShowPlan(false);
     setRiding(true);
@@ -1664,8 +1681,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           promoCode:promoApplied?.code||null, promoType:promoApplied?.type||null, isFree:true,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
-        // Sblocca bici
         await sendBikeCommand(bike.id, 'unlock');
+        await setBikeInUse(bike.id, true);
       }
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
@@ -1673,8 +1690,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   };
 
   const handleEndRide=(secs,cost,bikeId)=>{
-    // Blocca bici
     sendBikeCommand(bikeId, 'lock');
+    setBikeInUse(bikeId, false);
     setConfirmed(prev=>{
       const remaining=prev.filter(b=>b.id!==bikeId);
       if(remaining.length===0){
