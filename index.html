@@ -1143,11 +1143,12 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, initialSeconds=0, onEnd, t }) {
-  const [seconds, setSeconds] = React.useState(initialSeconds);
+function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
+  const computedStart = rideStartTime || Date.now();
+  const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
   const [pauseSeconds, setPauseSeconds] = React.useState(0);
-  const startTimeRef = React.useRef(Date.now() - initialSeconds * 1000);
+  const startTimeRef = React.useRef(computedStart);
   const pauseStartRef = React.useRef(null);
   const totalPausedRef = React.useRef(0);
   const [showEndFlow, setShowEndFlow] = React.useState(false);
@@ -1492,13 +1493,10 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
             const found = initBikes.find(b => b.id === r.bikeId);
             return found || {id: r.bikeId, zone: r.zone||"", battery: 80, status: "Disponibile", lat: 43.15, lng: 12.08};
           });
-          // Calcola secondi già trascorsi
-          const startTime = new Date(activeRides[0].startTime).getTime();
-          const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
           setCurrentRideIds(rideIds);
           setConfirmed(bks);
           setPlan(activeRides[0].plan || "minuti");
-          setRestoredElapsed(elapsedSeconds);
+          setRestoredElapsed(new Date(activeRides[0].startTime).getTime());
           setRiding(true);
         }
       } catch(e) { console.error("Errore ripristino corsa:", e); }
@@ -1763,7 +1761,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} initialSeconds={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t}/>
             :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t}/>
         )}
 
