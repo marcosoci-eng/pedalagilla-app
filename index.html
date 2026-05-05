@@ -1447,21 +1447,6 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [allBikes, setAllBikes] = React.useState(initBikes);
   const [activeBikeIds, setActiveBikeIds] = React.useState([]);
-  const [installPrompt, setInstallPrompt] = React.useState(null);
-  const [showInstallBanner, setShowInstallBanner] = React.useState(false);
-  const [isIOS, setIsIOS] = React.useState(false);
-  const [showIOSInstructions, setShowIOSInstructions] = React.useState(false);
-
-  // PWA install prompt
-  React.useEffect(()=>{
-    const isIOSDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isInStandalone = window.navigator.standalone === true;
-    setIsIOS(isIOSDevice);
-    if (isIOSDevice && !isInStandalone) setShowInstallBanner(true);
-    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  },[]);
 
   // Carica bici real-time da Firebase (bikes collection)
   React.useEffect(()=>{
@@ -2039,24 +2024,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
             <div style={{position:"absolute",inset:0}}>
               <MapView bikes={bikes} onBikeClick={handleBikeClick} fullscreen={true} zones={clientZones} userPos={userPos}/>
             </div>
-            <div style={{position:"absolute",bottom:80,left:12,right:12,zIndex:10}}>
-              {/* Banner installazione PWA */}
-              {showInstallBanner && (
-                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:14,padding:"12px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10,boxShadow:"0 4px 20px rgba(2,48,71,0.4)"}}>
-                  <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:36,height:36,borderRadius:8,objectFit:"contain"}} alt=""/>
-                  <div style={{flex:1}}>
-                    <p style={{color:C.white,fontSize:13,fontWeight:700,margin:0,...ds}}>Installa PedalAgilla</p>
-                    <p style={{color:C.skyBlue,fontSize:11,margin:0,...ds}}>{isIOS?"Tocca ⎋ poi 'Aggiungi a Home'":"Aggiungi alla schermata Home"}</p>
-                  </div>
-                  {!isIOS && installPrompt && (
-                    <button onClick={async()=>{ installPrompt.prompt(); const r=await installPrompt.userChoice; setShowInstallBanner(false); }}
-                      style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"8px 14px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-                      Installa
-                    </button>
-                  )}
-                  <button onClick={()=>setShowInstallBanner(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.5)",fontSize:20,cursor:"pointer",padding:"0 4px"}}>✕</button>
-                </div>
-              )}
+            <div style={{position:"absolute",bottom:90,left:12,right:12,zIndex:10}}>
               <button onClick={()=>startQRScanner(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                 {t('scanQR')}
               </button>
@@ -2717,12 +2685,46 @@ function Main() {
     const l = navigator.language?.slice(0,2);
     return LANG_LIST.includes(l) ? l : 'en';
   });
+  const [installPrompt, setInstallPrompt] = React.useState(null);
+  const [showInstallBanner, setShowInstallBanner] = React.useState(false);
+  const [isIOS, setIsIOS] = React.useState(false);
+
+  React.useEffect(()=>{
+    const isIOSDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isInStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    setIsIOS(isIOSDevice);
+    if (!isInStandalone) setShowInstallBanner(true);
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  },[]);
+
   const t = (k) => (TRANSLATIONS[lang] || TRANSLATIONS.en)[k] || k;
   const handleLogin=(u)=>setUser(u);
   const handleLogout=()=>{ if(window.firebaseAuth) window.firebaseFunctions.signOut(window.firebaseAuth).catch(()=>{}); setUser(null); };
-  if(!user) return <AuthScreen onLogin={handleLogin} lang={lang} setLang={setLang} t={t}/>;
+
+  const installBanner = showInstallBanner && (
+    <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 -4px 20px rgba(2,48,71,0.5)"}}>
+      <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:44,height:44,borderRadius:10,objectFit:"contain",background:"white",padding:2}} alt=""/>
+      <div style={{flex:1}}>
+        <p style={{color:C.white,fontSize:14,fontWeight:700,margin:0,...ds}}>Installa PedalAgilla</p>
+        <p style={{color:C.skyBlue,fontSize:12,margin:0,...ds}}>
+          {isIOS ? "Tocca ⎋ → 'Aggiungi a schermata Home'" : "Aggiungi alla schermata Home per un accesso rapido"}
+        </p>
+      </div>
+      {!isIOS && installPrompt && (
+        <button onClick={async()=>{ installPrompt.prompt(); await installPrompt.userChoice; setShowInstallBanner(false); }}
+          style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+          Installa
+        </button>
+      )}
+      <button onClick={()=>setShowInstallBanner(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.5)",fontSize:22,cursor:"pointer",padding:"0 4px",flexShrink:0}}>✕</button>
+    </div>
+  );
+
+  if(!user) return <>{installBanner}<AuthScreen onLogin={handleLogin} lang={lang} setLang={setLang} t={t}/></>;
   if(user.type==="admin") return <AdminApp user={user} onLogout={handleLogout} t={t}/>;
-  return <ClienteApp user={user} onLogout={handleLogout} lang={lang} setLang={setLang} t={t}/>;
+  return <>{installBanner}<ClienteApp user={user} onLogout={handleLogout} lang={lang} setLang={setLang} t={t}/></>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(COMING_SOON ? <ComingSoonScreen/> : <Main/>);
