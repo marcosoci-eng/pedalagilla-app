@@ -1409,7 +1409,45 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 // ═══════════════════════════════════════════════════════
 function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [allBikes, setAllBikes] = React.useState(initBikes);
-  const [activeBikeIds, setActiveBikeIds] = React.useState([]); // bici in corsa da altri utenti
+  const [activeBikeIds, setActiveBikeIds] = React.useState([]);
+
+  // Carica bici real-time da Firebase (bikes collection)
+  React.useEffect(()=>{
+    const load = async () => {
+      try {
+        await waitFB();
+        const {collection, onSnapshot} = window.firebaseFunctions;
+        onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
+          if (snap.empty) return; // usa initBikes se non ci sono dati
+          const fbBikes = snap.docs.map(d => {
+            const data = d.data();
+            const pedId = d.id; // es. PED027
+            const paId = pedId.replace('PED', 'PA-0').replace('PA-0', 'PA-'); // PED027 → PA-027
+            // Normalizza: PED027 → PA-027
+            const normalizedId = 'PA-' + pedId.replace('PED','').padStart(3,'0');
+            const existing = initBikes.find(b => b.id === normalizedId);
+            return {
+              id: normalizedId,
+              battery: data.batteryPercent || data.battery || existing?.battery || 50,
+              status: data.locked === false ? "Disponibile" : (existing?.status || "Disponibile"),
+              odometer: existing?.odometer || 0,
+              zone: existing?.zone || "Castiglione",
+              model: existing?.model || "City Comfort",
+              lat: data.lat || existing?.lat || 43.15,
+              lng: data.lng || existing?.lng || 12.08,
+              note: existing?.note || "",
+              lastMaint: existing?.lastMaint || "",
+              checks: existing?.checks || {},
+              online: data.online || false,
+              speed: data.speed || 0,
+            };
+          });
+          setAllBikes(fbBikes);
+        });
+      } catch(e) { console.error("Errore caricamento bici:", e); }
+    };
+    load();
+  },[]);
   const [tab, setTab] = React.useState("mappa");
   const [selectedBike, setSelectedBike] = React.useState(null);
   const [selectedBikes, setSelectedBikes] = React.useState([]);
@@ -2269,21 +2307,34 @@ function AdminApp({ user, onLogout, t }) {
 
   const [bikesRealtime, setBikesRealtime] = React.useState({});
 
-  React.useEffect(()=>{
-    const load=async()=>{ await waitFB(); const {collection,onSnapshot}=window.firebaseFunctions; onSnapshot(collection(window.firebaseDb,"rides"),snap=>{ setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; })); }); };
-    load();
-  },[]);
-
-  // GPS real-time dalla collection bikes
+  // Aggiorna lista bici admin da Firebase real-time
   React.useEffect(()=>{
     const load = async () => {
       await waitFB();
       const {collection, onSnapshot} = window.firebaseFunctions;
       onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
         const positions = {};
-        snap.docs.forEach(d => { positions[d.id] = d.data(); });
+        const updatedBikes = [...initBikes];
+        snap.docs.forEach(d => {
+          const data = d.data();
+          positions[d.id] = data;
+          const normalizedId = 'PA-' + d.id.replace('PED','').padStart(3,'0');
+          const idx = updatedBikes.findIndex(b => b.id === normalizedId);
+          if (idx >= 0) {
+            updatedBikes[idx] = {
+              ...updatedBikes[idx],
+              battery: data.batteryPercent || data.battery || updatedBikes[idx].battery,
+              lat: data.lat || updatedBikes[idx].lat,
+              lng: data.lng || updatedBikes[idx].lng,
+              online: data.online || false,
+            };
+          }
+        });
+        setBikes(updatedBikes);
         setBikesRealtime(positions);
       });
+      // Rides listener
+      onSnapshot(collection(window.firebaseDb,"rides"),snap=>{ setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; })); });
     };
     load();
   },[]);
@@ -2334,6 +2385,28 @@ function AdminApp({ user, onLogout, t }) {
                 {[["⚡",`${selBike.battery}%`,"Batteria",getBattColor(selBike.battery)],["🛣️",`${selBike.odometer.toFixed(0)}`,"Km",C.blueGreen],["📅",selBike.lastMaint,"Ultima mant.",C.deepBlue]].map(([icon,val,label,color],i)=>(
                   <div key={i} style={{background:C.white,borderRadius:12,padding:"10px 8px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:16,marginBottom:2}}>{icon}</div><div style={{color,fontSize:12,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:9,...ds}}>{label}</div></div>
                 ))}
+              </div>
+              {/* Badge online + link Maps + suona */}
+              <div style={{display:"flex",gap:8,marginBottom:12}}>
+                <div style={{background:selBike.online?`${C.blueGreen}20`:`${C.warmOrange}20`,border:`1px solid ${selBike.online?C.blueGreen:C.warmOrange}`,borderRadius:10,padding:"8px 14px",display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:8,height:8,borderRadius:4,background:selBike.online?C.blueGreen:C.warmOrange}}/>
+                  <span style={{color:selBike.online?C.blueGreen:C.warmOrange,fontSize:12,...ds,fontWeight:600}}>{selBike.online?"Online":"Offline"}</span>
+                </div>
+                <a href={`https://www.google.com/maps?q=${selBike.lat},${selBike.lng}`} target="_blank"
+                  style={{flex:1,background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:10,padding:"8px 14px",color:C.blueGreen,fontSize:12,...ds,fontWeight:600,textDecoration:"none",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                  🗺️ Naviga
+                </a>
+                <button onClick={async()=>{
+                  try {
+                    await waitFB();
+                    const {collection, addDoc} = window.firebaseFunctions;
+                    const normalPedId = 'PED' + selBike.id.replace('PA-','');
+                    await addDoc(collection(window.firebaseDb,'bikes',normalPedId,'commands'),{type:'beep',status:'pending',createdAt:new Date().toISOString()});
+                    alert("🔔 Comando inviato!");
+                  } catch(e){alert("Errore: "+e.message);}
+                }} style={{background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:10,padding:"8px 14px",color:"#b38600",fontSize:16,cursor:"pointer"}}>
+                  🔔
+                </button>
               </div>
               <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
