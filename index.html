@@ -1449,8 +1449,7 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 // ═══════════════════════════════════════════════════════
 // MTB NOLEGGIO — bici muscolari
 // ═══════════════════════════════════════════════════════
-function MTBTab({ user, t }) {
-  const [mtbBikes, setMtbBikes] = React.useState([]);
+function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([]);
   const [selectedMTB, setSelectedMTB] = React.useState(null);
   const [tariffa, setTariffa] = React.useState(null); // 'adulto' | 'bambino'
   const [showPayment, setShowPayment] = React.useState(false);
@@ -1706,7 +1705,7 @@ function MTBTab({ user, t }) {
   if(showPayment) return(
     <div style={{padding:"16px 18px 0"}}>
       <button onClick={()=>setShowPayment(false)} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,...ds,fontWeight:600,cursor:"pointer",marginBottom:14}}>← Torna</button>
-      <PaymentForm amount={amount} bike={selectedMTB} plan={tariffa==="adulto"?"MTB Adulto":"MTB Bambino"} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={k=>k}/>
+      <PaymentForm amount={amount} bike={selectedMTB} plan={tariffa==="adulto"?"MTB Adulto":"MTB Bambino"} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
     </div>
   );
 
