@@ -743,6 +743,23 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       else { userMarkerRef.current = new window.google.maps.Marker({ position: userPos, map: mapInstanceRef.current, title: "La tua posizione", icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#219EBC", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 3 }, zIndex: 999 }); }
     }
   }, [userPos]);
+
+  // Aggiorna marker quando cambiano le bici (posizione/batteria real-time)
+  React.useEffect(() => {
+    if (!mapInstanceRef.current || !window.google || !markersRef.current.length) return;
+    bikes.forEach(bike => {
+      const entry = markersRef.current.find(m => m.bike.id === bike.id);
+      if (entry) {
+        // Aggiorna posizione
+        entry.marker.setPosition({ lat: bike.lat, lng: bike.lng });
+        // Aggiorna colore e label batteria
+        const color = bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500";
+        entry.marker.setIcon({ path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: color, fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 });
+        entry.marker.setLabel({ text: `${bike.battery}%`, color: "#ffffff", fontSize: "10px", fontWeight: "bold" });
+        entry.bike = bike; // aggiorna riferimento
+      }
+    });
+  }, [bikes]);
   React.useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
