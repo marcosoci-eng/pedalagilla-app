@@ -1044,7 +1044,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
           <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
             {LANG_LIST.map(l=>(
               <button key={l} onClick={()=>{setLang(l);setError(null);}}
-                style={{background:lang===l?"rgba(255,255,255,0.30)":"rgba(255,255,255,0.08)",border:`2px solid ${lang===l?"rgba(255,255,255,0.8)":"rgba(255,255,255,0.2)"}`,borderRadius:10,padding:"5px 8px",cursor:"pointer",fontSize:26,lineHeight:1,transform:lang===l?"scale(1.15)":"scale(1)",transition:"all 0.15s"}}>
+                style={{background:lang===l?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.15)",border:`1px solid ${lang===l?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.2)"}`,borderRadius:8,padding:"3px 6px",cursor:"pointer",fontSize:20,lineHeight:1}}>
                 {LANG_FLAGS[l]}
               </button>
             ))}
