@@ -657,7 +657,10 @@ const SBLOCCO = 1.00;
 const TARIFFA_MIN = 0.19;
 const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
+const TARIFFA_MTB_ADULTO = 15.00;
+const TARIFFA_MTB_BAMBINO = 10.00;
 const QR_BASE_URL = "https://www.pedalagilla.it/?bike=";
+const QR_MTB_URL = "https://www.pedalagilla.it/?mtb=";
 const APP_URL = "https://www.pedalagilla.it";
 const LANG_LIST = ['it','en','de','fr','es','nl','cs'];
 const LANG_FLAGS = {it:'🇮🇹',en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷',es:'🇪🇸',nl:'🇳🇱',cs:'🇨🇿'};
@@ -1444,6 +1447,329 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 }
 
 // ═══════════════════════════════════════════════════════
+// MTB NOLEGGIO — bici muscolari
+// ═══════════════════════════════════════════════════════
+function MTBTab({ user, t }) {
+  const [mtbBikes, setMtbBikes] = React.useState([]);
+  const [selectedMTB, setSelectedMTB] = React.useState(null);
+  const [tariffa, setTariffa] = React.useState(null); // 'adulto' | 'bambino'
+  const [showPayment, setShowPayment] = React.useState(false);
+  const [showCode, setShowCode] = React.useState(false);
+  const [lockCode, setLockCode] = React.useState("");
+  const [rentalId, setRentalId] = React.useState(null);
+  const [showEndFlow, setShowEndFlow] = React.useState(false);
+  const [parkPhoto, setParkPhoto] = React.useState(null);
+  const [parkPreview, setParkPreview] = React.useState(null);
+  const [uploading, setUploading] = React.useState(false);
+  const [showQR, setShowQR] = React.useState(false);
+  const qrIntervalRef = React.useRef(null);
+  const [activeRental, setActiveRental] = React.useState(null);
+  const trackRef = React.useRef([]);
+
+  // Carica MTB da Firebase
+  React.useEffect(()=>{
+    const load = async () => {
+      try {
+        await waitFB();
+        const {collection, onSnapshot} = window.firebaseFunctions;
+        onSnapshot(collection(window.firebaseDb, "mtbBikes"), snap => {
+          setMtbBikes(snap.docs.map(d=>({id:d.id,...d.data()})));
+        });
+      } catch(e) {}
+    };
+    load();
+  },[]);
+
+  // Controlla noleggio attivo
+  React.useEffect(()=>{
+    const check = async () => {
+      try {
+        await waitFB();
+        const {collection, getDocs} = window.firebaseFunctions;
+        const snap = await getDocs(collection(window.firebaseDb, "mtbRentals"));
+        const active = snap.docs.find(d => d.data().userId===user.uid && d.data().status==="In corso");
+        if (active) setActiveRental({id:active.id,...active.data()});
+      } catch(e) {}
+    };
+    check();
+  },[]);
+
+  // GPS tracking
+  React.useEffect(()=>{
+    if (!activeRental || showEndFlow) return;
+    const saveGPS = () => {
+      navigator.geolocation?.getCurrentPosition(async pos => {
+        const point = {lat:pos.coords.latitude, lng:pos.coords.longitude, t:Date.now()};
+        trackRef.current.push(point);
+        try {
+          await waitFB();
+          const {doc, updateDoc} = window.firebaseFunctions;
+          await updateDoc(doc(window.firebaseDb,"mtbRentals",activeRental.id),{track:trackRef.current});
+        } catch(e){}
+      },()=>{},{enableHighAccuracy:true});
+    };
+    saveGPS();
+    const i = setInterval(saveGPS, 30000);
+    return()=>clearInterval(i);
+  },[activeRental, showEndFlow]);
+
+  // QR Scanner
+  React.useEffect(()=>{
+    if (!showQR) {
+      clearInterval(qrIntervalRef.current);
+      const video=document.getElementById("mtbQrVideo");
+      if(video?.srcObject){video.srcObject.getTracks().forEach(t=>t.stop());video.srcObject=null;}
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(stream=>{
+      const video=document.getElementById("mtbQrVideo");
+      if(video){video.srcObject=stream;video.play();}
+      qrIntervalRef.current=setInterval(()=>{
+        const video=document.getElementById("mtbQrVideo");
+        const canvas=document.getElementById("mtbQrCanvas");
+        if(!video||!canvas||!window.jsQR) return;
+        canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+        const ctx=canvas.getContext("2d"); ctx.drawImage(video,0,0);
+        const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+        const code=window.jsQR(imageData.data,imageData.width,imageData.height);
+        if(code){
+          try{
+            const url=new URL(code.data);
+            const mtbId=url.searchParams.get("mtb");
+            if(mtbId){
+              clearInterval(qrIntervalRef.current);
+              stream.getTracks().forEach(t=>t.stop());
+              setShowQR(false);
+              const bike = mtbBikes.find(b=>b.id===mtbId) || {id:mtbId,name:`MTB ${mtbId}`,zone:"Castiglione"};
+              setSelectedMTB(bike);
+            }
+          }catch(e){}
+        }
+      },500);
+    }).catch(()=>alert("Fotocamera non accessibile"));
+  },[showQR]);
+
+  const handlePaySuccess = async () => {
+    setShowPayment(false);
+    try {
+      await waitFB();
+      const {collection, addDoc, doc, getDoc} = window.firebaseFunctions;
+      // Recupera codice lucchetto dalla bici
+      const bikeSnap = await getDoc(doc(window.firebaseDb,"mtbBikes",selectedMTB.id));
+      const code = bikeSnap.data()?.lockCode || "----";
+      setLockCode(code);
+      // Crea noleggio
+      const rental = await addDoc(collection(window.firebaseDb,"mtbRentals"),{
+        mtbId: selectedMTB.id,
+        userId: user.uid,
+        userName: `${user.nome||""} ${user.cognome||""}`.trim(),
+        userEmail: user.email||"",
+        tariffa, importo: tariffa==="adulto"?TARIFFA_MTB_ADULTO:TARIFFA_MTB_BAMBINO,
+        status: "In corso",
+        startTime: new Date().toISOString(),
+        track: [], lockCode: code,
+      });
+      setRentalId(rental.id);
+      setActiveRental({id:rental.id, mtbId:selectedMTB.id, tariffa, lockCode:code});
+      setShowCode(true);
+    } catch(e){console.error(e);}
+  };
+
+  const handleParkPhoto=(e)=>{const file=e.target.files[0];if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);}};
+
+  const handleEndConfirm = async () => {
+    if(!parkPhoto){alert("📸 Foto obbligatoria");return;}
+    setUploading(true);
+    try {
+      await waitFB();
+      const {ref,uploadBytes,getDownloadURL,doc,updateDoc}=window.firebaseFunctions;
+      const sRef=ref(window.firebaseStorage,`mtb_parcheggi/${activeRental.mtbId}_${Date.now()}`);
+      await uploadBytes(sRef,parkPhoto);
+      const parkPhotoURL=await getDownloadURL(sRef);
+      await updateDoc(doc(window.firebaseDb,"mtbRentals",activeRental.id),{
+        status:"Completata", endTime:new Date().toISOString(),
+        parkPhotoURL, track:trackRef.current
+      });
+      setActiveRental(null); setShowEndFlow(false);
+      setParkPhoto(null); setParkPreview(null);
+      setSelectedMTB(null); setTariffa(null);
+      alert("✅ Noleggio terminato! Grazie.");
+    } catch(e){console.error(e);}
+    setUploading(false);
+  };
+
+  const amount = tariffa==="adulto" ? TARIFFA_MTB_ADULTO : TARIFFA_MTB_BAMBINO;
+
+  // Noleggio attivo — mostra stato e bottone fine
+  if(activeRental) return(
+    <div style={{padding:"16px 18px 0"}}>
+      {showEndFlow ? (
+        <div>
+          <div style={{background:C.deepBlue,borderRadius:16,padding:16,marginBottom:16,textAlign:"center"}}>
+            <p style={{color:C.skyBlue,fontSize:11,...ds,margin:"0 0 4px",letterSpacing:2}}>TERMINA NOLEGGIO MTB</p>
+            <h2 style={{color:C.white,fontSize:18,fontWeight:700,margin:0,fontFamily:"Lora"}}>{activeRental.mtbId}</h2>
+          </div>
+          <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:14,padding:14,marginBottom:16}}>
+            <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 4px",...ds}}>📸 Foto parcheggio obbligatoria</p>
+            <p style={{color:"#888",fontSize:12,...ds,margin:0}}>Scatta una foto alla bici parcheggiata</p>
+          </div>
+          <div style={{border:`2px dashed ${parkPhoto?C.blueGreen:C.warmOrange}`,borderRadius:14,padding:20,textAlign:"center",marginBottom:16,cursor:"pointer"}} onClick={()=>document.getElementById("mtbParkInput").click()}>
+            {parkPreview?<div><img src={parkPreview} style={{width:"100%",borderRadius:10,maxHeight:200,objectFit:"cover",marginBottom:8}}/><p style={{color:C.blueGreen,fontSize:13,...ds,fontWeight:600,margin:0}}>✅ Tocca per cambiare</p></div>
+              :<div><div style={{fontSize:48,marginBottom:8}}>📸</div><p style={{color:C.warmOrange,fontSize:14,...ds,fontWeight:600,margin:0}}>Scatta foto parcheggio</p></div>}
+            <input id="mtbParkInput" type="file" accept="image/*" capture="environment" onChange={handleParkPhoto} style={{display:"none"}}/>
+          </div>
+          <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading}
+            style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
+            {uploading?"⏳ Salvataggio...":"✅ Conferma fine noleggio"}
+          </button>
+          <button onClick={()=>setShowEndFlow(false)} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>← Torna</button>
+        </div>
+      ):(
+        <div>
+          <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:24,marginBottom:16,textAlign:"center"}}>
+            <p style={{color:C.skyBlue,fontSize:11,...ds,margin:"0 0 8px",letterSpacing:2}}>NOLEGGIO IN CORSO</p>
+            <h2 style={{color:C.white,fontSize:22,fontWeight:700,margin:"0 0 4px",fontFamily:"Lora"}}>{activeRental.mtbId}</h2>
+            <p style={{color:C.skyBlue,fontSize:13,...ds,margin:"0 0 16px"}}>{activeRental.tariffa==="adulto"?"👤 Adulto":"👶 Bambino"} · €{activeRental.importo?.toFixed(2)}</p>
+            <div style={{background:"rgba(255,255,255,0.1)",borderRadius:14,padding:16,marginBottom:0}}>
+              <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,...ds,margin:"0 0 8px"}}>🔒 CODICE LUCCHETTO</p>
+              <p style={{color:C.sunYellow,fontSize:40,fontWeight:700,margin:0,...ds,letterSpacing:8}}>{activeRental.lockCode}</p>
+            </div>
+          </div>
+          <div style={{background:`${C.warmOrange}10`,border:`1px solid ${C.warmOrange}30`,borderRadius:12,padding:"10px 14px",marginBottom:16}}>
+            <p style={{color:C.warmOrange,fontSize:12,...ds,margin:0}}>⏰ Noleggio valido per tutta la giornata. Al termine scatta la foto di parcheggio.</p>
+          </div>
+          <button onClick={()=>setShowEndFlow(true)} style={{width:"100%",background:C.warmOrange,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+            🏁 Termina noleggio
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Schermata codice dopo pagamento
+  if(showCode) return(
+    <div style={{padding:"16px 18px 0",textAlign:"center"}}>
+      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:28,marginBottom:16}}>
+        <div style={{fontSize:48,marginBottom:12}}>🎉</div>
+        <p style={{color:C.skyBlue,fontSize:11,...ds,margin:"0 0 8px",letterSpacing:2}}>PAGAMENTO CONFERMATO</p>
+        <h2 style={{color:C.white,fontSize:20,fontWeight:700,margin:"0 0 16px",fontFamily:"Lora"}}>{selectedMTB?.id} · {tariffa==="adulto"?"Adulto":"Bambino"}</h2>
+        <div style={{background:"rgba(255,255,255,0.1)",borderRadius:14,padding:20}}>
+          <p style={{color:"rgba(255,255,255,0.7)",fontSize:12,...ds,margin:"0 0 8px"}}>🔒 CODICE LUCCHETTO</p>
+          <p style={{color:C.sunYellow,fontSize:48,fontWeight:700,margin:0,...ds,letterSpacing:10}}>{lockCode}</p>
+        </div>
+      </div>
+      <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:14,padding:14,marginBottom:16,textAlign:"left"}}>
+        <p style={{color:C.blueGreen,fontSize:13,fontWeight:600,margin:"0 0 6px",...ds}}>✅ Come usare il codice</p>
+        <p style={{color:"#555",fontSize:12,...ds,margin:0,lineHeight:"1.6"}}>1. Vai alla bici<br/>2. Inserisci il codice nel lucchetto<br/>3. Al termine della giornata torna qui per terminare il noleggio e scattare la foto</p>
+      </div>
+      <button onClick={()=>setShowCode(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+        ✓ Ho capito
+      </button>
+    </div>
+  );
+
+  // Schermata selezione tariffa
+  if(selectedMTB && !showPayment) return(
+    <div style={{padding:"16px 18px 0"}}>
+      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:16,display:"flex",gap:12,alignItems:"center"}}>
+        <div style={{fontSize:36}}>🚲</div>
+        <div>
+          <p style={{color:C.white,fontSize:16,fontWeight:700,margin:0,fontFamily:"Lora"}}>{selectedMTB.id}</p>
+          <p style={{color:C.skyBlue,fontSize:12,margin:"2px 0 0",...ds}}>📍 {selectedMTB.zone||"Castiglione"} · MTB Muscolare</p>
+        </div>
+      </div>
+      <p style={{color:C.deepBlue,fontSize:13,fontWeight:600,margin:"0 0 12px",...ds}}>Seleziona tariffa giornaliera:</p>
+      {[["adulto","👤 Adulto",TARIFFA_MTB_ADULTO,"Bici standard"],["bambino","👶 Bambino",TARIFFA_MTB_BAMBINO,"Bici per bambini"]].map(([id,label,price,desc])=>(
+        <div key={id} onClick={()=>setTariffa(id)}
+          style={{background:tariffa===id?C.deepBlue:C.white,borderRadius:14,padding:"16px",marginBottom:10,cursor:"pointer",border:`2px solid ${tariffa===id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14}}>
+          <div style={{fontSize:32}}>{label.split(" ")[0]}</div>
+          <div style={{flex:1}}>
+            <p style={{color:tariffa===id?C.white:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{label.split(" ").slice(1).join(" ")}</p>
+            <p style={{color:tariffa===id?C.skyBlue:"#aaa",fontSize:12,margin:"2px 0 0",...ds}}>{desc} · Tutto il giorno</p>
+          </div>
+          <p style={{color:tariffa===id?C.sunYellow:C.blueGreen,fontSize:20,fontWeight:700,margin:0,...ds}}>€{price.toFixed(2)}</p>
+          {tariffa===id&&<div style={{width:22,height:22,borderRadius:11,background:C.blueGreen,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:13}}>✓</div>}
+        </div>
+      ))}
+      <div style={{display:"flex",gap:10,marginTop:8}}>
+        <button onClick={()=>setSelectedMTB(null)} style={{flex:1,background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:13,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>← Indietro</button>
+        <button onClick={()=>tariffa&&setShowPayment(true)} disabled={!tariffa}
+          style={{flex:2,background:tariffa?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:13,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:tariffa?"pointer":"not-allowed"}}>
+          💳 Paga €{tariffa?(tariffa==="adulto"?TARIFFA_MTB_ADULTO:TARIFFA_MTB_BAMBINO).toFixed(2):"--"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // Form pagamento
+  if(showPayment) return(
+    <div style={{padding:"16px 18px 0"}}>
+      <button onClick={()=>setShowPayment(false)} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,...ds,fontWeight:600,cursor:"pointer",marginBottom:14}}>← Torna</button>
+      <PaymentForm amount={amount} bike={selectedMTB} plan={tariffa==="adulto"?"MTB Adulto":"MTB Bambino"} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={k=>k}/>
+    </div>
+  );
+
+  // Schermata principale MTB
+  return(
+    <div style={{padding:"16px 18px 0"}}>
+      {/* QR Scanner */}
+      {showQR&&(
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.95)",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          <button onClick={()=>setShowQR(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>✕</button>
+          <div style={{fontSize:60,marginBottom:20}}>📷</div>
+          <p style={{color:C.white,fontSize:18,fontWeight:700,fontFamily:"Lora",marginBottom:8}}>Scansiona QR MTB</p>
+          <p style={{color:"rgba(255,255,255,0.6)",fontSize:13,...ds,marginBottom:20,textAlign:"center",padding:"0 30px"}}>Inquadra il QR code sul telaio della bici</p>
+          <video id="mtbQrVideo" style={{width:260,height:260,borderRadius:16,objectFit:"cover",border:`3px solid ${C.blueGreen}`,marginBottom:20}} autoPlay playsInline muted/>
+          <canvas id="mtbQrCanvas" style={{display:"none"}}/>
+          <div style={{background:C.white,borderRadius:16,padding:16,width:260,textAlign:"center"}}>
+            <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>Oppure inserisci il codice:</p>
+            <input placeholder="Es: MTB-001" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
+              onChange={e=>{
+                const val=e.target.value.toUpperCase().trim();
+                const bike=mtbBikes.find(b=>b.id===val);
+                if(bike){setShowQR(false);setSelectedMTB(bike);}
+              }}/>
+          </div>
+        </div>
+      )}
+      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:24,marginBottom:16,textAlign:"center"}}>
+        <div style={{fontSize:56,marginBottom:8}}>🚲</div>
+        <h2 style={{color:C.white,fontSize:20,fontWeight:700,margin:"0 0 6px",fontFamily:"Lora"}}>MTB Muscolare</h2>
+        <p style={{color:C.skyBlue,fontSize:13,...ds,margin:"0 0 20px"}}>Noleggio giornaliero · Lago Trasimeno</p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+          {[["👤 Adulto",`€${TARIFFA_MTB_ADULTO.toFixed(2)}`],["👶 Bambino",`€${TARIFFA_MTB_BAMBINO.toFixed(2)}`]].map(([l,p])=>(
+            <div key={l} style={{background:"rgba(255,255,255,0.1)",borderRadius:12,padding:"12px 8px",textAlign:"center"}}>
+              <p style={{color:C.white,fontSize:13,...ds,fontWeight:600,margin:"0 0 2px"}}>{l}</p>
+              <p style={{color:C.sunYellow,fontSize:20,fontWeight:700,margin:0,...ds}}>{p}</p>
+              <p style={{color:C.skyBlue,fontSize:10,...ds,margin:"2px 0 0"}}>tutto il giorno</p>
+            </div>
+          ))}
+        </div>
+        <button onClick={()=>setShowQR(true)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},#027a4e)`,border:"none",borderRadius:14,padding:"13px 16px",color:C.white,fontSize:14,...ds,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          📷 Scansiona QR bici
+        </button>
+      </div>
+      {mtbBikes.filter(b=>b.status==="Disponibile").length===0&&(
+        <div style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}`,borderRadius:14,padding:14,textAlign:"center"}}>
+          <p style={{color:"#b38600",fontSize:13,...ds,fontWeight:600,margin:0}}>⚠️ Nessuna MTB disponibile al momento</p>
+        </div>
+      )}
+      {mtbBikes.filter(b=>b.status==="Disponibile").map(bike=>(
+        <div key={bike.id} onClick={()=>setSelectedMTB(bike)} className="card"
+          style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:44,height:44,borderRadius:22,background:`${C.blueGreen}20`,border:`2px solid ${C.blueGreen}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>🚲</div>
+          <div style={{flex:1}}>
+            <p style={{color:C.deepBlue,fontWeight:700,fontSize:14,margin:0,fontFamily:"Lora"}}>{bike.id}</p>
+            <p style={{color:"#aaa",fontSize:12,...ds,margin:"2px 0 0"}}>📍 {bike.zone||"Castiglione"} · {bike.type||"MTB"}</p>
+          </div>
+          <span style={{color:C.blueGreen,fontSize:18}}>›</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // CLIENTEAPP — con multi-bici (Opzione B)
 // ═══════════════════════════════════════════════════════
 function ClienteApp({ user, onLogout, lang, setLang, t }) {
@@ -2047,6 +2373,22 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           </div>
         )}
 
+        {/* MTB */}
+        {tab==="mtb"&&(
+          <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
+            <div style={{background:C.deepBlue,padding:"12px 22px 16px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>NOLEGGIO</p>
+                  <h1 style={{color:C.white,fontSize:18,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>MTB Muscolare 🚲</h1>
+                </div>
+                <button onClick={onLogout} style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:10,padding:"6px 12px",color:C.skyBlue,fontSize:11,...ds,cursor:"pointer"}}>{t('logout')}</button>
+              </div>
+            </div>
+            <MTBTab user={user} t={t}/>
+          </div>
+        )}
+
         {/* PROFILO */}
         {tab==="profilo"&&(
           <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
@@ -2085,7 +2427,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
         {/* NAVBAR */}
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"10px 0 18px",zIndex:20}}>
-          {[["mappa","🗺️",t('navMap')],["profilo","👤",t('navProfile')]].map(([id,icon,label])=>(
+          {[["mappa","🗺️",t('navMap')],["mtb","🚲","MTB"],["profilo","👤",t('navProfile')]].map(([id,icon,label])=>(
             <button key={id} className="btn" onClick={()=>setTab(id)} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
               <span style={{fontSize:24}}>{icon}</span>
               <span style={{color:tab===id?C.blueGreen:"#bbb",fontSize:11,...ds,fontWeight:tab===id?600:400}}>{label}</span>
