@@ -1473,6 +1473,7 @@ function MTBTab({ user, t }) {
         await waitFB();
         const {collection, onSnapshot} = window.firebaseFunctions;
         onSnapshot(collection(window.firebaseDb, "mtbBikers"), snap => {
+          console.log("🚲 MTB snap size:", snap.size, snap.docs.map(d=>d.id));
           setMtbBikes(snap.docs.map(d=>({id:d.id,...d.data()})));
         });
       } catch(e) {}
