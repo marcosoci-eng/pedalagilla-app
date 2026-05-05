@@ -1211,9 +1211,10 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
     saveGPS(); const i=setInterval(saveGPS,30000); return()=>clearInterval(i);
   },[showEndFlow]);
   const mins=Math.floor(seconds/60), secs=seconds%60, pauseMins=Math.floor(pauseSeconds/60);
-  const rideCost=isGiornata?TARIFFA_GIORNATA:SBLOCCO+(seconds/60)*TARIFFA_MIN;
+  const rideCost=isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
   const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
-  const totalCost=rideCost+pauseCost;
+  const totalCost=Math.min(rideCost+pauseCost, TARIFFA_GIORNATA);
+  const cappedAtMax = !isGiornata && totalCost >= TARIFFA_GIORNATA;
   const handleParkPhoto=(e)=>{ const file=e.target.files[0]; if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);} };
   const handleEndConfirm=async()=>{
     if(!parkPhoto){alert("📸");return;}
@@ -1268,6 +1269,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
         <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:24,padding:28,textAlign:"center",marginBottom:20,width:"100%"}}>
           {paused&&<div style={{background:C.sunYellow,borderRadius:10,padding:"4px 14px",display:"inline-block",marginBottom:10}}><p style={{color:C.deepBlue,fontSize:11,...ds,fontWeight:700,margin:0}}>{t('ridePause')} — {isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`}</p></div>}
+          {cappedAtMax&&<div style={{background:C.blueGreen,borderRadius:10,padding:"4px 14px",display:"inline-block",marginBottom:10}}><p style={{color:C.white,fontSize:11,...ds,fontWeight:700,margin:0}}>🎉 Massimo giornaliero raggiunto!</p></div>}
           <p style={{color:C.skyBlue,fontSize:12,margin:"0 0 6px",...ds,letterSpacing:2}}>{paused?t('ridePause'):t('rideInProgress')}</p>
           <p style={{color:C.white,fontSize:48,fontWeight:700,margin:"0 0 12px",...ds,fontFamily:"monospace"}}>
             {paused?`${String(pauseMins).padStart(2,"0")}:${String(pauseSeconds%60).padStart(2,"0")}`:
@@ -1334,10 +1336,10 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 
   const mins=Math.floor(seconds/60), secs=seconds%60;
   const pauseMins=Math.floor(pauseSeconds/60);
-  const costPerBike=isGiornata?TARIFFA_GIORNATA:SBLOCCO+(seconds/60)*TARIFFA_MIN;
+  const costPerBike=isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
   const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
   const activeBikes=bikes.filter(b=>!completedBikes.includes(b.id));
-  const totalCost=(costPerBike+pauseCost)*activeBikes.length;
+  const totalCost=Math.min((costPerBike+pauseCost), TARIFFA_GIORNATA)*activeBikes.length;
 
   const handleParkPhoto=(e)=>{ const file=e.target.files[0]; if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);} };
   const startEndFlow=(bike)=>{ setEndingBike(bike);setShowEndFlow(true);setParkPhoto(null);setParkPreview(null); };
