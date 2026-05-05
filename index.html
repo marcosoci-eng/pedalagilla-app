@@ -1472,7 +1472,7 @@ function MTBTab({ user, t }) {
       try {
         await waitFB();
         const {collection, onSnapshot} = window.firebaseFunctions;
-        onSnapshot(collection(window.firebaseDb, "mtbBikes"), snap => {
+        onSnapshot(collection(window.firebaseDb, "mtbBikers"), snap => {
           setMtbBikes(snap.docs.map(d=>({id:d.id,...d.data()})));
         });
       } catch(e) {}
@@ -1555,7 +1555,7 @@ function MTBTab({ user, t }) {
       await waitFB();
       const {collection, addDoc, doc, getDoc} = window.firebaseFunctions;
       // Recupera codice lucchetto dalla bici
-      const bikeSnap = await getDoc(doc(window.firebaseDb,"mtbBikes",selectedMTB.id));
+      const bikeSnap = await getDoc(doc(window.firebaseDb,"mtbBikers",selectedMTB.id));
       const code = bikeSnap.data()?.lockCode || "----";
       setLockCode(code);
       // Crea noleggio
