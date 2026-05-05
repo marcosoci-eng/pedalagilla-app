@@ -930,6 +930,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
   const [terms, setTerms] = React.useState({t1:false,t2:false,t3:false,t4:false});
   const [showTermsModal, setShowTermsModal] = React.useState(false);
   const [showResend, setShowResend] = React.useState(false);
+  const [showPwd, setShowPwd] = React.useState(false);
   const handleDocChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1061,7 +1062,13 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('email')}</p>
             <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder={t('emailPlaceholder')} style={inp} />
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('password')}</p>
-            <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder={t('passwordPlaceholder')} style={inp} />
+            <div style={{position:"relative"}}>
+              <input value={password} onChange={e=>setPassword(e.target.value)} type={showPwd?"text":"password"} placeholder={t('passwordPlaceholder')} style={{...inp,marginBottom:0,paddingRight:44}} />
+              <button onClick={()=>setShowPwd(p=>!p)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#aaa"}}>
+                {showPwd?"🙈":"👁️"}
+              </button>
+            </div>
+            <div style={{height:10}}/>
             {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             {showResend&&(
               <button onClick={async()=>{
@@ -1084,12 +1091,19 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             </button>
           </>}
           {mode==="register"&&<>
-            {[[t('nome'),nome,setNome,"text",t('nomePh')],[t('cognome'),cognome,setCognome,"text",t('cognomePh')],[t('email'),email,setEmail,"email",t('emailPlaceholder')],[t('telefono'),telefono,setTelefono,"tel",t('telefonoPh')],[t('password'),password,setPassword,"password",t('passwordMin')]].map(([label,val,setter,type,ph])=>(
+            {[[t('nome'),nome,setNome,"text",t('nomePh')],[t('cognome'),cognome,setCognome,"text",t('cognomePh')],[t('email'),email,setEmail,"email",t('emailPlaceholder')],[t('telefono'),telefono,setTelefono,"tel",t('telefonoPh')]].map(([label,val,setter,type,ph])=>(
               <div key={label}>
                 <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{label}</p>
                 <input value={val} onChange={e=>setter(e.target.value)} type={type} placeholder={ph} style={inp} />
               </div>
             ))}
+            <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('password')}</p>
+            <div style={{position:"relative",marginBottom:10}}>
+              <input value={password} onChange={e=>setPassword(e.target.value)} type={showPwd?"text":"password"} placeholder={t('passwordMin')} style={{...inp,marginBottom:0,paddingRight:44}} />
+              <button onClick={()=>setShowPwd(p=>!p)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#aaa"}}>
+                {showPwd?"🙈":"👁️"}
+              </button>
+            </div>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"4px 0 6px",...ds}}>{t('documento')} <span style={{color:C.warmOrange}}>*</span></p>
             <div style={{border:`2px dashed ${docFile?C.blueGreen:C.warmOrange}`,borderRadius:12,padding:16,textAlign:"center",marginBottom:10,cursor:"pointer"}} onClick={()=>document.getElementById("docInput").click()}>
               {docPreview?<div><img src={docPreview} style={{width:"100%",borderRadius:8,maxHeight:100,objectFit:"cover",marginBottom:4}}/><p style={{color:C.blueGreen,fontSize:12,...ds,margin:0,fontWeight:600}}>{t('docLoaded')}</p></div>
@@ -1135,7 +1149,13 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('adminUsername')}</p>
             <input value={adminUser} onChange={e=>setAdminUser(e.target.value)} type="email" placeholder={t('adminUsernamePh')} style={inp} />
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('password')}</p>
-            <input value={adminPass} onChange={e=>setAdminPass(e.target.value)} type="password" placeholder={t('passwordPlaceholder')} style={inp} />
+            <div style={{position:"relative"}}>
+              <input value={adminPass} onChange={e=>setAdminPass(e.target.value)} type={showPwd?"text":"password"} placeholder={t('passwordPlaceholder')} style={{...inp,marginBottom:0,paddingRight:44}} />
+              <button onClick={()=>setShowPwd(p=>!p)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#aaa"}}>
+                {showPwd?"🙈":"👁️"}
+              </button>
+            </div>
+            <div style={{height:10}}/>
             {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             <button onClick={handleAdminLogin} style={{width:"100%",background:`linear-gradient(90deg,${C.deepBlue},#034a6e)`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>{t('adminLoginBtn')}</button>
           </>}
