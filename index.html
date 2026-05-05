@@ -1551,14 +1551,15 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
 
   const handlePaySuccess = async () => {
     setShowPayment(false);
+    let code = "----";
     try {
       await waitFB();
       const {collection, addDoc, doc, getDoc} = window.firebaseFunctions;
-      // Recupera codice lucchetto dalla bici
-      const bikeSnap = await getDoc(doc(window.firebaseDb,"mtbBikers",selectedMTB.id));
-      const code = bikeSnap.data()?.lockCode || "----";
+      try {
+        const bikeSnap = await getDoc(doc(window.firebaseDb,"mtbBikers",selectedMTB.id));
+        if (bikeSnap.exists()) code = bikeSnap.data()?.lockCode || "----";
+      } catch(e){ console.error("Errore lockCode:", e); }
       setLockCode(code);
-      // Crea noleggio
       const rental = await addDoc(collection(window.firebaseDb,"mtbRentals"),{
         mtbId: selectedMTB.id,
         userId: user.uid,
@@ -1570,9 +1571,9 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
         track: [], lockCode: code,
       });
       setRentalId(rental.id);
-      setActiveRental({id:rental.id, mtbId:selectedMTB.id, tariffa, lockCode:code});
-      setShowCode(true);
-    } catch(e){console.error(e);}
+      setActiveRental({id:rental.id, mtbId:selectedMTB.id, tariffa, lockCode:code, importo: tariffa==="adulto"?TARIFFA_MTB_ADULTO:TARIFFA_MTB_BAMBINO});
+    } catch(e){ console.error("Errore MTB pay:", e); setLockCode(code); }
+    setShowCode(true);
   };
 
   const handleParkPhoto=(e)=>{const file=e.target.files[0];if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);}};
