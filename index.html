@@ -2869,7 +2869,7 @@ function AdminApp({ user, onLogout, t }) {
               <MapView bikes={mapBikes.map(b=>{
                 const pedId = b.id.replace('PA-','PED');
                 const rt = bikesRealtime[pedId];
-                return rt?.lat ? {...b, lat:rt.lat, lng:rt.lng, battery:rt.battery||b.battery} : b;
+                return rt?.lat ? {...b, lat:rt.lat, lng:rt.lng, battery:rt.batteryPercent||b.battery} : b;
               })} onBikeClick={b=>openBikeDetail(b)} height={300}/>
             </div>
             {/* Ciclisti attivi */}
@@ -2883,7 +2883,7 @@ function AdminApp({ user, onLogout, t }) {
                     <div key={ride.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                       <span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600}}>{ride.bike} · {ride.user}</span>
                       <span style={{color:rt?.speed>0?C.blueGreen:"#aaa",fontSize:11,...ds}}>
-                        {rt ? `${rt.speed||0} km/h · ⚡${rt.battery||0}%` : "📡 attesa GPS"}
+                        {rt ? `${rt.speed||0} km/h · ⚡${rt.batteryPercent||0}%` : "📡 attesa GPS"}
                       </span>
                     </div>
                   );
