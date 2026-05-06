@@ -2687,7 +2687,7 @@ function MTBAdmin() {
         alert(`✅ Posizione salvata!\n${lat.toFixed(5)}, ${lng.toFixed(5)}`);
       } catch(e){alert("Errore: "+e.message);}
       setSaving(p=>({...p,[bikeId+"_pos"]:false}));
-    }, ()=>{ alert("Impossibile ottenere posizione GPS"); setSaving(p=>({...p,[bikeId+"_pos"]:false}})); }, {enableHighAccuracy:true});
+    }, ()=>{ alert("Impossibile ottenere posizione GPS"); setSaving(p=>({...p,[bikeId+"_pos"]:false})); }, {enableHighAccuracy:true});
   };
 
   const toggleStatus = async (bikeId, current) => {
