@@ -2640,6 +2640,155 @@ function PromoAdmin() {
   );
 }
 
+function MTBAdmin() {
+  const [bikes, setBikes] = React.useState([]);
+  const [rentals, setRentals] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState({});
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      await waitFB();
+      const {collection, getDocs} = window.firebaseFunctions;
+      const bikesSnap = await getDocs(collection(window.firebaseDb, "mtbBikers"));
+      setBikes(bikesSnap.docs.map(d=>({id:d.id,...d.data()})));
+      const rentalsSnap = await getDocs(collection(window.firebaseDb, "mtbRentals"));
+      setRentals(rentalsSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)));
+    } catch(e){}
+    setLoading(false);
+  };
+
+  React.useEffect(()=>{ loadData(); },[]);
+
+  const generateCode = async (bikeId) => {
+    const code = String(Math.floor(10000 + Math.random() * 90000)); // 5 cifre
+    setSaving(p=>({...p,[bikeId]:true}));
+    try {
+      await waitFB();
+      const {doc, updateDoc} = window.firebaseFunctions;
+      await updateDoc(doc(window.firebaseDb,"mtbBikers",bikeId),{lockCode:code, codeGeneratedAt:new Date().toISOString()});
+      setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,lockCode:code}:b));
+    } catch(e){alert("Errore: "+e.message);}
+    setSaving(p=>({...p,[bikeId]:false}));
+  };
+
+  const setPosition = async (bikeId) => {
+    if (!navigator.geolocation) { alert("GPS non disponibile"); return; }
+    setSaving(p=>({...p,[bikeId+"_pos"]:true}));
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      try {
+        await waitFB();
+        const {doc, updateDoc} = window.firebaseFunctions;
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        await updateDoc(doc(window.firebaseDb,"mtbBikers",bikeId),{lat, lng, positionUpdatedAt:new Date().toISOString()});
+        setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,lat,lng}:b));
+        alert(`✅ Posizione salvata!\n${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      } catch(e){alert("Errore: "+e.message);}
+      setSaving(p=>({...p,[bikeId+"_pos"]:false}));
+    }, ()=>{ alert("Impossibile ottenere posizione GPS"); setSaving(p=>({...p,[bikeId+"_pos"]:false}})); }, {enableHighAccuracy:true});
+  };
+
+  const toggleStatus = async (bikeId, current) => {
+    try {
+      await waitFB();
+      const {doc, updateDoc} = window.firebaseFunctions;
+      const newStatus = current==="Disponibile"?"Manutenzione":"Disponibile";
+      await updateDoc(doc(window.firebaseDb,"mtbBikers",bikeId),{status:newStatus});
+      setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:newStatus}:b));
+    } catch(e){}
+  };
+
+  const activeRentals = rentals.filter(r=>r.status==="In corso");
+  const completedRentals = rentals.filter(r=>r.status==="Completata");
+
+  return(
+    <div className="slide" style={{padding:"16px 18px 0"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>MTB Muscolari ({bikes.length})</p>
+        <button onClick={loadData} style={{background:`${C.blueGreen}20`,border:`1px solid ${C.blueGreen}`,borderRadius:10,padding:"6px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🔄 Aggiorna</button>
+      </div>
+
+      {loading && <p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:20}}>⏳ Caricamento...</p>}
+
+      {/* BICI */}
+      {bikes.map(bike=>(
+        <div key={bike.id} style={{background:C.white,borderRadius:16,padding:16,marginBottom:12,boxShadow:"0 2px 12px rgba(2,48,71,0.08)",borderLeft:`4px solid ${bike.status==="Disponibile"?C.blueGreen:C.warmOrange}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div>
+              <p style={{color:C.deepBlue,fontSize:16,fontWeight:700,margin:0,fontFamily:"Lora"}}>{bike.id}</p>
+              <p style={{color:"#aaa",fontSize:12,...ds,margin:"2px 0 0"}}>📍 {bike.zone||"—"} · {bike.type||"MTB"}</p>
+            </div>
+            <button onClick={()=>toggleStatus(bike.id,bike.status)}
+              style={{background:bike.status==="Disponibile"?`${C.warmOrange}20`:`${C.blueGreen}20`,border:`1px solid ${bike.status==="Disponibile"?C.warmOrange:C.blueGreen}`,borderRadius:10,padding:"6px 12px",color:bike.status==="Disponibile"?C.warmOrange:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
+              {bike.status==="Disponibile"?"🔧 Manutenzione":"✅ Disponibile"}
+            </button>
+          </div>
+
+          {/* Codice lucchetto */}
+          <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:14,padding:16,marginBottom:10,textAlign:"center"}}>
+            <p style={{color:C.skyBlue,fontSize:10,...ds,margin:"0 0 6px",letterSpacing:2}}>🔒 CODICE LUCCHETTO OGGI</p>
+            <p style={{color:C.sunYellow,fontSize:44,fontWeight:700,margin:"0 0 6px",...ds,letterSpacing:12}}>
+              {bike.lockCode||"—————"}
+            </p>
+            {bike.codeGeneratedAt&&<p style={{color:"rgba(255,255,255,0.5)",fontSize:10,...ds,margin:0}}>
+              Generato: {new Date(bike.codeGeneratedAt).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}
+            </p>}
+          </div>
+          <button onClick={()=>generateCode(bike.id)} disabled={saving[bike.id]}
+            style={{width:"100%",background:saving[bike.id]?"#ccc":`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:12,color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8}}>
+            {saving[bike.id]?"⏳ Generazione...":"🔄 Genera nuovo codice"}
+          </button>
+
+          {/* Posizione GPS */}
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setPosition(bike.id)} disabled={saving[bike.id+"_pos"]}
+              style={{flex:1,background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:10,padding:"10px",color:"#b38600",fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>
+              {saving[bike.id+"_pos"]?"📡 GPS...":"📍 Sono qui — salva posizione"}
+            </button>
+            {bike.lat&&<a href={`https://www.google.com/maps?q=${bike.lat},${bike.lng}`} target="_blank"
+              style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:10,padding:"10px 14px",color:C.blueGreen,fontSize:12,...ds,fontWeight:600,textDecoration:"none",display:"flex",alignItems:"center"}}>
+              🗺️
+            </a>}
+          </div>
+        </div>
+      ))}
+
+      {/* NOLEGGI ATTIVI */}
+      {activeRentals.length>0&&<>
+        <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"16px 0 8px",...ds,opacity:0.5}}>🔴 Noleggi in corso ({activeRentals.length})</p>
+        {activeRentals.map(r=>(
+          <div key={r.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{r.mtbId}</span>
+              <span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(r.importo||0).toFixed(2)}</span>
+            </div>
+            <p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {r.userName} · {r.tariffa==="adulto"?"Adulto":"Bambino"}</p>
+            <p style={{color:"#aaa",fontSize:11,...ds,margin:0}}>⏰ {r.startTime?new Date(r.startTime).toLocaleString("it-IT"):""}</p>
+          </div>
+        ))}
+      </>}
+
+      {/* NOLEGGI COMPLETATI */}
+      {completedRentals.length>0&&<>
+        <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"16px 0 8px",...ds,opacity:0.5}}>Completati ({completedRentals.length})</p>
+        {completedRentals.slice(0,10).map(r=>(
+          <div key={r.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{r.mtbId}</span>
+              <span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(r.importo||0).toFixed(2)}</span>
+            </div>
+            <p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {r.userName} · {r.tariffa==="adulto"?"Adulto":"Bambino"}</p>
+            <p style={{color:"#aaa",fontSize:11,...ds,margin:0}}>{r.startTime?new Date(r.startTime).toLocaleDateString("it-IT"):""}</p>
+            {r.parkPhotoURL&&<img src={r.parkPhotoURL} style={{width:"100%",borderRadius:10,maxHeight:120,objectFit:"cover",marginTop:8}} alt="Parcheggio"/>}
+          </div>
+        ))}
+      </>}
+    </div>
+  );
+}
+
 function AdminApp({ user, onLogout, t }) {
   if (!t) t = (k) => k;
   const [tab, setTab] = React.useState("dashboard");
@@ -2994,6 +3143,8 @@ function AdminApp({ user, onLogout, t }) {
 
           {tab==="promo"&&<PromoAdmin/>}
 
+          {tab==="mtb"&&<MTBAdmin/>}
+
           {tab==="stats"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>⚡ Batteria flotta</p>
@@ -3011,7 +3162,7 @@ function AdminApp({ user, onLogout, t }) {
         </div>
 
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"8px 0 16px",zIndex:20}}>
-          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["promo","🎟️","Promo"],["stats","📊","Stats"]].map(([tid,icon,label])=>(
+          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["promo","🎟️","Promo"],["mtb","🚵","MTB"],["stats","📊","Stats"]].map(([tid,icon,label])=>(
             <button key={tid} className="btn" onClick={()=>setTab(tid)} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <span style={{fontSize:16}}>{icon}</span>
               <span style={{color:tab===tid?C.blueGreen:"#bbb",fontSize:8,...ds,fontWeight:tab===tid?600:400}}>{label}</span>
