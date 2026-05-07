@@ -2279,7 +2279,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         )}
 
         {/* Schermata piano + selezione multi-bici */}
-        {showPlan&&selectedBike&&!riding&&!showSummary&&(
+        {showPlan&&selectedBike&&!selectedBike.isMTB&&!riding&&!showSummary&&(
           <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:200,display:"flex",flexDirection:"column",overflowY:"auto"}}>
             {showPayment?(
               <>
@@ -2458,7 +2458,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   ...(bikeFilter!=="mtb" ? bikes : []),
                   ...(bikeFilter!=="ebike" ? mtbBikesMap.map(b=>({...b, isMTB:true, battery:100})) : [])
                 ]}
-                onBikeClick={b=>{ if(b.isMTB){ setTab("mtb"); } else { handleBikeClick(b); }}}
+                onBikeClick={b=>{ if(b.isMTB){ setTab("mtb"); } else { handleBikeClick(b); }}}>
                 fullscreen={true} zones={clientZones} userPos={userPos}/>
             </div>
             <div style={{position:"absolute",bottom:90,left:12,right:12,zIndex:10}}>
@@ -3031,7 +3031,7 @@ function AdminApp({ user, onLogout, t }) {
             </div>
             <div style={{padding:"16px 18px"}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
-                {[["⚡",`${selBike.battery}%`,"Batteria",getBattColor(selBike.battery)],["🛣️",`${selBike.odometer.toFixed(0)}`,"Km",C.blueGreen],["📅",selBike.lastMaint,"Ultima mant.",C.deepBlue]].map(([icon,val,label,color],i)=>(
+                {[["⚡",`${selBike.battery}%`,"Batteria",getBattColor(selBike.battery)],["🛣️",`${(selBike.odometer||0).toFixed(0)}`,"Km",C.blueGreen],["📅",selBike.lastMaint||"—","Ultima mant.",C.deepBlue]].map(([icon,val,label,color],i)=>(
                   <div key={i} style={{background:C.white,borderRadius:12,padding:"10px 8px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:16,marginBottom:2}}>{icon}</div><div style={{color,fontSize:12,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:9,...ds}}>{label}</div></div>
                 ))}
               </div>
@@ -3300,7 +3300,7 @@ function AdminApp({ user, onLogout, t }) {
             </div>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:18,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>🛣️ Top km percorsi</p>
-              {[...bikes].sort((a,b)=>b.odometer-a.odometer).slice(0,5).map((bike,i)=>(<div key={bike.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{color:i===0?C.sunYellow:"#ccc",fontSize:13,...ds,fontWeight:700}}>#{i+1}</span><span style={{color:C.deepBlue,fontSize:13,...ds}}>{bike.id} · {bike.zone}</span></div><span style={{color:C.blueGreen,fontSize:13,fontWeight:700,...ds}}>{bike.odometer.toFixed(0)} km</span></div>))}
+              {[...bikes].sort((a,b)=>(b.odometer||0)-(a.odometer||0)).slice(0,5).map((bike,i)=>(<div key={bike.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{color:i===0?C.sunYellow:"#ccc",fontSize:13,...ds,fontWeight:700}}>#{i+1}</span><span style={{color:C.deepBlue,fontSize:13,...ds}}>{bike.id} · {bike.zone}</span></div><span style={{color:C.blueGreen,fontSize:13,fontWeight:700,...ds}}>{(bike.odometer||0).toFixed(0)} km</span></div>))}
             </div>
           </div>}
         </div>
