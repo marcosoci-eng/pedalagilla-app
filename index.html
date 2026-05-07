@@ -1907,8 +1907,9 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [bikeFilter, setBikeFilter] = React.useState("tutte");
   const [mtbBikesMap, setMtbBikesMap] = React.useState([]);
 
-  // Carica MTB per la mappa
+  // Carica MTB per la mappa (dopo autenticazione)
   React.useEffect(()=>{
+    if (!user?.uid) return;
     const load = async () => {
       try {
         await waitFB();
@@ -1920,10 +1921,10 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           .map(b=>({...b, lat:b.lat||43.1208, lng:b.lng||11.9847}));
         console.log("🏔️ MTBmap cliente:", mtbs.length, mtbs.map(b=>b.id));
         setMtbBikesMap(mtbs);
-      } catch(e) { console.error("Errore MTB mappa:", e); }
+      } catch(e) { console.error("Errore MTB mappa:", e.code, e.message); }
     };
     load();
-  },[]);
+  },[user?.uid]);
 
   // Bici disponibili = non in corsa da altri utenti
   const bikes = allBikes.filter(b => b.status==="Disponibile" && !activeBikeIds.includes(b.id));
