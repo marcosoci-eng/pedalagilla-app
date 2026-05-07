@@ -771,7 +771,7 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       mapInstanceRef.current = map;
       bikes.forEach(bike => {
         const iw = new window.google.maps.InfoWindow({ content: "" });
-        const marker = new window.google.maps.Marker({ position: { lat: bike.lat, lng: bike.lng }, map, title: bike.id, label: { text: `${bike.battery}%`, color: "#ffffff", fontSize: "10px", fontWeight: "bold" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 } });
+        const marker = new window.google.maps.Marker({ position: { lat: bike.lat, lng: bike.lng }, map, title: bike.id, label: { text: bike.isMTB?"🏔️":`${bike.battery}%`, color: "#ffffff", fontSize: bike.isMTB?"14px":"10px", fontWeight: "bold" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: bike.isMTB?"#FB8500":bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 } });
         markersRef.current.push({ marker, iw, bike });
         marker.addListener("click", () => { const distanceText = getDistText(bike, userPos); iw.setContent(`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}<br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`); iw.open(map, marker); onBikeClick(bike); });
       });
@@ -1904,6 +1904,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [clientZones, setClientZones] = React.useState([]);
   const [userPos, setUserPos] = React.useState(null);
 
+  const [bikeFilter, setBikeFilter] = React.useState("tutte");
   const [mtbBikesMap, setMtbBikesMap] = React.useState([]);
 
   // Carica MTB per la mappa
@@ -2426,21 +2427,36 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {tab==="mappa"&&(
           <div style={{flex:1,position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,right:0,zIndex:10,background:"linear-gradient(180deg,rgba(2,48,71,0.9) 0%,transparent 100%)",padding:"12px 18px 40px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <div>
                   <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>{t('hiUser')} {user.nome?.toUpperCase()}!</p>
                   <h1 style={{color:C.white,fontSize:16,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>PedalAgilla 🌊</h1>
                 </div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{background:"rgba(33,158,188,0.85)",borderRadius:10,padding:"5px 10px"}}>
-                    <span style={{color:C.white,fontSize:11,...ds,fontWeight:600}}>{bikes.length} 🚲</span>
+                    <span style={{color:C.white,fontSize:11,...ds,fontWeight:600}}>{bikes.length} 🚲 · {mtbBikesMap.length} 🏔️</span>
                   </div>
                   <button onClick={onLogout} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:10,padding:"6px 12px",color:C.white,fontSize:11,...ds,cursor:"pointer"}}>{t('logout')}</button>
                 </div>
               </div>
+              {/* Filtri tipo bici */}
+              <div style={{display:"flex",gap:6}}>
+                {[["tutte","🚲+🏔️","Tutte"],["ebike","⚡","E-Bike"],["mtb","🏔️","MTB"]].map(([id,icon,label])=>(
+                  <button key={id} onClick={()=>setBikeFilter(id)}
+                    style={{background:bikeFilter===id?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.15)",border:"none",borderRadius:20,padding:"4px 12px",color:bikeFilter===id?C.deepBlue:C.white,fontSize:11,...ds,fontWeight:bikeFilter===id?700:400,cursor:"pointer"}}>
+                    {icon} {label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div style={{position:"absolute",inset:0}}>
-              <MapView bikes={[...bikes, ...mtbBikesMap.map(b=>({...b, isMTB:true}))]} onBikeClick={b=>{ if(b.isMTB){ setTab("mtb"); } else { handleBikeClick(b); }}} fullscreen={true} zones={clientZones} userPos={userPos}/>
+              <MapView
+                bikes={[
+                  ...(bikeFilter!=="mtb" ? bikes : []),
+                  ...(bikeFilter!=="ebike" ? mtbBikesMap.map(b=>({...b, isMTB:true, battery:100})) : [])
+                ]}
+                onBikeClick={b=>{ if(b.isMTB){ setTab("mtb"); } else { handleBikeClick(b); }}}
+                fullscreen={true} zones={clientZones} userPos={userPos}/>
             </div>
             <div style={{position:"absolute",bottom:90,left:12,right:12,zIndex:10}}>
               <button onClick={()=>startQRScanner(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
@@ -2771,15 +2787,15 @@ function MTBAdmin() {
     navigator.geolocation.getCurrentPosition(async pos=>{
       try {
         await waitFB();
-        const {doc, updateDoc} = window.firebaseFunctions;
+        const {doc, setDoc} = window.firebaseFunctions;
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        await updateDoc(doc(window.firebaseDb,"mtbBikers",bikeId),{lat, lng, positionUpdatedAt:new Date().toISOString()});
+        await setDoc(doc(window.firebaseDb,"mtbBikers",bikeId),{lat, lng, positionUpdatedAt:new Date().toISOString()},{merge:true});
         setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,lat,lng}:b));
-        alert(`✅ Posizione salvata!\n${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-      } catch(e){alert("Errore: "+e.message);}
+        alert(`✅ Posizione MTB ${bikeId} salvata!\n📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}\n\nLa bici apparirà ora sulla mappa clienti.`);
+      } catch(e){alert("Errore salvataggio: "+e.message);}
       setSaving(p=>({...p,[bikeId+"_pos"]:false}));
-    }, ()=>{ alert("Impossibile ottenere posizione GPS"); setSaving(p=>({...p,[bikeId+"_pos"]:false})); }, {enableHighAccuracy:true});
+    }, (err)=>{ alert("Impossibile ottenere posizione GPS: "+err.message); setSaving(p=>({...p,[bikeId+"_pos"]:false})); }, {enableHighAccuracy:true, timeout:10000});
   };
 
   const toggleStatus = async (bikeId, current) => {
