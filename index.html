@@ -773,7 +773,7 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
         const iw = new window.google.maps.InfoWindow({ content: "" });
         const marker = new window.google.maps.Marker({ position: { lat: bike.lat, lng: bike.lng }, map, title: bike.id, label: { text: bike.isMTB?"🏔️":`${bike.battery}%`, color: "#ffffff", fontSize: bike.isMTB?"14px":"10px", fontWeight: "bold" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: bike.isMTB?"#FB8500":bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 } });
         markersRef.current.push({ marker, iw, bike });
-        marker.addListener("click", () => { const distanceText = getDistText(bike, userPos); iw.setContent(`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}<br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`); iw.open(map, marker); onBikeClick(bike); });
+        marker.addListener("click", () => { const distanceText = getDistText(bike, userPos); iw.setContent(`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone||""}</span><br/>${bike.isMTB?'<span style="font-size:11px">🏔️ MTB Muscolare</span>':'<span style="font-size:11px">⚡ '+bike.battery+'% · ~'+getRange(bike.battery)+'km</span>'}${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}<br/><span style="font-size:11px;color:${bike.isMTB?'#FB8500':bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.isMTB?'Disponibile':bike.status}</span></div>`); iw.open(map, marker); onBikeClick(bike); });
       });
       zones.forEach(zone => {
         if (zone.shape === "circle" && zone.center) { new window.google.maps.Circle({ map, center: zone.center, radius: zone.radius||200, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 }); const icons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" }; if (zone.type !== "operativa" && icons[zone.type]) { new window.google.maps.Marker({ position: zone.center, map, label: { text: icons[zone.type], fontSize: "16px" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 } }); } }
@@ -1914,10 +1914,12 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         await waitFB();
         const {collection, onSnapshot} = window.firebaseFunctions;
         onSnapshot(collection(window.firebaseDb, "mtbBikers"), snap => {
-          setMtbBikesMap(snap.docs
+          const mtbs = snap.docs
             .map(d=>({id:d.id,...d.data()}))
             .filter(b=>b.status==="Disponibile")
-            .map(b=>({...b, lat:b.lat||43.1208, lng:b.lng||11.9847})));
+            .map(b=>({...b, lat:b.lat||43.1208, lng:b.lng||11.9847}));
+          console.log("🏔️ MTBmap cliente:", mtbs.length, mtbs.map(b=>b.id));
+          setMtbBikesMap(mtbs);
         });
       } catch(e) {}
     };
