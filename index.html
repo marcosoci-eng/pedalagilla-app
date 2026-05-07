@@ -2458,7 +2458,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   ...(bikeFilter!=="mtb" ? bikes : []),
                   ...(bikeFilter!=="ebike" ? mtbBikesMap.map(b=>({...b, isMTB:true, battery:100})) : [])
                 ]}
-                onBikeClick={b=>{ if(b.isMTB){ setTab("mtb"); } else { handleBikeClick(b); }}}>
+                onBikeClick={b=>{ if(b.isMTB){ setTab("mtb"); } else { handleBikeClick(b); }}}
                 fullscreen={true} zones={clientZones} userPos={userPos}/>
             </div>
             <div style={{position:"absolute",bottom:90,left:12,right:12,zIndex:10}}>
