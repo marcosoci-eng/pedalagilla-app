@@ -853,7 +853,7 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
 
-function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t }) {
+function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=false }) {
   const cardRef = React.useRef(null);
   const cardEl = React.useRef(null);
   const [loading, setLoading] = React.useState(false);
@@ -885,7 +885,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t }) {
       </div>
 
       {/* Box pre-autorizzazione */}
-      <div style={{background:"#FFF8E1",border:"2px solid #FFB703",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
+      {!hidePreAuth&&<div style={{background:"#FFF8E1",border:"2px solid #FFB703",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
         <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
           <span style={{fontSize:22,flexShrink:0}}>🔒</span>
           <div>
@@ -902,7 +902,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t }) {
             )}
           </div>
         </div>
-      </div>
+      </div>}
 
       <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('cardName')}</p>
       <input value={nome} onChange={e=>setNome(e.target.value)} placeholder={t('cardNamePh')} style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,marginBottom:12,background:C.white}} />
@@ -1777,7 +1777,7 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
   if(showPayment) return(
     <div style={{padding:"16px 18px 0"}}>
       <button onClick={()=>setShowPayment(false)} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,...ds,fontWeight:600,cursor:"pointer",marginBottom:14}}>← Torna</button>
-      <PaymentForm amount={amount} bike={selectedMTB} plan={tariffa==="adulto"?"MTB Adulto":"MTB Bambino"} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
+      <PaymentForm amount={amount} bike={selectedMTB} plan={tariffa==="adulto"?"MTB Adulto":"MTB Bambino"} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t} hidePreAuth={true}/>
     </div>
   );
 
