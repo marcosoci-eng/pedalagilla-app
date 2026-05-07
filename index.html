@@ -987,13 +987,6 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       await waitFB();
       const {signInWithEmailAndPassword,doc,getDoc} = window.firebaseFunctions;
       const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
-      if (!cred.user.emailVerified) {
-        await window.firebaseFunctions.signOut(window.firebaseAuth);
-        setError(t('errVerify'));
-        setShowResend(true);
-        setLoading(false);
-        return;
-      }
       const snap = await getDoc(doc(window.firebaseDb,"users",cred.user.uid));
       onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
     } catch(e) { setError(t('errLogin')); }
@@ -1009,14 +1002,12 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
     setLoading(true); setError(null);
     try {
       await waitFB();
-      const {createUserWithEmailAndPassword,doc,setDoc,ref,uploadBytes,getDownloadURL,sendEmailVerification} = window.firebaseFunctions;
+      const {createUserWithEmailAndPassword,doc,setDoc,ref,uploadBytes,getDownloadURL} = window.firebaseFunctions;
       const cred = await createUserWithEmailAndPassword(window.firebaseAuth,email,password);
       const sRef = ref(window.firebaseStorage,`documenti/${cred.user.uid}`);
       await uploadBytes(sRef,docFile);
       const docURL = await getDownloadURL(sRef);
       await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString(),docReviewed:false});
-      await sendEmailVerification(cred.user);
-      await window.firebaseFunctions.signOut(window.firebaseAuth);
       // Notifica admin via Resend
       try {
         await fetch("https://api.resend.com/emails", {
@@ -1052,8 +1043,9 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
           })
         });
       } catch(emailErr) { console.warn("Notifica email fallita:", emailErr); }
-      setMode("login"); setEmail(""); setPassword("");
-      alert(t('registerSuccess'));
+      // Login automatico dopo registrazione
+      const snap = await window.firebaseFunctions.getDoc(window.firebaseFunctions.doc(window.firebaseDb,"users",cred.user.uid));
+      onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
     } catch(e) { setError(e.code==="auth/email-already-in-use"?t('errEmailUsed'):t('errGenerico')+e.message); }
     setLoading(false);
   };
@@ -1092,19 +1084,6 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             </div>
             <div style={{height:10}}/>
             {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
-            {showResend&&(
-              <button onClick={async()=>{
-                try {
-                  const {signInWithEmailAndPassword,signOut,sendEmailVerification} = window.firebaseFunctions;
-                  const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
-                  await sendEmailVerification(cred.user);
-                  await signOut(window.firebaseAuth);
-                  setError(null); setShowResend(false);
-                } catch(e){ setError(t('errLogin')); }
-              }} style={{width:"100%",background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:10,padding:10,color:C.deepBlue,fontSize:12,...ds,fontWeight:600,cursor:"pointer",marginBottom:8}}>
-                📧 {t('resendVerify')}
-              </button>
-            )}
             <button onClick={handleLogin} disabled={loading} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
               {loading?t('loginLoading'):t('loginBtn')}
             </button>
@@ -3013,7 +2992,19 @@ function AdminApp({ user, onLogout, t }) {
   const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
   const toggleStatus=(bikeId)=>{setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b));};
   const forceEndRide=async(ride)=>{ const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); if(importoStr===null) return; const importoForced=parseFloat(importoStr)||0; try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true}); } catch(e){alert("Errore: "+e.message);} };
-  const exportExcel=()=>{ const data=fbUsers.map(u=>({"Nome":u.nome||"","Cognome":u.cognome||"","Email":u.email||"","Telefono":u.telefono||"","Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):""})); if(!data.length){alert("Nessun utente");return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,"Utenti",ws); XLSX.writeFile(wb,"utenti_pedalagilla.xlsx"); };
+  const exportExcel=()=>{ 
+    const data=fbUsers.filter(u=>u.type!=="admin").map(u=>({"Nome":u.nome||"","Cognome":u.cognome||"","Email":u.email||"","Telefono":u.telefono||"","Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):"","Doc verificato":u.docReviewed===true?"Sì":u.docReviewed==="rejected"?"Rifiutato":"Da verificare"})); 
+    if(!data.length){alert("Nessun utente");return;} 
+    const ws=XLSX.utils.json_to_sheet(data); 
+    const wb=XLSX.utils.book_new(); 
+    XLSX.utils.book_append_sheet(wb,"Utenti",ws); 
+    const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    const blob=new Blob([wbout],{type:"application/octet-stream"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download="utenti_pedalagilla.xlsx"; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return(
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
