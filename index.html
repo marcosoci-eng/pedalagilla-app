@@ -1451,7 +1451,7 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 // ═══════════════════════════════════════════════════════
 function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([]);
   const [selectedMTB, setSelectedMTB] = React.useState(null);
-  const [tariffa, setTariffa] = React.useState(null); // 'adulto' | 'bambino'
+  const [tariffa, setTariffa] = React.useState(null);
   const [showPayment, setShowPayment] = React.useState(false);
   const [showCode, setShowCode] = React.useState(false);
   const [lockCode, setLockCode] = React.useState("");
@@ -1464,6 +1464,30 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
   const qrIntervalRef = React.useRef(null);
   const [activeRental, setActiveRental] = React.useState(null);
   const trackRef = React.useRef([]);
+  const [promoCode, setPromoCode] = React.useState("");
+  const [promoApplied, setPromoApplied] = React.useState(null);
+  const [promoError, setPromoError] = React.useState("");
+  const [promoLoading, setPromoLoading] = React.useState(false);
+
+  const isMTBFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia");
+  const mtbAmount = isMTBFree ? 0 : (tariffa==="adulto" ? TARIFFA_MTB_ADULTO : TARIFFA_MTB_BAMBINO);
+
+  const applyMTBPromo = async () => {
+    const code = promoCode.trim().toUpperCase();
+    if (!code) return;
+    setPromoLoading(true); setPromoError(""); setPromoApplied(null);
+    try {
+      await waitFB();
+      const {doc, getDoc} = window.firebaseFunctions;
+      const snap = await getDoc(doc(window.firebaseDb, "promoCodes", code));
+      if (!snap.exists()) { setPromoError("Codice non valido"); setPromoLoading(false); return; }
+      const data = snap.data();
+      if (data.expiresAt && new Date(data.expiresAt) < new Date()) { setPromoError("Codice scaduto"); setPromoLoading(false); return; }
+      if (!data.active) { setPromoError("Codice non valido"); setPromoLoading(false); return; }
+      setPromoApplied({code, type:data.type});
+    } catch(e) { setPromoError("Codice non valido"); }
+    setPromoLoading(false);
+  };
 
   // Carica MTB da Firebase
   React.useEffect(()=>{
@@ -1694,10 +1718,57 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
       ))}
       <div style={{display:"flex",gap:10,marginTop:8}}>
         <button onClick={()=>setSelectedMTB(null)} style={{flex:1,background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:13,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>← Indietro</button>
-        <button onClick={()=>tariffa&&setShowPayment(true)} disabled={!tariffa}
+        {!isMTBFree && <button onClick={()=>tariffa&&setShowPayment(true)} disabled={!tariffa}
           style={{flex:2,background:tariffa?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:13,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:tariffa?"pointer":"not-allowed"}}>
           💳 Paga €{tariffa?(tariffa==="adulto"?TARIFFA_MTB_ADULTO:TARIFFA_MTB_BAMBINO).toFixed(2):"--"}
-        </button>
+        </button>}
+        {isMTBFree && <button onClick={async()=>{
+          setShowPayment(false);
+          let code="----";
+          try {
+            await waitFB();
+            const {collection,addDoc,doc,getDoc}=window.firebaseFunctions;
+            const bikeSnap=await getDoc(doc(window.firebaseDb,"mtbBikers",selectedMTB.id));
+            if(bikeSnap.exists()) code=bikeSnap.data()?.lockCode||"----";
+            setLockCode(code);
+            const rental=await addDoc(collection(window.firebaseDb,"mtbRentals"),{
+              mtbId:selectedMTB.id, userId:user.uid,
+              userName:`${user.nome||""} ${user.cognome||""}`.trim(),
+              userEmail:user.email||"", tariffa, importo:0,
+              status:"In corso", startTime:new Date().toISOString(),
+              track:[], lockCode:code, isFree:true,
+              promoCode:promoApplied?.code||null, promoType:promoApplied?.type||null,
+            });
+            setRentalId(rental.id);
+            setActiveRental({id:rental.id,mtbId:selectedMTB.id,tariffa,lockCode:code,importo:0});
+          } catch(e){console.error(e);setLockCode(code);}
+          setShowCode(true);
+        }} disabled={!tariffa}
+          style={{flex:2,background:tariffa?`linear-gradient(90deg,${C.blueGreen},#027a4e)`:"#ccc",border:"none",borderRadius:14,padding:13,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:tariffa?"pointer":"not-allowed"}}>
+          🎉 Parti gratis!
+        </button>}
+      </div>
+
+      {/* Codice promo */}
+      <div style={{background:`${C.skyBlue}15`,border:`1.5px solid ${C.skyBlue}50`,borderRadius:14,padding:14,marginTop:12}}>
+        <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>🎟️ Hai un codice promozionale?</p>
+        {!promoApplied ? (
+          <div style={{display:"flex",gap:8}}>
+            <input value={promoCode} onChange={e=>{setPromoCode(e.target.value.toUpperCase());setPromoError("");}}
+              placeholder="Es. THESOCIS2026"
+              style={{flex:1,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,textTransform:"uppercase",letterSpacing:2}}/>
+            <button onClick={applyMTBPromo} disabled={promoLoading||!promoCode.trim()}
+              style={{background:promoCode.trim()?C.deepBlue:"#ccc",border:"none",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
+              {promoLoading?"...":"Applica"}
+            </button>
+          </div>
+        ):(
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <p style={{color:C.blueGreen,fontSize:13,fontWeight:700,margin:0,...ds}}>🎉 Corsa gratuita! · {promoApplied.code}</p>
+            <button onClick={()=>{setPromoApplied(null);setPromoCode("");}} style={{background:"none",border:"none",color:"#aaa",fontSize:18,cursor:"pointer"}}>✕</button>
+          </div>
+        )}
+        {promoError&&<p style={{color:C.warmOrange,fontSize:12,margin:"6px 0 0",...ds}}>⚠️ {promoError}</p>}
       </div>
     </div>
   );
@@ -1832,6 +1903,24 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const qrIntervalRef = React.useRef(null);
   const [clientZones, setClientZones] = React.useState([]);
   const [userPos, setUserPos] = React.useState(null);
+
+  const [mtbBikesMap, setMtbBikesMap] = React.useState([]);
+
+  // Carica MTB per la mappa
+  React.useEffect(()=>{
+    const load = async () => {
+      try {
+        await waitFB();
+        const {collection, onSnapshot} = window.firebaseFunctions;
+        onSnapshot(collection(window.firebaseDb, "mtbBikers"), snap => {
+          setMtbBikesMap(snap.docs
+            .map(d=>({id:d.id,...d.data()}))
+            .filter(b=>b.status==="Disponibile" && b.lat && b.lng));
+        });
+      } catch(e) {}
+    };
+    load();
+  },[]);
 
   // Bici disponibili = non in corsa da altri utenti
   const bikes = allBikes.filter(b => b.status==="Disponibile" && !activeBikeIds.includes(b.id));
@@ -2351,7 +2440,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
               </div>
             </div>
             <div style={{position:"absolute",inset:0}}>
-              <MapView bikes={bikes} onBikeClick={handleBikeClick} fullscreen={true} zones={clientZones} userPos={userPos}/>
+              <MapView bikes={[...bikes, ...mtbBikesMap.map(b=>({...b, isMTB:true}))]} onBikeClick={b=>{ if(b.isMTB){ setTab("mtb"); } else { handleBikeClick(b); }}} fullscreen={true} zones={clientZones} userPos={userPos}/>
             </div>
             <div style={{position:"absolute",bottom:90,left:12,right:12,zIndex:10}}>
               <button onClick={()=>startQRScanner(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
@@ -2379,9 +2468,12 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
             <div style={{background:C.deepBlue,padding:"12px 22px 16px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>NOLEGGIO</p>
-                  <h1 style={{color:C.white,fontSize:18,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>MTB Muscolare 🚲</h1>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <button onClick={()=>setTab("mappa")} style={{background:"none",border:"none",color:C.skyBlue,fontSize:22,cursor:"pointer",padding:0}}>←</button>
+                  <div>
+                    <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>NOLEGGIO</p>
+                    <h1 style={{color:C.white,fontSize:18,fontWeight:700,margin:"2px 0 0",fontFamily:"Lora"}}>MTB Muscolare 🚲</h1>
+                  </div>
                 </div>
                 <button onClick={onLogout} style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:10,padding:"6px 12px",color:C.skyBlue,fontSize:11,...ds,cursor:"pointer"}}>{t('logout')}</button>
               </div>
