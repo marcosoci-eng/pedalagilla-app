@@ -1912,16 +1912,15 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     const load = async () => {
       try {
         await waitFB();
-        const {collection, onSnapshot} = window.firebaseFunctions;
-        onSnapshot(collection(window.firebaseDb, "mtbBikers"), snap => {
-          const mtbs = snap.docs
-            .map(d=>({id:d.id,...d.data()}))
-            .filter(b=>b.status==="Disponibile")
-            .map(b=>({...b, lat:b.lat||43.1208, lng:b.lng||11.9847}));
-          console.log("🏔️ MTBmap cliente:", mtbs.length, mtbs.map(b=>b.id));
-          setMtbBikesMap(mtbs);
-        });
-      } catch(e) {}
+        const {collection, getDocs} = window.firebaseFunctions;
+        const snap = await getDocs(collection(window.firebaseDb, "mtbBikers"));
+        const mtbs = snap.docs
+          .map(d=>({id:d.id,...d.data()}))
+          .filter(b=>b.status==="Disponibile")
+          .map(b=>({...b, lat:b.lat||43.1208, lng:b.lng||11.9847}));
+        console.log("🏔️ MTBmap cliente:", mtbs.length, mtbs.map(b=>b.id));
+        setMtbBikesMap(mtbs);
+      } catch(e) { console.error("Errore MTB mappa:", e); }
     };
     load();
   },[]);
