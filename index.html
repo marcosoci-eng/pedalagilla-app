@@ -3231,6 +3231,8 @@ function AdminApp({ user, onLogout, t }) {
                   <div style={{flex:1}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                       <p style={{color:C.deepBlue,fontWeight:700,fontSize:14,margin:0,fontFamily:"Lora"}}>{u.nome} {u.cognome}</p>
+                      {u.type==="admin"&&<span style={{background:C.sunYellow,color:C.deepBlue,fontSize:9,...ds,fontWeight:700,padding:"2px 8px",borderRadius:20}}>👑 ADMIN</span>}
+                      {u.type==="sospeso"&&<span style={{background:"#ccc",color:"#666",fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>🚫 SOSPESO</span>}
                       {u.type!=="admin"&&!u.emailVerified&&<span style={{background:C.warmOrange,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>📧 Non verificata</span>}
                       {u.type!=="admin"&&u.emailVerified&&<span style={{background:C.blueGreen,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>✅ Verificata</span>}
                     </div>
@@ -3249,6 +3251,22 @@ function AdminApp({ user, onLogout, t }) {
                   {(u.docReviewed===false||u.docReviewed===undefined)&&<div style={{display:"flex",gap:8}}>
                     <button onClick={async()=>{ try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{docReviewed:true}); loadUsers(); }catch(e){alert("Errore: "+e.message);} }} style={{flex:1,background:C.blueGreen,border:"none",borderRadius:8,padding:"7px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>✅ Approva</button>
                     <button onClick={async()=>{ if(!window.confirm("Sospendere questo utente?")) return; try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{docReviewed:"rejected",type:"sospeso"}); loadUsers(); }catch(e){alert("Errore: "+e.message);} }} style={{flex:1,background:C.warmOrange,border:"none",borderRadius:8,padding:"7px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>❌ Rifiuta</button>
+                  </div>}
+                </div>
+                {/* Gestione ruolo */}
+                <div style={{display:"flex",gap:8,marginTop:8}}>
+                  {u.type!=="admin"&&<button onClick={async()=>{
+                    if(!window.confirm(`Promuovere ${u.nome} ${u.cognome} ad amministratore?`)) return;
+                    try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{type:"admin"}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
+                  }} style={{flex:1,background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:8,padding:"7px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>👑 Promuovi Admin</button>}
+                  {u.type==="admin"&&<button onClick={async()=>{
+                    if(!window.confirm(`Rimuovere i privilegi admin a ${u.nome} ${u.cognome}?`)) return;
+                    try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{type:"cliente"}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
+                  }} style={{flex:1,background:`${C.warmOrange}15`,border:`1px solid ${C.warmOrange}40`,borderRadius:8,padding:"7px",color:C.warmOrange,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>⬇️ Rimuovi Admin</button>}
+                  {u.type==="sospeso"&&<button onClick={async()=>{
+                    try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{type:"cliente",docReviewed:true}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
+                  }} style={{flex:1,background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}`,borderRadius:8,padding:"7px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>✅ Riattiva utente</button>}
+                </div>
                   </div>}
                 </div>}
               </div>
