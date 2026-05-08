@@ -3267,10 +3267,9 @@ function AdminApp({ user, onLogout, t }) {
                     try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{type:"cliente",docReviewed:true}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
                   }} style={{flex:1,background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}`,borderRadius:8,padding:"7px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>✅ Riattiva utente</button>}
                 </div>
-                  </div>}
-                </div>}
               </div>
             ))}
+
             {/* Paginazione */}
             {totalPages>1&&<div style={{display:"flex",justifyContent:"center",gap:8,padding:"16px 0",alignItems:"center"}}>
               <button onClick={()=>setUsersPage(p=>Math.max(0,p-1))} disabled={usersPage===0}
