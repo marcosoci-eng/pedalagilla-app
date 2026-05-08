@@ -3252,8 +3252,7 @@ function AdminApp({ user, onLogout, t }) {
                     <button onClick={async()=>{ try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{docReviewed:true}); loadUsers(); }catch(e){alert("Errore: "+e.message);} }} style={{flex:1,background:C.blueGreen,border:"none",borderRadius:8,padding:"7px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>✅ Approva</button>
                     <button onClick={async()=>{ if(!window.confirm("Sospendere questo utente?")) return; try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{docReviewed:"rejected",type:"sospeso"}); loadUsers(); }catch(e){alert("Errore: "+e.message);} }} style={{flex:1,background:C.warmOrange,border:"none",borderRadius:8,padding:"7px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>❌ Rifiuta</button>
                   </div>}
-                </div>
-                {/* Gestione ruolo */}
+                </div>}
                 <div style={{display:"flex",gap:8,marginTop:8}}>
                   {u.type!=="admin"&&<button onClick={async()=>{
                     if(!window.confirm(`Promuovere ${u.nome} ${u.cognome} ad amministratore?`)) return;
