@@ -3048,7 +3048,7 @@ function AdminApp({ user, onLogout, t }) {
                 ))}
               </div>
               {/* Badge online + link Maps + suona */}
-              <div style={{display:"flex",gap:8,marginBottom:12}}>
+              <div style={{display:"flex",gap:8,marginBottom:8}}>
                 <div style={{background:selBike.online?`${C.blueGreen}20`:`${C.warmOrange}20`,border:`1px solid ${selBike.online?C.blueGreen:C.warmOrange}`,borderRadius:10,padding:"8px 14px",display:"flex",alignItems:"center",gap:6}}>
                   <div style={{width:8,height:8,borderRadius:4,background:selBike.online?C.blueGreen:C.warmOrange}}/>
                   <span style={{color:selBike.online?C.blueGreen:C.warmOrange,fontSize:12,...ds,fontWeight:600}}>{selBike.online?"Online":"Offline"}</span>
@@ -3068,6 +3068,30 @@ function AdminApp({ user, onLogout, t }) {
                 }} style={{background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:10,padding:"8px 14px",color:"#b38600",fontSize:16,cursor:"pointer"}}>
                   🔔
                 </button>
+              </div>
+              {/* Comandi remoti */}
+              <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+                <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 10px",...ds,letterSpacing:1,textTransform:"uppercase",opacity:0.6}}>🎮 Comandi remoti</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                  {[
+                    ["unlock","🔓","Sblocca",C.blueGreen],
+                    ["lock","🔒","Blocca",C.warmOrange],
+                    ["battery_open","🔋","Vano batt.",C.sunYellow]
+                  ].map(([type,icon,label,color])=>(
+                    <button key={type} onClick={async()=>{
+                      try {
+                        await waitFB();
+                        const {collection, addDoc} = window.firebaseFunctions;
+                        const normalPedId = 'PED' + selBike.id.replace('PA-','');
+                        await addDoc(collection(window.firebaseDb,'bikes',normalPedId,'commands'),{type,status:'pending',createdAt:new Date().toISOString()});
+                        alert(`${icon} Comando "${label}" inviato a ${selBike.id}!`);
+                      } catch(e){alert("Errore: "+e.message);}
+                    }} style={{background:`${color}15`,border:`1.5px solid ${color}50`,borderRadius:12,padding:"12px 8px",color:color==="--"?C.deepBlue:color,fontSize:11,...ds,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                      <span style={{fontSize:22}}>{icon}</span>
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
               <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
