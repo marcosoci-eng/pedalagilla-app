@@ -3176,6 +3176,7 @@ function AdminApp({ user, onLogout, t }) {
     };
     load();
   },[tab]);
+  const exportExcel=()=>{ 
     try {
       const data=fbUsers.filter(u=>u.type!=="admin").map(u=>({"Nome":String(u.nome||""),"Cognome":String(u.cognome||""),"Email":String(u.email||""),"Telefono":String(u.telefono||""),"Tipo":String(u.type||"cliente"),"Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):"","Doc verificato":u.docReviewed===true?"Si":u.docReviewed==="rejected"?"Rifiutato":"Da verificare"})); 
       if(!data.length){alert("Nessun utente");return;} 
