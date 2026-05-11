@@ -1219,6 +1219,44 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
   const handleParkPhoto=(e)=>{ const file=e.target.files[0]; if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);} };
   const handleEndConfirm=async()=>{
     if(!parkPhoto){alert("📸");return;}
+    // Controlla se la posizione attuale è in una zona sosta - OBBLIGATORIO
+    const checkZone = () => new Promise(resolve => {
+      if (!navigator.geolocation) { resolve({ok:true}); return; }
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const zones = window._clientZones || [];
+        const sostaZones = zones.filter(z => z.type === "sosta");
+        const operativaZone = zones.find(z => z.type === "operativa");
+        const dist = (lat1,lng1,lat2,lng2) => {
+          const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+          const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+          return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+        };
+        // Verifica area operativa
+        if (operativaZone?.center) {
+          const d = dist(lat,lng,operativaZone.center.lat,operativaZone.center.lng);
+          if (d > (operativaZone.radius||25000)) {
+            resolve({ok:false, msg:"🚫 Sei fuori dall'area operativa!\n\nDevi rientrare nell'area del Lago Trasimeno per terminare la corsa e parcheggiare la bici in una zona 🅿️."});
+            return;
+          }
+        }
+        // Verifica zona sosta - BLOCCANTE
+        if (sostaZones.length > 0) {
+          const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= (z.radius||300));
+          if (!inSosta) {
+            resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nDevi portare la bici in uno dei punti 🅿️ segnati sulla mappa per poter terminare la corsa.\n\nSe hai difficoltà chiama il +39 349 524 0422"});
+            return;
+          }
+        }
+        resolve({ok:true});
+      }, () => resolve({ok:true}), {enableHighAccuracy:true, timeout:8000});
+    });
+    const zoneCheck = await checkZone();
+    if (!zoneCheck.ok) {
+      alert(zoneCheck.msg);
+      return; // BLOCCATO - non può terminare
+    }
     setUploading(true);
     try {
       await waitFB();
@@ -1898,7 +1936,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [feedbackProblems, setFeedbackProblems] = React.useState([]);
   const [feedbackNote, setFeedbackNote] = React.useState("");
   const [feedbackSent, setFeedbackSent] = React.useState(false);
-  const PROBLEMI = ["🚲 Ruota sgonfia","⛓️ Catena a terra","🦶 Pedale lento","🔧 Ruota lesionata","⚡ Pedalata assistita non funzionante","💺 Seggiolino danneggiato"];
+  const PROBLEMI = ["🚲 Ruota sgonfia","⛓️ Catena a terra","🦶 Pedale lento","🔧 Ruota lesionata","⚡ Pedalata assistita non funzionante","💺 Seggiolino danneggiato","💰 Troppo costosa","🧹 Bicicletta sporca"];
   const [showQRScanner, setShowQRScanner] = React.useState(false);
   const [addingBike, setAddingBike] = React.useState(false);
   const [restoringRide, setRestoringRide] = React.useState(true);
@@ -1932,14 +1970,31 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   // Bici disponibili = non in corsa da altri utenti
   const bikes = allBikes.filter(b => b.status==="Disponibile" && !activeBikeIds.includes(b.id));
 
-  React.useEffect(()=>{ if (!navigator.geolocation) return; navigator.geolocation.watchPosition(pos=>{ setUserPos({lat:pos.coords.latitude,lng:pos.coords.longitude}); window._userPosition={lat:pos.coords.latitude,lng:pos.coords.longitude}; },()=>{},{enableHighAccuracy:true}); },[]);
+  React.useEffect(()=>{ if (!navigator.geolocation) return; navigator.geolocation.watchPosition(pos=>{ setUserPos({lat:pos.coords.latitude,lng:pos.coords.longitude}); window._userPosition={lat:pos.coords.latitude,lng:pos.coords.longitude}; },()=>{},{enableHighAccuracy:true}); 
+    // Salva posizione apertura app per heatmap
+    navigator.geolocation.getCurrentPosition(async pos => {
+      try {
+        await waitFB();
+        const {collection, addDoc} = window.firebaseFunctions;
+        if (user?.uid) await addDoc(collection(window.firebaseDb,"appOpens"),{
+          lat: pos.coords.latitude, lng: pos.coords.longitude,
+          userId: user.uid, ts: new Date().toISOString(),
+          country: navigator.language||"", ua: navigator.userAgent.slice(0,80)
+        });
+      } catch(e){}
+    },()=>{},{enableHighAccuracy:false});
+  },[]);
 
   React.useEffect(()=>{
     const load=async()=>{ try { await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const snap=await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()) setClientZones(snap.data().zones||[]); else setClientZones(DEFAULT_ZONES); } catch(e){ setClientZones(DEFAULT_ZONES); } };
-    load();
+    load().then(() => {
+      // Rendi le zone disponibili globalmente per i controlli di parcheggio
+    });
   },[]);
 
-  // Ascolta bici occupate da bikesStatus
+  React.useEffect(()=>{
+    window._clientZones = clientZones;
+  },[clientZones]);
   React.useEffect(()=>{
     const load = async () => {
       await waitFB();
@@ -2970,6 +3025,51 @@ function MTBAdmin() {
   );
 }
 
+function HeatmapView() {
+  const mapRef = React.useRef(null);
+  const [count, setCount] = React.useState(0);
+  React.useEffect(()=>{
+    const load = async () => {
+      try {
+        await waitFB();
+        const {collection, getDocs} = window.firebaseFunctions;
+        const snap = await getDocs(collection(window.firebaseDb,"appOpens"));
+        const points = snap.docs.map(d=>d.data()).filter(d=>d.lat&&d.lng);
+        setCount(points.length);
+        const tryInit = () => {
+          if (!window.google || !mapRef.current) { setTimeout(tryInit,300); return; }
+          const map = new window.google.maps.Map(mapRef.current,{
+            center:{lat:45,lng:12}, zoom:5, mapTypeId:"roadmap",
+            styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
+          });
+          // Marker per ogni apertura
+          points.forEach(p=>{
+            new window.google.maps.Circle({
+              map, center:{lat:p.lat,lng:p.lng},
+              radius:8000, fillColor:"#FB8500", fillOpacity:0.3,
+              strokeColor:"#FB8500", strokeWeight:0
+            });
+          });
+          // Adatta bounds
+          if (points.length>0) {
+            const bounds = new window.google.maps.LatLngBounds();
+            points.forEach(p=>bounds.extend({lat:p.lat,lng:p.lng}));
+            map.fitBounds(bounds);
+          }
+        };
+        tryInit();
+      } catch(e){}
+    };
+    load();
+  },[]);
+  return(
+    <div>
+      <p style={{color:C.blueGreen,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>📱 {count} aperture registrate</p>
+      <div ref={mapRef} style={{width:"100%",height:220,borderRadius:12,overflow:"hidden",background:"#e8f4f8"}}/>
+    </div>
+  );
+}
+
 function AdminApp({ user, onLogout, t }) {
   if (!t) t = (k) => k;
   const [tab, setTab] = React.useState("dashboard");
@@ -3064,7 +3164,22 @@ function AdminApp({ user, onLogout, t }) {
   const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
   const toggleStatus=(bikeId)=>{setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b));};
   const forceEndRide=async(ride)=>{ const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); if(importoStr===null) return; const importoForced=parseFloat(importoStr)||0; try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true}); } catch(e){alert("Errore: "+e.message);} };
-  const exportExcel=()=>{ 
+  const [fbFeedback, setFbFeedback] = React.useState([]);
+  const [loadingFb, setLoadingFb] = React.useState(true);
+  React.useEffect(()=>{
+    if(tab!=="feedback") return;
+    const load = async () => {
+      setLoadingFb(true);
+      try {
+        await waitFB();
+        const {collection, getDocs} = window.firebaseFunctions;
+        const snap = await getDocs(collection(window.firebaseDb, "feedback"));
+        setFbFeedback(snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)));
+      } catch(e){}
+      setLoadingFb(false);
+    };
+    load();
+  },[tab]);
     try {
       const data=fbUsers.filter(u=>u.type!=="admin").map(u=>({"Nome":String(u.nome||""),"Cognome":String(u.cognome||""),"Email":String(u.email||""),"Telefono":String(u.telefono||""),"Tipo":String(u.type||"cliente"),"Registrato il":u.createdAt?new Date(u.createdAt).toLocaleDateString("it-IT"):"","Doc verificato":u.docReviewed===true?"Si":u.docReviewed==="rejected"?"Rifiutato":"Da verificare"})); 
       if(!data.length){alert("Nessun utente");return;} 
@@ -3418,67 +3533,53 @@ function AdminApp({ user, onLogout, t }) {
 
           {tab==="mtb"&&<MTBAdmin/>}
 
-          {tab==="feedback"&&(()=>{
-            const [fbFeedback, setFbFeedback] = React.useState([]);
-            const [loadingFb, setLoadingFb] = React.useState(true);
-            React.useEffect(()=>{
-              const load = async () => {
-                try {
-                  await waitFB();
-                  const {collection, getDocs} = window.firebaseFunctions;
-                  const snap = await getDocs(collection(window.firebaseDb, "feedback"));
-                  setFbFeedback(snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)));
-                } catch(e){}
-                setLoadingFb(false);
-              };
-              load();
-            },[]);
-            const positivi = fbFeedback.filter(f=>f.rating==="up").length;
-            const negativi = fbFeedback.filter(f=>f.rating==="down").length;
-            return (
-              <div className="slide" style={{padding:"16px 18px 0"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
-                  {[["⭐",fbFeedback.length,"Totali",C.blueGreen],["👍",positivi,"Positivi",C.blueGreen],["👎",negativi,"Problemi",C.warmOrange]].map(([icon,val,label,color])=>(
-                    <div key={label} style={{background:C.white,borderRadius:14,padding:"12px 8px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-                      <div style={{fontSize:20,marginBottom:4}}>{icon}</div>
-                      <div style={{color,fontSize:20,fontWeight:700,...ds}}>{val}</div>
-                      <div style={{color:"#aaa",fontSize:10,...ds,marginTop:2}}>{label}</div>
-                    </div>
-                  ))}
-                </div>
-                {loadingFb&&<p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:20}}>⏳ Caricamento...</p>}
-                {fbFeedback.map(f=>(
-                  <div key={f.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`4px solid ${f.rating==="up"?C.blueGreen:C.warmOrange}`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <span style={{fontSize:20}}>{f.rating==="up"?"👍":"👎"}</span>
-                        <div>
-                          <p style={{color:C.deepBlue,fontSize:13,fontWeight:700,margin:0,...ds}}>{f.userName||"—"}</p>
-                          <p style={{color:"#aaa",fontSize:11,...ds,margin:"1px 0 0"}}>🚲 {f.bikeId||"—"}</p>
-                        </div>
-                      </div>
-                      <p style={{color:"#ccc",fontSize:11,...ds,margin:0}}>{f.createdAt?new Date(f.createdAt).toLocaleDateString("it-IT"):""}</p>
-                    </div>
-                    {f.problems?.length>0&&(
-                      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
-                        {f.problems.map(p=>(
-                          <span key={p} style={{background:`${C.warmOrange}15`,border:`1px solid ${C.warmOrange}40`,borderRadius:20,padding:"3px 10px",color:C.warmOrange,fontSize:10,...ds,fontWeight:600}}>{p}</span>
-                        ))}
-                      </div>
-                    )}
-                    {f.note&&<p style={{color:"#555",fontSize:12,...ds,margin:0,fontStyle:"italic"}}>💬 "{f.note}"</p>}
+          {tab==="feedback"&&(
+            <div className="slide" style={{padding:"16px 18px 0"}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+                {[["⭐",fbFeedback.length,"Totali",C.blueGreen],["👍",fbFeedback.filter(f=>f.rating==="up").length,"Positivi",C.blueGreen],["👎",fbFeedback.filter(f=>f.rating==="down").length,"Problemi",C.warmOrange]].map(([icon,val,label,color])=>(
+                  <div key={label} style={{background:C.white,borderRadius:14,padding:"12px 8px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+                    <div style={{fontSize:20,marginBottom:4}}>{icon}</div>
+                    <div style={{color,fontSize:20,fontWeight:700,...ds}}>{val}</div>
+                    <div style={{color:"#aaa",fontSize:10,...ds,marginTop:2}}>{label}</div>
                   </div>
                 ))}
-                {!loadingFb&&fbFeedback.length===0&&<p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:40}}>Nessun feedback ancora</p>}
               </div>
-            );
-          })()}
+              {loadingFb&&<p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:20}}>⏳ Caricamento...</p>}
+              {fbFeedback.map(f=>(
+                <div key={f.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`4px solid ${f.rating==="up"?C.blueGreen:C.warmOrange}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:20}}>{f.rating==="up"?"👍":"👎"}</span>
+                      <div>
+                        <p style={{color:C.deepBlue,fontSize:13,fontWeight:700,margin:0,...ds}}>{f.userName||"—"}</p>
+                        <p style={{color:"#aaa",fontSize:11,...ds,margin:"1px 0 0"}}>🚲 {f.bikeId||"—"}</p>
+                      </div>
+                    </div>
+                    <p style={{color:"#ccc",fontSize:11,...ds,margin:0}}>{f.createdAt?new Date(f.createdAt).toLocaleDateString("it-IT"):""}</p>
+                  </div>
+                  {f.problems?.length>0&&(
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+                      {f.problems.map(p=>(
+                        <span key={p} style={{background:`${C.warmOrange}15`,border:`1px solid ${C.warmOrange}40`,borderRadius:20,padding:"3px 10px",color:C.warmOrange,fontSize:10,...ds,fontWeight:600}}>{p}</span>
+                      ))}
+                    </div>
+                  )}
+                  {f.note&&<p style={{color:"#555",fontSize:12,...ds,margin:0,fontStyle:"italic"}}>💬 "{f.note}"</p>}
+                </div>
+              ))}
+              {!loadingFb&&fbFeedback.length===0&&<p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:40}}>Nessun feedback ancora</p>}
+            </div>
+          )}
 
           {tab==="stats"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
+              <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 4px",fontFamily:"Lora"}}>🌍 Da dove aprono l'app</p>
+              <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 10px"}}>Posizioni GPS al momento dell'apertura</p>
+              <HeatmapView/>
+            </div>
+            <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>⚡ Batteria flotta</p>
               {[["≥80%",bikes.filter(b=>b.battery>=80).length,C.blueGreen],["50-79%",bikes.filter(b=>b.battery>=50&&b.battery<80).length,C.sunYellow],["<50%",bikes.filter(b=>b.battery<50).length,C.warmOrange]].map(([range,count,color])=>(<div key={range} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:"#888",fontSize:12,...ds}}>{range}</span><span style={{color,fontSize:12,...ds,fontWeight:700}}>{count} bici</span></div><div style={{height:8,background:"#eee",borderRadius:4,overflow:"hidden"}}><div style={{width:`${(count/bikes.length)*100}%`,height:"100%",background:color,borderRadius:4}}/></div></div>))}
-            </div>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>📍 Corse per zona</p>
               {["Passignano","Castiglione","Tuoro","Magione","Panicale"].map(zona=>{ const count=rides.filter(r=>r.zone===zona).length; const total=rides.length||1; return <div key={zona} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:"#888",fontSize:12,...ds}}>{zona}</span><span style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:700}}>{count} corse</span></div><div style={{height:6,background:"#eee",borderRadius:3,overflow:"hidden"}}><div style={{width:`${(count/total)*100}%`,height:"100%",background:C.blueGreen,borderRadius:3}}/></div></div>; })}
