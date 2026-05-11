@@ -1987,14 +1987,10 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   React.useEffect(()=>{
     const load=async()=>{ try { await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const snap=await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()) setClientZones(snap.data().zones||[]); else setClientZones(DEFAULT_ZONES); } catch(e){ setClientZones(DEFAULT_ZONES); } };
-    load().then(() => {
-      // Rendi le zone disponibili globalmente per i controlli di parcheggio
-    });
+    load();
   },[]);
 
-  React.useEffect(()=>{
-    window._clientZones = clientZones;
-  },[clientZones]);
+  React.useEffect(()=>{ window._clientZones = clientZones; },[clientZones]);
   React.useEffect(()=>{
     const load = async () => {
       await waitFB();
