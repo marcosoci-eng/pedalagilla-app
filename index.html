@@ -742,8 +742,38 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       iw.setContent(`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone}</span><br/><span style="font-size:11px">⚡ ${bike.battery}% · ~${getRange(bike.battery)}km</span>${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}<br/><span style="font-size:11px;color:${bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.status}</span></div>`);
     });
     if (userPos && mapInstanceRef.current) {
-      if (userMarkerRef.current) { userMarkerRef.current.setPosition(userPos); }
-      else { userMarkerRef.current = new window.google.maps.Marker({ position: userPos, map: mapInstanceRef.current, title: "La tua posizione", icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#219EBC", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 3 }, zIndex: 999 }); }
+      if (userMarkerRef.current) { 
+        userMarkerRef.current.setPosition(userPos);
+        if (userMarkerRef.current._circle) userMarkerRef.current._circle.setCenter(userPos);
+        if (userMarkerRef.current._outer) userMarkerRef.current._outer.setPosition(userPos);
+      } else {
+        // Cerchio accuratezza GPS
+        const circle = new window.google.maps.Circle({
+          map: mapInstanceRef.current, center: userPos, radius: 30,
+          fillColor: "#219EBC", fillOpacity: 0.12,
+          strokeColor: "#219EBC", strokeWeight: 1.5, strokeOpacity: 0.4, zIndex: 997
+        });
+        // Cerchio esterno pulsante
+        const outer = new window.google.maps.Marker({
+          position: userPos, map: mapInstanceRef.current, zIndex: 998,
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 18, fillColor: "#219EBC", fillOpacity: 0.2, strokeColor: "#219EBC", strokeWeight: 1 }
+        });
+        // Punto centrale
+        const marker = new window.google.maps.Marker({ 
+          position: userPos, map: mapInstanceRef.current, title: "La tua posizione",
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#219EBC", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 3 }, 
+          zIndex: 999 
+        });
+        marker._circle = circle;
+        marker._outer = outer;
+        userMarkerRef.current = marker;
+        // Centra mappa sulla posizione utente la prima volta
+        if (!mapInstanceRef.current._centeredOnUser) {
+          mapInstanceRef.current.setCenter(userPos);
+          mapInstanceRef.current.setZoom(15);
+          mapInstanceRef.current._centeredOnUser = true;
+        }
+      }
     }
   }, [userPos]);
 
@@ -788,14 +818,23 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       if (!window.google) { setTimeout(tryInit, 200); return; }
       const map = new window.google.maps.Map(mapRef.current, { center: window._userPosition || {lat:43.1500,lng:12.0800}, zoom: window._userPosition ? 14 : 11, mapTypeId: "roadmap", gestureHandling: "greedy", styles: [{ featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },{ featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },{ featureType:"road", elementType:"geometry", stylers:[{color:"#ffffff"}] },{ featureType:"poi", stylers:[{visibility:"off"}] }] });
       mapInstanceRef.current = map;
-      bikes.forEach(bike => {
-        const iw = new window.google.maps.InfoWindow({ content: "" });
-        const marker = new window.google.maps.Marker({ position: { lat: bike.lat, lng: bike.lng }, map, title: bike.id, label: { text: bike.isMTB?"🏔️":`${bike.battery}%`, color: "#ffffff", fontSize: bike.isMTB?"14px":"10px", fontWeight: "bold" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: bike.isMTB?"#FB8500":bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 } });
+      window._mapInstance = map; // per bottone centrami
         markersRef.current.push({ marker, iw, bike });
         marker.addListener("click", () => { const distanceText = getDistText(bike, userPos); iw.setContent(`<div style="font-family:'DM Sans',sans-serif;padding:8px;min-width:140px"><b style="color:#023047;font-size:14px">${bike.id}</b><br/><span style="color:#666;font-size:11px">📍 ${bike.zone||""}</span><br/>${bike.isMTB?'<span style="font-size:11px">🏔️ MTB Muscolare</span>':'<span style="font-size:11px">⚡ '+bike.battery+'% · ~'+getRange(bike.battery)+'km</span>'}${distanceText ? `<br/><span style="font-size:11px;color:#219EBC">${distanceText}</span>` : ""}<br/><span style="font-size:11px;color:${bike.isMTB?'#FB8500':bike.status==='Disponibile'?'#219EBC':'#FB8500'}">● ${bike.isMTB?'Disponibile':bike.status}</span></div>`); iw.open(map, marker); onBikeClick(bike); });
       });
       zones.forEach(zone => {
-        if (zone.shape === "circle" && zone.center) { new window.google.maps.Circle({ map, center: zone.center, radius: zone.radius||200, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 }); const icons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" }; if (zone.type !== "operativa" && icons[zone.type]) { new window.google.maps.Marker({ position: zone.center, map, label: { text: icons[zone.type], fontSize: "16px" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 } }); } }
+        if (zone.shape === "circle" && zone.center) { 
+          new window.google.maps.Circle({ map, center: zone.center, radius: zone.radius||200, fillColor: zone.color, fillOpacity: zone.type==="sosta"?0.25:0.15, strokeColor: zone.color, strokeWeight: zone.type==="sosta"?2.5:1.5 }); 
+          const icons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" }; 
+          if (zone.type !== "operativa" && icons[zone.type]) { 
+            new window.google.maps.Marker({ 
+              position: zone.center, map, 
+              label: { text: icons[zone.type], fontSize: zone.type==="sosta"?"22px":"16px", fontWeight:"bold" }, 
+              icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: zone.type==="sosta"?18:0, fillColor:"#2196F3", fillOpacity: zone.type==="sosta"?0.9:0, strokeColor:"#ffffff", strokeWeight: zone.type==="sosta"?2:0 },
+              title: zone.name||""
+            }); 
+          } 
+        }
         else if (zone.path?.length > 0) { new window.google.maps.Polygon({ map, paths: zone.path, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 }); }
       });
       tracks.forEach(track => {
@@ -1222,11 +1261,13 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
     // Controlla se la posizione attuale è in una zona sosta - OBBLIGATORIO
     const checkZone = () => new Promise(resolve => {
       if (!navigator.geolocation) { resolve({ok:true}); return; }
+      const zones = window._clientZones || [];
+      const sostaZones = zones.filter(z => z.type === "sosta");
+      // Se non ci sono zone sosta configurate, lascia terminare
+      if (sostaZones.length === 0) { resolve({ok:true}); return; }
       navigator.geolocation.getCurrentPosition(pos => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        const zones = window._clientZones || [];
-        const sostaZones = zones.filter(z => z.type === "sosta");
         const operativaZone = zones.find(z => z.type === "operativa");
         const dist = (lat1,lng1,lat2,lng2) => {
           const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
@@ -1241,13 +1282,11 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
             return;
           }
         }
-        // Verifica zona sosta - BLOCCANTE
-        if (sostaZones.length > 0) {
-          const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= (z.radius||300));
-          if (!inSosta) {
-            resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nDevi portare la bici in uno dei punti 🅿️ segnati sulla mappa per poter terminare la corsa.\n\nSe hai difficoltà chiama il +39 349 524 0422"});
-            return;
-          }
+        // Verifica zona sosta con raggio aumentato a 500m per compensare imprecisione GPS
+        const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= Math.max(z.radius||300, 500));
+        if (!inSosta) {
+          resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nParcheggia la bici vicino a uno dei punti 🅿️ sulla mappa per terminare la corsa.\n\nSe hai difficoltà chiama il +39 349 524 0422"});
+          return;
         }
         resolve({ok:true});
       }, () => resolve({ok:true}), {enableHighAccuracy:true, timeout:8000});
@@ -2176,9 +2215,10 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       }
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
-      // Sblocca tutte le bici
+      // Sblocca tutte le bici e attiva GPS alta frequenza
       for(const bike of bks) {
         await sendBikeCommand(bike.id, 'unlock');
+        await sendBikeCommand(bike.id, 'gps_high');
         await setBikeInUse(bike.id, true);
       }
     } catch(e){console.error(e);}
@@ -2231,6 +2271,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
         await sendBikeCommand(bike.id, 'unlock');
+        await sendBikeCommand(bike.id, 'gps_high');
         await setBikeInUse(bike.id, true);
       }
       setCurrentRideIds(rideIds);
@@ -2240,6 +2281,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   const handleEndRide=(secs,cost,bikeId)=>{
     sendBikeCommand(bikeId, 'lock');
+    sendBikeCommand(bikeId, 'gps_normal'); // Ripristina frequenza normale
     setBikeInUse(bikeId, false);
     setConfirmed(prev=>{
       const remaining=prev.filter(b=>b.id!==bikeId);
@@ -2583,6 +2625,12 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                 fullscreen={true} zones={clientZones} userPos={userPos}/>
             </div>
             <div style={{position:"absolute",bottom:90,left:12,right:12,zIndex:10}}>
+              {/* Bottone centrami */}
+              {userPos&&<button onClick={()=>{
+                if(window._mapInstance) { window._mapInstance.setCenter(userPos); window._mapInstance.setZoom(16); }
+              }} style={{position:"absolute",right:0,bottom:130,background:"white",border:`2px solid ${C.blueGreen}`,borderRadius:12,padding:"10px 12px",color:C.blueGreen,fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.15)",zIndex:11}}>
+                📍
+              </button>}
               <button onClick={()=>startQRScanner(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                 {t('scanQR')}
               </button>
