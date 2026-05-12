@@ -747,22 +747,24 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
         if (userMarkerRef.current._circle) userMarkerRef.current._circle.setCenter(userPos);
         if (userMarkerRef.current._outer) userMarkerRef.current._outer.setPosition(userPos);
       } else {
-        // Cerchio accuratezza GPS
+        // Cerchio accuratezza GPS - non intercetta click
         const circle = new window.google.maps.Circle({
           map: mapInstanceRef.current, center: userPos, radius: 30,
           fillColor: "#219EBC", fillOpacity: 0.12,
-          strokeColor: "#219EBC", strokeWeight: 1.5, strokeOpacity: 0.4, zIndex: 997
+          strokeColor: "#219EBC", strokeWeight: 1.5, strokeOpacity: 0.4,
+          zIndex: 1, clickable: false
         });
-        // Cerchio esterno pulsante
+        // Cerchio esterno pulsante - non intercetta click
         const outer = new window.google.maps.Marker({
-          position: userPos, map: mapInstanceRef.current, zIndex: 998,
+          position: userPos, map: mapInstanceRef.current, zIndex: 2,
+          clickable: false,
           icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 18, fillColor: "#219EBC", fillOpacity: 0.2, strokeColor: "#219EBC", strokeWeight: 1 }
         });
-        // Punto centrale
+        // Punto centrale - non intercetta click
         const marker = new window.google.maps.Marker({ 
           position: userPos, map: mapInstanceRef.current, title: "La tua posizione",
           icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#219EBC", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 3 }, 
-          zIndex: 999 
+          zIndex: 3, clickable: false
         });
         marker._circle = circle;
         marker._outer = outer;
