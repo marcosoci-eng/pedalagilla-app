@@ -1527,7 +1527,13 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 // ═══════════════════════════════════════════════════════
 // MTB NOLEGGIO — bici muscolari
 // ═══════════════════════════════════════════════════════
-function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([]);
+function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = React.useState(true);
+  const [mtbFeedback, setMtbFeedback] = React.useState(null);
+  const [mtbFeedbackProblems, setMtbFeedbackProblems] = React.useState([]);
+  const [mtbFeedbackNote, setMtbFeedbackNote] = React.useState("");
+  const [mtbFeedbackSent, setMtbFeedbackSent] = React.useState(false);
+  const [showMtbFeedback, setShowMtbFeedback] = React.useState(false);
+  const MTB_PROBLEMI = ["🔒 Problema lucchetto","🚲 Ruota sgonfia","⛓️ Catena a terra","🦶 Pedale difficile","💺 Seggiolino danneggiato","🧹 Bici sporca","💰 Troppo costosa"];
   const [selectedMTB, setSelectedMTB] = React.useState(null);
   const [tariffa, setTariffa] = React.useState(null);
   const [showPayment, setShowPayment] = React.useState(false);
@@ -1696,7 +1702,7 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
       setActiveRental(null); setShowEndFlow(false);
       setParkPhoto(null); setParkPreview(null);
       setSelectedMTB(null); setTariffa(null);
-      alert("✅ Noleggio terminato! Grazie.");
+      setShowMtbFeedback(true); // Mostra feedback
     } catch(e){console.error(e);}
     setUploading(false);
   };
@@ -1859,6 +1865,75 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
     </div>
   );
 
+  // Schermata feedback MTB
+  if(showMtbFeedback) return(
+    <div style={{padding:"16px 18px 0"}}>
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <div style={{width:70,height:70,borderRadius:35,background:`linear-gradient(135deg,${C.blueGreen},${C.deepBlue})`,margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>🏁</div>
+        <h2 style={{color:C.deepBlue,fontSize:20,fontWeight:700,fontFamily:"Lora",margin:"0 0 4px"}}>Noleggio completato!</h2>
+        <p style={{color:"#888",fontSize:13,...ds}}>Ride completed! Thank you 🌊</p>
+      </div>
+      {!mtbFeedbackSent?(
+        <div style={{background:C.white,borderRadius:20,padding:20,marginBottom:16,boxShadow:"0 2px 12px rgba(2,48,71,0.08)"}}>
+          <p style={{color:C.deepBlue,fontSize:15,fontWeight:700,margin:"0 0 4px",fontFamily:"Lora",textAlign:"center"}}>Com'è andata?</p>
+          <p style={{color:"#aaa",fontSize:12,...ds,textAlign:"center",margin:"0 0 16px"}}>How was your ride?</p>
+          <div style={{display:"flex",gap:12,marginBottom:16}}>
+            <button onClick={()=>setMtbFeedback("up")} style={{flex:1,background:mtbFeedback==="up"?C.blueGreen:`${C.blueGreen}15`,border:`2px solid ${mtbFeedback==="up"?C.blueGreen:C.skyBlue+"40"}`,borderRadius:16,padding:"16px 10px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
+              <span style={{fontSize:32}}>👍</span>
+              <span style={{color:mtbFeedback==="up"?C.white:C.blueGreen,fontSize:13,...ds,fontWeight:700}}>Ottima!</span>
+            </button>
+            <button onClick={()=>setMtbFeedback("down")} style={{flex:1,background:mtbFeedback==="down"?C.warmOrange:`${C.warmOrange}15`,border:`2px solid ${mtbFeedback==="down"?C.warmOrange:C.warmOrange+"40"}`,borderRadius:16,padding:"16px 10px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
+              <span style={{fontSize:32}}>👎</span>
+              <span style={{color:mtbFeedback==="down"?C.white:C.warmOrange,fontSize:13,...ds,fontWeight:700}}>Problema</span>
+            </button>
+          </div>
+          {mtbFeedback==="down"&&(
+            <div>
+              <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 10px",...ds}}>Segnala il problema:</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+                {MTB_PROBLEMI.map(p=>(
+                  <button key={p} onClick={()=>setMtbFeedbackProblems(prev=>prev.includes(p)?prev.filter(x=>x!==p):[...prev,p])}
+                    style={{background:mtbFeedbackProblems.includes(p)?C.warmOrange:`${C.warmOrange}10`,border:`1.5px solid ${mtbFeedbackProblems.includes(p)?C.warmOrange:C.warmOrange+"40"}`,borderRadius:20,padding:"6px 12px",color:mtbFeedbackProblems.includes(p)?C.white:C.warmOrange,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+              <textarea value={mtbFeedbackNote} onChange={e=>setMtbFeedbackNote(e.target.value)}
+                placeholder="Altro problema..."
+                style={{width:"100%",padding:"10px 14px",borderRadius:12,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,minHeight:70,resize:"none"}}/>
+            </div>
+          )}
+          <button onClick={async()=>{
+            if(mtbFeedback){
+              try {
+                await waitFB();
+                const {collection,addDoc}=window.firebaseFunctions;
+                await addDoc(collection(window.firebaseDb,"feedback"),{
+                  userId:user.uid, userName:`${user.nome||""} ${user.cognome||""}`.trim(),
+                  bikeId:"MTB", type:"mtb", rating:mtbFeedback,
+                  problems:mtbFeedbackProblems, note:mtbFeedbackNote.trim(),
+                  createdAt:new Date().toISOString()
+                });
+              }catch(e){}
+            }
+            setMtbFeedbackSent(true);
+          }} style={{width:"100%",background:mtbFeedback?`linear-gradient(90deg,${mtbFeedback==="up"?C.blueGreen:C.warmOrange},${C.deepBlue})`:`${C.deepBlue}20`,border:"none",borderRadius:14,padding:13,color:mtbFeedback?C.white:C.deepBlue,fontSize:14,...ds,fontWeight:700,cursor:"pointer",marginTop:12}}>
+            {mtbFeedback?"✅ Invia feedback":"⏭️ Salta"}
+          </button>
+        </div>
+      ):(
+        <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:16,padding:20,marginBottom:16,textAlign:"center"}}>
+          <p style={{fontSize:32,margin:"0 0 8px"}}>🙏</p>
+          <p style={{color:C.blueGreen,fontSize:14,fontWeight:700,margin:0,...ds}}>Grazie per il feedback!</p>
+        </div>
+      )}
+      <button onClick={()=>{setShowMtbFeedback(false);setMtbFeedback(null);setMtbFeedbackProblems([]);setMtbFeedbackNote("");setMtbFeedbackSent(false);setShowInstructions(false);}}
+        style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+        Torna alla mappa 🌊
+      </button>
+    </div>
+  );
+
   // Schermata principale MTB
   return(
     <div style={{padding:"16px 18px 0"}}>
@@ -1882,6 +1957,41 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
           </div>
         </div>
       )}
+      {/* ISTRUZIONI — mostrate la prima volta */}
+      {showInstructions&&(
+        <div style={{position:"absolute",inset:0,background:"rgba(2,48,71,0.97)",zIndex:500,display:"flex",flexDirection:"column",padding:24,overflowY:"auto"}}>
+          <div style={{textAlign:"center",marginBottom:20}}>
+            <div style={{fontSize:56,marginBottom:8}}>🚲</div>
+            <h2 style={{color:C.white,fontSize:22,fontWeight:700,fontFamily:"Lora",margin:"0 0 4px"}}>Come funziona</h2>
+            <p style={{color:C.skyBlue,fontSize:13,...ds,margin:0}}>How it works — MTB Muscolare</p>
+          </div>
+          {[
+            ["1️⃣","Scansiona il QR","Inquadra il QR code sul telaio della bici con la fotocamera\nScan the QR code on the bike frame"],
+            ["2️⃣","Scegli la tariffa","Adulto €15 · Bambino €10 — valido per tutta la giornata\nAdult €15 · Child €10 — valid all day"],
+            ["3️⃣","Paga e ottieni il codice","Dopo il pagamento ricevi il codice a 5 cifre del lucchetto\nAfter payment you get the 5-digit lock code"],
+            ["4️⃣","Sblocca la bici","Inserisci il codice nel lucchetto combinazione sulla bici\nEnter the code in the combination lock on the bike"],
+            ["5️⃣","Al ritorno","Riporta la bici nello stesso posto, scatta la foto e termina\nReturn the bike, take a photo and end the rental"],
+          ].map(([num,title,desc])=>(
+            <div key={num} style={{background:"rgba(255,255,255,0.08)",borderRadius:16,padding:14,marginBottom:10,display:"flex",gap:14,alignItems:"flex-start"}}>
+              <span style={{fontSize:24,flexShrink:0}}>{num}</span>
+              <div>
+                <p style={{color:C.white,fontSize:14,fontWeight:700,margin:"0 0 4px",fontFamily:"Lora"}}>{title}</p>
+                {desc.split("\n").map((d,i)=>(
+                  <p key={i} style={{color:i===0?C.skyBlue:"rgba(255,255,255,0.5)",fontSize:12,...ds,margin:"0 0 2px",fontStyle:i===1?"italic":"normal"}}>{d}</p>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div style={{background:`${C.warmOrange}20`,border:`1px solid ${C.warmOrange}50`,borderRadius:14,padding:14,marginBottom:16}}>
+            <p style={{color:C.warmOrange,fontSize:12,...ds,fontWeight:600,margin:"0 0 4px"}}>⚠️ Importante</p>
+            <p style={{color:"rgba(255,255,255,0.8)",fontSize:12,...ds,margin:0,lineHeight:"1.5"}}>La bici deve essere parcheggiata nello stesso punto dove l'hai presa. Foto obbligatoria al rientro.<br/><span style={{fontStyle:"italic",opacity:0.6}}>The bike must be returned to the same spot. Parking photo required.</span></p>
+          </div>
+          <button onClick={()=>setShowInstructions(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},#027a4e)`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+            ✅ Ho capito, inizia il noleggio
+          </button>
+          <p style={{color:"rgba(255,255,255,0.4)",fontSize:11,...ds,textAlign:"center",marginTop:10}}>Got it, start rental</p>
+        </div>
+      )}
       <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:24,marginBottom:16,textAlign:"center"}}>
         <div style={{fontSize:56,marginBottom:8}}>🚲</div>
         <h2 style={{color:C.white,fontSize:20,fontWeight:700,margin:"0 0 6px",fontFamily:"Lora"}}>MTB Muscolare</h2>
@@ -1897,6 +2007,9 @@ function MTBTab({ user, t }) {  const [mtbBikes, setMtbBikes] = React.useState([
         </div>
         <button onClick={()=>setShowQR(true)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},#027a4e)`,border:"none",borderRadius:14,padding:"13px 16px",color:C.white,fontSize:14,...ds,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           📷 Scansiona QR bici
+        </button>
+        <button onClick={()=>setShowInstructions(true)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.5)",fontSize:12,...ds,cursor:"pointer",marginTop:10}}>
+          ℹ️ Come funziona?
         </button>
       </div>
       {mtbBikes.filter(b=>b.status==="Disponibile").length===0&&(
@@ -3093,8 +3206,8 @@ function HeatmapView() {
           points.forEach(p=>{
             new window.google.maps.Circle({
               map, center:{lat:p.lat,lng:p.lng},
-              radius:8000, fillColor:"#FB8500", fillOpacity:0.3,
-              strokeColor:"#FB8500", strokeWeight:0
+              radius:500, fillColor:"#FB8500", fillOpacity:0.5,
+              strokeColor:"#FB8500", strokeWeight:1, strokeOpacity:0.8
             });
           });
           // Adatta bounds
