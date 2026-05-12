@@ -1958,48 +1958,43 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
           </div>
         </div>
       )}
-      {/* ISTRUZIONI — mostrate la prima volta */}
-      {showInstructions&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(2,48,71,0.98)",zIndex:500,display:"flex",flexDirection:"column",padding:24,overflowY:"auto"}}>
-          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
-            <button onClick={()=>setShowInstructions(false)} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:20,padding:"6px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>
-              ✕ Salta
-            </button>
+  // Schermata istruzioni — appare dopo click sulla bici
+  if(showInstructions&&selectedMTB) return(
+    <div style={{padding:24,background:"rgba(2,48,71,0.98)",minHeight:"100%",overflowY:"auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <button onClick={()=>{setShowInstructions(false);setSelectedMTB(null);}} style={{background:"none",border:"none",color:"rgba(255,255,255,0.6)",fontSize:22,cursor:"pointer"}}>←</button>
+        <h2 style={{color:C.white,fontSize:18,fontWeight:700,fontFamily:"Lora",margin:0}}>{selectedMTB.id}</h2>
+        <div style={{width:30}}/>
+      </div>
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <div style={{fontSize:48,marginBottom:8}}>🚲</div>
+        <h3 style={{color:C.white,fontSize:20,fontWeight:700,fontFamily:"Lora",margin:"0 0 4px"}}>Come funziona</h3>
+        <p style={{color:C.skyBlue,fontSize:12,...ds,margin:0}}>How it works — MTB Muscolare</p>
+      </div>
+      {[
+        ["1️⃣","Paga e ottieni il codice","Scegli la tariffa e paga · Choose rate and pay"],
+        ["2️⃣","Sblocca il lucchetto","Inserisci il codice a 5 cifre · Enter the 5-digit code"],
+        ["3️⃣","Pedala e divertiti!","La bici è tua per tutta la giornata · All day rental"],
+        ["4️⃣","Al ritorno","Riporta la bici nello stesso posto · Return to same spot"],
+        ["5️⃣","Scatta la foto","Foto obbligatoria per terminare · Photo required to end"],
+      ].map(([num,title,desc])=>(
+        <div key={num} style={{background:"rgba(255,255,255,0.08)",borderRadius:14,padding:12,marginBottom:8,display:"flex",gap:12,alignItems:"flex-start"}}>
+          <span style={{fontSize:22,flexShrink:0}}>{num}</span>
+          <div>
+            <p style={{color:C.white,fontSize:13,fontWeight:700,margin:"0 0 3px",fontFamily:"Lora"}}>{title}</p>
+            <p style={{color:"rgba(255,255,255,0.5)",fontSize:11,...ds,margin:0,fontStyle:"italic"}}>{desc}</p>
           </div>
-          <div style={{textAlign:"center",marginBottom:20}}>
-            <div style={{fontSize:56,marginBottom:8}}>🚲</div>
-            <h2 style={{color:C.white,fontSize:22,fontWeight:700,fontFamily:"Lora",margin:"0 0 4px"}}>Come funziona</h2>
-            <p style={{color:C.skyBlue,fontSize:13,...ds,margin:0}}>How it works — MTB Muscolare</p>
-          </div>
-          {[
-            ["1️⃣","Scansiona il QR","Inquadra il QR code sul telaio della bici con la fotocamera\nScan the QR code on the bike frame"],
-            ["2️⃣","Scegli la tariffa","Adulto €15 · Bambino €10 — valido per tutta la giornata\nAdult €15 · Child €10 — valid all day"],
-            ["3️⃣","Paga e ottieni il codice","Dopo il pagamento ricevi il codice a 5 cifre del lucchetto\nAfter payment you get the 5-digit lock code"],
-            ["4️⃣","Sblocca la bici","Inserisci il codice nel lucchetto combinazione sulla bici\nEnter the code in the combination lock on the bike"],
-            ["5️⃣","Al ritorno","Riporta la bici nello stesso posto, scatta la foto e termina\nReturn the bike, take a photo and end the rental"],
-          ].map(([num,title,desc])=>(
-            <div key={num} style={{background:"rgba(255,255,255,0.08)",borderRadius:16,padding:14,marginBottom:10,display:"flex",gap:14,alignItems:"flex-start"}}>
-              <span style={{fontSize:24,flexShrink:0}}>{num}</span>
-              <div>
-                <p style={{color:C.white,fontSize:14,fontWeight:700,margin:"0 0 4px",fontFamily:"Lora"}}>{title}</p>
-                {desc.split("\n").map((d,i)=>(
-                  <p key={i} style={{color:i===0?C.skyBlue:"rgba(255,255,255,0.5)",fontSize:12,...ds,margin:"0 0 2px",fontStyle:i===1?"italic":"normal"}}>{d}</p>
-                ))}
-              </div>
-            </div>
-          ))}
-          <div style={{background:`${C.warmOrange}20`,border:`1px solid ${C.warmOrange}50`,borderRadius:14,padding:14,marginBottom:16}}>
-            <p style={{color:C.warmOrange,fontSize:12,...ds,fontWeight:600,margin:"0 0 4px"}}>⚠️ Importante</p>
-            <p style={{color:"rgba(255,255,255,0.8)",fontSize:12,...ds,margin:0,lineHeight:"1.5"}}>La bici deve essere parcheggiata nello stesso punto dove l'hai presa. Foto obbligatoria al rientro.<br/><span style={{fontStyle:"italic",opacity:0.6}}>The bike must be returned to the same spot. Parking photo required.</span></p>
-          </div>
-          <button onClick={()=>setShowInstructions(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},#027a4e)`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
-            ✅ Ho capito — Scegli la tariffa
-          </button>
-          <p style={{color:"rgba(255,255,255,0.4)",fontSize:11,...ds,textAlign:"center",marginTop:8,cursor:"pointer"}} onClick={()=>setShowInstructions(false)}>
-            Got it, choose your rate →
-          </p>
         </div>
-      )}
+      ))}
+      <div style={{background:`${C.warmOrange}20`,border:`1px solid ${C.warmOrange}50`,borderRadius:12,padding:12,marginBottom:20}}>
+        <p style={{color:C.warmOrange,fontSize:12,...ds,fontWeight:600,margin:"0 0 3px"}}>⚠️ Importante</p>
+        <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,...ds,margin:0}}>Foto parcheggio obbligatoria al rientro · Parking photo required on return</p>
+      </div>
+      <button onClick={()=>setShowInstructions(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},#027a4e)`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+        ✅ Ho capito — Scegli la tariffa
+      </button>
+    </div>
+  );
       <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:24,marginBottom:16,textAlign:"center"}}>
         <div style={{fontSize:56,marginBottom:8}}>🚲</div>
         <h2 style={{color:C.white,fontSize:20,fontWeight:700,margin:"0 0 6px",fontFamily:"Lora"}}>MTB Muscolare</h2>
