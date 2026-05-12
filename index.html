@@ -1535,6 +1535,7 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
   const [showMtbFeedback, setShowMtbFeedback] = React.useState(false);
   const MTB_PROBLEMI = ["🔒 Problema lucchetto","🚲 Ruota sgonfia","⛓️ Catena a terra","🦶 Pedale difficile","💺 Seggiolino danneggiato","🧹 Bici sporca","💰 Troppo costosa"];
   const [mtbBikes, setMtbBikes] = React.useState([]);
+  const [selectedMTB, setSelectedMTB] = React.useState(null);
   const [tariffa, setTariffa] = React.useState(null);
   const [showPayment, setShowPayment] = React.useState(false);
   const [showCode, setShowCode] = React.useState(false);
