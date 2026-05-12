@@ -1977,6 +1977,8 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
 
   // Schermata principale MTB
   return(
+    <div style={{padding:"16px 18px 0"}}>
+      {showQR&&(
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.95)",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
           <button onClick={()=>setShowQR(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>✕</button>
           <div style={{fontSize:60,marginBottom:20}}>📷</div>
