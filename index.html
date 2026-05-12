@@ -1937,29 +1937,6 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
     </div>
   );
 
-  // Schermata principale MTB
-  return(
-    <div style={{padding:"16px 18px 0"}}>
-      {/* QR Scanner */}
-      {showQR&&(
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.95)",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-          <button onClick={()=>setShowQR(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>✕</button>
-          <div style={{fontSize:60,marginBottom:20}}>📷</div>
-          <p style={{color:C.white,fontSize:18,fontWeight:700,fontFamily:"Lora",marginBottom:8}}>Scansiona QR MTB</p>
-          <p style={{color:"rgba(255,255,255,0.6)",fontSize:13,...ds,marginBottom:20,textAlign:"center",padding:"0 30px"}}>Inquadra il QR code sul telaio della bici</p>
-          <video id="mtbQrVideo" style={{width:260,height:260,borderRadius:16,objectFit:"cover",border:`3px solid ${C.blueGreen}`,marginBottom:20}} autoPlay playsInline muted/>
-          <canvas id="mtbQrCanvas" style={{display:"none"}}/>
-          <div style={{background:C.white,borderRadius:16,padding:16,width:260,textAlign:"center"}}>
-            <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>Oppure inserisci il codice:</p>
-            <input placeholder="Es: MTB-001" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
-              onChange={e=>{
-                const val=e.target.value.toUpperCase().trim();
-                const bike=mtbBikes.find(b=>b.id===val);
-                if(bike){setShowQR(false);setSelectedMTB(bike);}
-              }}/>
-          </div>
-        </div>
-      )}
   // Schermata istruzioni — appare dopo click sulla bici
   if(showInstructions&&selectedMTB) return(
     <div style={{padding:24,background:"rgba(2,48,71,0.98)",minHeight:"100%",overflowY:"auto"}}>
@@ -1997,6 +1974,27 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
       </button>
     </div>
   );
+
+  // Schermata principale MTB
+  return(
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.95)",zIndex:400,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          <button onClick={()=>setShowQR(false)} style={{position:"absolute",top:20,right:20,background:"none",border:"none",color:C.white,fontSize:28,cursor:"pointer"}}>✕</button>
+          <div style={{fontSize:60,marginBottom:20}}>📷</div>
+          <p style={{color:C.white,fontSize:18,fontWeight:700,fontFamily:"Lora",marginBottom:8}}>Scansiona QR MTB</p>
+          <p style={{color:"rgba(255,255,255,0.6)",fontSize:13,...ds,marginBottom:20,textAlign:"center",padding:"0 30px"}}>Inquadra il QR code sul telaio della bici</p>
+          <video id="mtbQrVideo" style={{width:260,height:260,borderRadius:16,objectFit:"cover",border:`3px solid ${C.blueGreen}`,marginBottom:20}} autoPlay playsInline muted/>
+          <canvas id="mtbQrCanvas" style={{display:"none"}}/>
+          <div style={{background:C.white,borderRadius:16,padding:16,width:260,textAlign:"center"}}>
+            <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>Oppure inserisci il codice:</p>
+            <input placeholder="Es: MTB-001" style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
+              onChange={e=>{
+                const val=e.target.value.toUpperCase().trim();
+                const bike=mtbBikes.find(b=>b.id===val);
+                if(bike){setShowQR(false);setSelectedMTB(bike);}
+              }}/>
+          </div>
+        </div>
+      )}
       <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:24,marginBottom:16,textAlign:"center"}}>
         <div style={{fontSize:56,marginBottom:8}}>🚲</div>
         <h2 style={{color:C.white,fontSize:20,fontWeight:700,margin:"0 0 6px",fontFamily:"Lora"}}>MTB Muscolare</h2>
