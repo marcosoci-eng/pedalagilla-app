@@ -1241,12 +1241,26 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
     return () => clearInterval(i);
   }, [paused]);
 
-  const handlePauseToggle = () => {
+  const handlePauseToggle = async () => {
     if (!paused) {
+      // Metti in pausa — blocca la bici
       pauseStartRef.current = Date.now();
+      try {
+        await waitFB();
+        const {collection, addDoc} = window.firebaseFunctions;
+        const pedId = bike.id.replace('PA-','PED');
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
+      } catch(e){ console.error('Errore lock pausa:', e); }
     } else {
+      // Riprendi — sblocca la bici
       totalPausedRef.current += Date.now() - pauseStartRef.current;
       pauseStartRef.current = null;
+      try {
+        await waitFB();
+        const {collection, addDoc} = window.firebaseFunctions;
+        const pedId = bike.id.replace('PA-','PED');
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'unlock',status:'pending',createdAt:new Date().toISOString()});
+      } catch(e){ console.error('Errore unlock ripresa:', e); }
     }
     setPaused(p => !p);
   };
@@ -1266,35 +1280,42 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
     // Controlla se la posizione attuale è in una zona sosta - OBBLIGATORIO
     const checkZone = () => new Promise(resolve => {
       if (!navigator.geolocation) { resolve({ok:true}); return; }
-      const zones = window._clientZones || [];
-      const sostaZones = zones.filter(z => z.type === "sosta");
-      // Se non ci sono zone sosta configurate, lascia terminare
-      if (sostaZones.length === 0) { resolve({ok:true}); return; }
-      navigator.geolocation.getCurrentPosition(pos => {
+      // Carica zone fresche da Firebase
+      const getZones = async () => {
+        try {
+          await waitFB();
+          const {doc, getDoc} = window.firebaseFunctions;
+          const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
+          return snap.exists() ? (snap.data().zones||[]) : (window._clientZones||[]);
+        } catch(e) { return window._clientZones||[]; }
+      };
+      navigator.geolocation.getCurrentPosition(async pos => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
+        const zones = await getZones();
+        const sostaZones = zones.filter(z => z.type === "sosta");
+        if (sostaZones.length === 0) { resolve({ok:true}); return; }
         const operativaZone = zones.find(z => z.type === "operativa");
         const dist = (lat1,lng1,lat2,lng2) => {
           const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
           const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
           return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
         };
-        // Verifica area operativa
         if (operativaZone?.center) {
           const d = dist(lat,lng,operativaZone.center.lat,operativaZone.center.lng);
           if (d > (operativaZone.radius||25000)) {
-            resolve({ok:false, msg:"🚫 Sei fuori dall'area operativa!\n\nDevi rientrare nell'area del Lago Trasimeno per terminare la corsa e parcheggiare la bici in una zona 🅿️."});
+            resolve({ok:false, msg:"🚫 Sei fuori dall'area operativa!\n\nRientra nell'area del Lago Trasimeno e parcheggia in una zona 🅿️."});
             return;
           }
         }
-        // Verifica zona sosta con raggio aumentato a 500m per compensare imprecisione GPS
+        // Raggio 500m per compensare imprecisione GPS
         const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= Math.max(z.radius||300, 500));
         if (!inSosta) {
-          resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nParcheggia la bici vicino a uno dei punti 🅿️ sulla mappa per terminare la corsa.\n\nSe hai difficoltà chiama il +39 349 524 0422"});
+          resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nPorta la bici vicino a uno dei punti 🅿️ sulla mappa.\n\nAssistenza: +39 349 524 0422"});
           return;
         }
         resolve({ok:true});
-      }, () => resolve({ok:true}), {enableHighAccuracy:true, timeout:8000});
+      }, () => resolve({ok:true}), {enableHighAccuracy:true, timeout:10000});
     });
     const zoneCheck = await checkZone();
     if (!zoneCheck.ok) {
@@ -2023,7 +2044,7 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
         </div>
       )}
       {mtbBikes.filter(b=>b.status==="Disponibile").map(bike=>(
-        <div key={bike.id} onClick={()=>{ setSelectedMTB(bike); setShowInstructions(true); }} className="card"
+        <div key={bike.id} onClick={()=>{ setSelectedMTB(bike); setShowInstructions(true); setShowMtbFeedback(false); }} className="card"
           style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",display:"flex",alignItems:"center",gap:12}}>
           <div style={{width:44,height:44,borderRadius:22,background:`${C.blueGreen}20`,border:`2px solid ${C.blueGreen}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>🚲</div>
           <div style={{flex:1}}>
