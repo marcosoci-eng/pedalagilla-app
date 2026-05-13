@@ -843,7 +843,14 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
         else if (zone.path?.length > 0) { new window.google.maps.Polygon({ map, paths: zone.path, fillColor: zone.color, fillOpacity: 0.15, strokeColor: zone.color, strokeWeight: 1.5 }); }
       });
       tracks.forEach(track => {
-        if (track.points?.length > 1) { new window.google.maps.Polyline({ path: track.points, geodesic: true, strokeColor: track.color||"#219EBC", strokeOpacity: 0.8, strokeWeight: 4, map }); new window.google.maps.Marker({ position: track.points[0], map, label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} }); new window.google.maps.Marker({ position: track.points[track.points.length-1], map, label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} }); }
+        if (track.points?.length > 1) { 
+          const path = track.points.map(p => ({lat: p.lat||p[0], lng: p.lng||p[1]})).filter(p=>p.lat&&p.lng);
+          if (path.length > 1) {
+            new window.google.maps.Polyline({ path, geodesic: true, strokeColor: track.color||"#219EBC", strokeOpacity: 0.85, strokeWeight: 4, map }); 
+            new window.google.maps.Marker({ position: path[0], map, label:{text:"A",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#219EBC",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} }); 
+            new window.google.maps.Marker({ position: path[path.length-1], map, label:{text:"B",color:"#fff",fontSize:"11px",fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:12,fillColor:"#FB8500",fillOpacity:1,strokeColor:"#fff",strokeWeight:2} }); 
+          }
+        }
       });
     };
     tryInit();
@@ -3349,7 +3356,25 @@ function AdminApp({ user, onLogout, t }) {
   const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
   const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
   const toggleStatus=(bikeId)=>{setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b));};
-  const forceEndRide=async(ride)=>{ const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); if(importoStr===null) return; const importoForced=parseFloat(importoStr)||0; try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true}); } catch(e){alert("Errore: "+e.message);} };
+  const forceEndRide=async(ride)=>{ 
+    const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); 
+    if(importoStr===null) return; 
+    const importoForced=parseFloat(importoStr)||0; 
+    try{ 
+      await waitFB(); 
+      const {doc,updateDoc,setDoc,collection,addDoc}=window.firebaseFunctions; 
+      // Aggiorna la corsa
+      await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:importoForced,duration:ride.duration||0,closedByAdmin:true}); 
+      // Libera la bici su bikesStatus
+      await setDoc(doc(window.firebaseDb,"bikesStatus",ride.bike),{inUse:false,userId:null,updatedAt:new Date().toISOString()},{merge:true});
+      // Manda comando lock alla bici IoT
+      const pedId = ride.bike?.replace('PA-','PED');
+      if(pedId) await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
+      // Ripristina GPS normale
+      if(pedId) await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date().toISOString()});
+      alert(`✅ Corsa terminata. Bici ${ride.bike} liberata.`);
+    } catch(e){alert("Errore: "+e.message);} 
+  };
   const [fbFeedback, setFbFeedback] = React.useState([]);
   const [loadingFb, setLoadingFb] = React.useState(true);
   React.useEffect(()=>{
