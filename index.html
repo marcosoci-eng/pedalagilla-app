@@ -859,12 +859,13 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
   return <div ref={mapRef} style={style} />;
 }
 
-function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved }) {
+function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved, onZoneUpdated }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const drawingManagerRef = React.useRef(null);
   const shapesRef = React.useRef([]);
   const markersRef = React.useRef([]);
+  const nameMarkersRef = React.useRef([]);
   const zoneColors = { operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500" };
   const zoneIcons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
   const zoneTypeRef = React.useRef(zoneType);
@@ -875,14 +876,25 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
     if (!mapInstanceRef.current || !window.google) return;
     shapesRef.current.forEach(s=>{ if(s) s.setMap(null); });
     markersRef.current.forEach(m=>{ if(m) m.setMap(null); });
+    nameMarkersRef.current.forEach(m=>{ if(m) m.setMap(null); });
     shapesRef.current = [];
+    nameMarkersRef.current = [];
     zones.forEach((zone, idx) => {
       let shape = null, center = null;
       if (zone.shape==="circle" && zone.center) {
         shape = new window.google.maps.Circle({ map:mapInstanceRef.current, center:zone.center, radius:zone.radius||200, fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2, draggable:true, editable:true });
         center = {lat:zone.center.lat, lng:zone.center.lng};
-        shape.addListener("center_changed", ()=>{ const newCenter = shape.getCenter(); if (markersRef.current[idx]) markersRef.current[idx].setPosition(newCenter); zone.center = {lat:newCenter.lat(), lng:newCenter.lng()}; });
-        shape.addListener("radius_changed", ()=>{ zone.radius = shape.getRadius(); });
+        shape.addListener("center_changed", ()=>{ 
+          const newCenter = shape.getCenter(); 
+          if (markersRef.current[idx]) markersRef.current[idx].setPosition(newCenter);
+          if (nameMarkersRef.current[idx]) nameMarkersRef.current[idx].setPosition(newCenter);
+          zone.center = {lat:newCenter.lat(), lng:newCenter.lng()};
+          if(onZoneUpdated) onZoneUpdated(idx, {...zone, center:{lat:newCenter.lat(),lng:newCenter.lng()}});
+        });
+        shape.addListener("radius_changed", ()=>{ 
+          zone.radius = shape.getRadius(); 
+          if(onZoneUpdated) onZoneUpdated(idx, {...zone, radius:shape.getRadius()});
+        });
       } else if (zone.path && zone.path.length>0) {
         shape = new window.google.maps.Polygon({ map:mapInstanceRef.current, paths:zone.path, fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2, draggable:true, editable:true });
         const bounds = new window.google.maps.LatLngBounds();
@@ -895,6 +907,16 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
         const marker = new window.google.maps.Marker({ position:center, map:mapInstanceRef.current, label:{text:zoneIcons[zone.type], fontSize:"20px", fontWeight:"bold"}, icon:{path:window.google.maps.SymbolPath.CIRCLE, scale:0, fillOpacity:0, strokeOpacity:0}, zIndex:10 });
         markersRef.current[idx] = marker;
       } else { markersRef.current[idx] = null; }
+      // Label nome zona
+      if (center && zone.name) {
+        const nameMarker = new window.google.maps.Marker({
+          position: center, map: mapInstanceRef.current,
+          label: { text: zone.name, color: "#023047", fontSize: "11px", fontWeight: "700", fontFamily: "'DM Sans', sans-serif" },
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
+          zIndex: 9
+        });
+        nameMarkersRef.current[idx] = nameMarker;
+      }
     });
   }, [zones]);
   React.useEffect(() => {
@@ -3772,7 +3794,7 @@ function AdminApp({ user, onLogout, t }) {
               <button onClick={()=>setDrawingActive(true)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"12px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>✏️ Inizia a disegnare</button>
               <button onClick={async()=>{ try { await waitFB(); const {doc,setDoc}=window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()}); alert("✅ Zone salvate!"); } catch(e){ alert("Errore: "+e.message); } }} style={{width:"100%",background:`linear-gradient(90deg,${C.sunYellow},${C.warmOrange})`,border:"none",borderRadius:12,padding:"12px",color:C.deepBlue,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>💾 Salva zone su Firebase</button>
             </div>
-            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><ZoneMapEditor zones={visibleZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName} onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);setZoneName("");}}/></div>
+            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><ZoneMapEditor zones={visibleZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName} onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);setZoneName("");}} onZoneUpdated={(idx,updated)=>setSavedZones(prev=>prev.map((z,i)=>i===idx?updated:z))}/></div>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone ({savedZones.length})</p>
             <input placeholder="🔍 Cerca zona..." onChange={e=>{const v=e.target.value.toLowerCase(); const els=document.querySelectorAll('.zone-item'); els.forEach(el=>{el.style.display=el.dataset.name.toLowerCase().includes(v)?'block':'none';});}} style={{width:"100%",padding:"8px 12px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
             {savedZones.map((zone,i)=>(
