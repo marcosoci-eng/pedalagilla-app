@@ -1196,9 +1196,9 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             <button onClick={handleLogin} disabled={loading} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
               {loading?t('loginLoading'):t('loginBtn')}
             </button>
-            <button onClick={()=>{setMode("adminLogin");setError(null);}} style={{width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer"}}>
+            <a href="/admin" style={{display:"block",width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer",textAlign:"center",textDecoration:"none"}}>
               {t('adminAccess')}
-            </button>
+            </a>
           </>}
           {mode==="register"&&<>
             {[[t('nome'),nome,setNome,"text",t('nomePh')],[t('cognome'),cognome,setCognome,"text",t('cognomePh')],[t('email'),email,setEmail,"email",t('emailPlaceholder')],[t('telefono'),telefono,setTelefono,"tel",t('telefonoPh')]].map(([label,val,setter,type,ph])=>(
@@ -1360,6 +1360,8 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
         const lng = pos.coords.longitude;
         const zones = await getZones();
         const sostaZones = zones.filter(z => z.type === "sosta");
+        console.log(`🅿️ Zone sosta trovate: ${sostaZones.length}`, sostaZones.map(z=>z.name));
+        console.log(`📍 Posizione utente: ${lat}, ${lng}`);
         if (sostaZones.length === 0) { resolve({ok:true}); return; }
         const operativaZone = zones.find(z => z.type === "operativa");
         const dist = (lat1,lng1,lat2,lng2) => {
@@ -1369,13 +1371,18 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
         };
         if (operativaZone?.center) {
           const d = dist(lat,lng,operativaZone.center.lat,operativaZone.center.lng);
+          console.log(`🗺️ Distanza da area operativa: ${Math.round(d)}m (max: ${operativaZone.radius||25000}m)`);
           if (d > (operativaZone.radius||25000)) {
             resolve({ok:false, msg:"🚫 Sei fuori dall'area operativa!\n\nRientra nell'area del Lago Trasimeno e parcheggia in una zona 🅿️."});
             return;
           }
         }
-        // Raggio 500m per compensare imprecisione GPS
-        const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= Math.max(z.radius||300, 500));
+        // Controlla distanza da ogni zona sosta
+        sostaZones.forEach(z => {
+          if(z.center) console.log(`  📌 ${z.name}: ${Math.round(dist(lat,lng,z.center.lat,z.center.lng))}m (raggio: ${z.radius||300}m)`);
+        });
+        // Raggio minimo 1000m per compensare imprecisione GPS
+        const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= Math.max(z.radius||300, 1000));
         if (!inSosta) {
           resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nPorta la bici vicino a uno dei punti 🅿️ sulla mappa.\n\nAssistenza: +39 349 524 0422"});
           return;
