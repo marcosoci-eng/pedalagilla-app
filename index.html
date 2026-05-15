@@ -1278,7 +1278,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
+function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
@@ -1409,6 +1409,64 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
     } catch(e){console.error(e);}
     setUploading(false); onEnd(seconds,totalCost,bike.id);
   };
+  const rideMapRef = React.useRef(null);
+  const rideMapInstance = React.useRef(null);
+  const rideUserMarker = React.useRef(null);
+  const rideZonesDrawn = React.useRef(false);
+
+  // Inizializza mappa durante la corsa
+  React.useEffect(()=>{
+    if (!rideMapRef.current || rideMapInstance.current) return;
+    const tryInit = () => {
+      if (!window.google) { setTimeout(tryInit, 300); return; }
+      const map = new window.google.maps.Map(rideMapRef.current, {
+        center: {lat:43.15, lng:12.08}, zoom:15,
+        mapTypeId:"roadmap",
+        disableDefaultUI: true,
+        zoomControl: true,
+        gestureHandling:"greedy",
+        styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
+      });
+      rideMapInstance.current = map;
+    };
+    tryInit();
+  }, []);
+
+  // Aggiorna posizione utente sulla mappa durante corsa
+  React.useEffect(()=>{
+    if (!userPos || !rideMapInstance.current || !window.google) return;
+    // Marker utente
+    if (rideUserMarker.current) {
+      rideUserMarker.current.setPosition(userPos);
+    } else {
+      rideUserMarker.current = new window.google.maps.Marker({
+        position: userPos, map: rideMapInstance.current,
+        icon: {path:window.google.maps.SymbolPath.CIRCLE, scale:12, fillColor:"#219EBC", fillOpacity:1, strokeColor:"#ffffff", strokeWeight:3},
+        title:"Sei qui", zIndex:999, clickable:false
+      });
+      rideMapInstance.current.setCenter(userPos);
+    }
+    // Disegna zone sosta una sola volta
+    if (!rideZonesDrawn.current && window._clientZones?.length) {
+      rideZonesDrawn.current = true;
+      const zones = window._clientZones || [];
+      zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
+        new window.google.maps.Circle({
+          map: rideMapInstance.current, center: zone.center,
+          radius: zone.radius||300,
+          fillColor:"#2196F3", fillOpacity:0.2,
+          strokeColor:"#2196F3", strokeWeight:2, clickable:false
+        });
+        new window.google.maps.Marker({
+          position: zone.center, map: rideMapInstance.current,
+          label:{text:"🅿️",fontSize:"18px"},
+          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+          title: zone.name||"Parcheggio", clickable:false, zIndex:10
+        });
+      });
+    }
+  }, [userPos]);
+
   if(showEndFlow) return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:400,display:"flex",flexDirection:"column",overflowY:"auto"}}>
       <div style={{background:C.deepBlue,padding:"14px 22px"}}>
@@ -1442,36 +1500,49 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t }) {
   );
   return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:300,display:"flex",flexDirection:"column"}}>
-      <div style={{background:C.deepBlue,padding:"16px 22px"}}>
-        <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>{t('rideInProgress')}</p>
-        <h2 style={{color:C.white,fontSize:20,fontWeight:700,margin:"4px 0 0",fontFamily:"Lora"}}>{bike.id} · {bike.zone}</h2>
-      </div>
-      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
-        <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:24,padding:28,textAlign:"center",marginBottom:20,width:"100%"}}>
-          {paused&&<div style={{background:C.sunYellow,borderRadius:10,padding:"4px 14px",display:"inline-block",marginBottom:10}}><p style={{color:C.deepBlue,fontSize:11,...ds,fontWeight:700,margin:0}}>{t('ridePause')} — {isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`}</p></div>}
-          {cappedAtMax&&<div style={{background:C.blueGreen,borderRadius:10,padding:"4px 14px",display:"inline-block",marginBottom:10}}><p style={{color:C.white,fontSize:11,...ds,fontWeight:700,margin:0}}>🎉 Massimo giornaliero raggiunto!</p></div>}
-          <p style={{color:C.skyBlue,fontSize:12,margin:"0 0 6px",...ds,letterSpacing:2}}>{paused?t('ridePause'):t('rideInProgress')}</p>
-          <p style={{color:C.white,fontSize:48,fontWeight:700,margin:"0 0 12px",...ds,fontFamily:"monospace"}}>
+      {/* HEADER COMPATTO */}
+      <div style={{background:C.deepBlue,padding:"10px 16px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+        <div style={{flex:1}}>
+          <p style={{color:C.skyBlue,fontSize:9,margin:0,letterSpacing:2,...ds}}>{bike.id} · {paused?t('ridePause'):t('rideInProgress')}</p>
+          <p style={{color:C.white,fontSize:28,fontWeight:700,margin:0,...ds,fontFamily:"monospace",lineHeight:1.1}}>
             {paused?`${String(pauseMins).padStart(2,"0")}:${String(pauseSeconds%60).padStart(2,"0")}`:
               `${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`}
           </p>
-          <p style={{color:C.skyBlue,fontSize:12,margin:"0 0 4px",...ds}}>{t('totalCost')}</p>
-          <p style={{color:C.sunYellow,fontSize:34,fontWeight:700,margin:0,...ds}}>€{totalCost.toFixed(2)}</p>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,width:"100%",marginBottom:16}}>
-          {[[t('unlock'),`€${SBLOCCO.toFixed(2)}`],[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`],[t('zone'),bike.zone]].map(([k,v])=>(
-            <div key={k} style={{background:C.white,borderRadius:12,padding:"10px 14px",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-              <p style={{color:"#aaa",fontSize:10,...ds,margin:"0 0 2px"}}>{k}</p>
-              <p style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:700,margin:0}}>{v}</p>
-            </div>
+        <div style={{textAlign:"right"}}>
+          <p style={{color:C.skyBlue,fontSize:9,margin:0,...ds}}>Totale</p>
+          <p style={{color:C.sunYellow,fontSize:22,fontWeight:700,margin:0,...ds}}>€{totalCost.toFixed(2)}</p>
+        </div>
+        {paused&&<div style={{background:C.sunYellow,borderRadius:8,padding:"3px 10px"}}><p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,margin:0}}>PAUSA</p></div>}
+      </div>
+
+      {/* MAPPA GRANDE */}
+      <div style={{flex:1,position:"relative"}}>
+        <div ref={rideMapRef} style={{width:"100%",height:"100%"}}/>
+        {/* Label zona */}
+        <div style={{position:"absolute",top:8,left:8,background:"rgba(2,48,71,0.85)",borderRadius:10,padding:"4px 10px"}}>
+          <p style={{color:C.white,fontSize:11,...ds,margin:0,fontWeight:600}}>📍 {bike.zone}</p>
+        </div>
+        {/* Bottone centrami */}
+        <button onClick={()=>{ if(rideMapInstance.current&&userPos) rideMapInstance.current.setCenter(userPos); }}
+          style={{position:"absolute",top:8,right:8,background:"white",border:"none",borderRadius:10,padding:"6px 10px",fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.2)"}}>📍</button>
+      </div>
+
+      {/* BOTTONI IN BASSO */}
+      <div style={{padding:"10px 14px 16px",flexShrink:0,background:C.white,boxShadow:"0 -2px 12px rgba(2,48,71,0.08)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+          <button onClick={handlePauseToggle} style={{background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:12,padding:12,color:paused?C.white:C.deepBlue,fontSize:14,...ds,fontWeight:700,cursor:"pointer"}}>
+            {paused?t('resumeBtn'):t('pauseBtn')}
+          </button>
+          <button onClick={()=>setShowEndFlow(true)} style={{background:C.warmOrange,border:"none",borderRadius:12,padding:12,color:C.white,fontSize:14,...ds,fontWeight:700,cursor:"pointer"}}>
+            🏁 {t('endRide')}
+          </button>
+        </div>
+        <div style={{display:"flex",justifyContent:"center",gap:16}}>
+          {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
+            <p key={k} style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{k}: <span style={{color:C.deepBlue,fontWeight:600}}>{v}</span></p>
           ))}
         </div>
-        <button onClick={handlePauseToggle} style={{width:"100%",background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:14,color:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
-          {paused?t('resumeBtn'):t('pauseBtn')}
-        </button>
-        <button onClick={()=>setShowEndFlow(true)} style={{width:"100%",background:C.warmOrange,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
-          {t('endRide')}
-        </button>
       </div>
     </div>
   );
@@ -2560,7 +2631,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t} userPos={userPos}/>
             :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t}/>
         )}
 
