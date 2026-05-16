@@ -1445,24 +1445,22 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
     tryInit();
   }, []);
 
-  // Aggiorna posizione utente sulla mappa durante corsa
+  // Carica zone e disegnale sulla mappa corsa
   React.useEffect(()=>{
-    if (!userPos || !rideMapInstance.current || !window.google) return;
-    // Marker utente
-    if (rideUserMarker.current) {
-      rideUserMarker.current.setPosition(userPos);
-    } else {
-      rideUserMarker.current = new window.google.maps.Marker({
-        position: userPos, map: rideMapInstance.current,
-        icon: {path:window.google.maps.SymbolPath.CIRCLE, scale:12, fillColor:"#219EBC", fillOpacity:1, strokeColor:"#ffffff", strokeWeight:3},
-        title:"Sei qui", zIndex:999, clickable:false
-      });
-      rideMapInstance.current.setCenter(userPos);
-    }
-    // Disegna zone sosta una sola volta
-    if (!rideZonesDrawn.current && window._clientZones?.length) {
+    if (!rideMapInstance.current || !window.google || rideZonesDrawn.current) return;
+    const loadAndDraw = async () => {
+      let zones = window._clientZones || [];
+      // Se non ci sono zone in memoria le carica da Firebase
+      if (zones.length === 0) {
+        try {
+          await waitFB();
+          const {doc, getDoc} = window.firebaseFunctions;
+          const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
+          if (snap.exists()) zones = snap.data().zones || [];
+        } catch(e) {}
+      }
+      if (zones.length === 0) return;
       rideZonesDrawn.current = true;
-      const zones = window._clientZones || [];
       zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
         new window.google.maps.Circle({
           map: rideMapInstance.current, center: zone.center,
@@ -1476,11 +1474,33 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
           icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
           title: zone.name||"Parcheggio", clickable:false, zIndex:10
         });
+        // Nome zona
+        if (zone.name) new window.google.maps.Marker({
+          position: zone.center, map: rideMapInstance.current,
+          label:{text:zone.name,color:"#023047",fontSize:"10px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"},
+          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+          clickable:false, zIndex:9
+        });
       });
+    };
+    loadAndDraw();
+  }, [rideMapInstance.current]);
+
+  // Aggiorna posizione utente sulla mappa durante corsa
+  React.useEffect(()=>{
+    if (!userPos || !rideMapInstance.current || !window.google) return;
+    if (rideUserMarker.current) {
+      rideUserMarker.current.setPosition(userPos);
+    } else {
+      rideUserMarker.current = new window.google.maps.Marker({
+        position: userPos, map: rideMapInstance.current,
+        icon: {path:window.google.maps.SymbolPath.CIRCLE, scale:12, fillColor:"#219EBC", fillOpacity:1, strokeColor:"#ffffff", strokeWeight:3},
+        title:"Sei qui", zIndex:999, clickable:false
+      });
+      rideMapInstance.current.setCenter(userPos);
+      rideMapInstance.current.setZoom(16);
     }
   }, [userPos]);
-
-  if(showEndFlow) return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:400,display:"flex",flexDirection:"column",overflowY:"auto"}}>
       <div style={{background:C.deepBlue,padding:"14px 22px"}}>
         <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>TERMINA CORSA</p>
