@@ -682,7 +682,11 @@ const getBattColor = (b) => b>=80 ? C.blueGreen : b>=50 ? C.sunYellow : C.warmOr
 const getStatusColor = (s) => s==="Disponibile" ? C.blueGreen : C.warmOrange;
 const getRange = (battery) => Math.round((battery/100)*80);
 const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
-const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
+const waitFB = () => new Promise(r=>{ 
+  if(window.firebaseDb && window.firebaseFunctions) { r(); return; }
+  const check = setInterval(()=>{ if(window.firebaseDb && window.firebaseFunctions){ clearInterval(check); r(); }}, 100);
+  setTimeout(()=>{ clearInterval(check); r(); }, 5000);
+});
 const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
 
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], zones=[], userPos=null }) {
@@ -982,10 +986,81 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
 function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=false }) {
-  const cardRef = React.useRef(null);
-  const cardEl = React.useRef(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState(null);
+  const mapRef = React.useRef(null);
+  const [count, setCount] = React.useState(0);
+  React.useEffect(()=>{
+    const load = async () => {
+      try {
+        await waitFB();
+        const {collection, getDocs} = window.firebaseFunctions;
+        const snap = await getDocs(collection(window.firebaseDb,"appOpens"));
+        const points = snap.docs.map(d=>d.data()).filter(d=>d.lat&&d.lng);
+        setCount(points.length);
+        const tryInit = () => {
+          if (!window.google || !mapRef.current) { setTimeout(tryInit,300); return; }
+          const map = new window.google.maps.Map(mapRef.current,{
+            center:{lat:45,lng:12}, zoom:5, mapTypeId:"roadmap",
+            styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
+          });
+          // Marker per ogni apertura
+          points.forEach(p=>{
+            new window.google.maps.Circle({
+              map, center:{lat:p.lat,lng:p.lng},
+              radius:500, fillColor:"#FB8500", fillOpacity:0.5,
+              strokeColor:"#FB8500", strokeWeight:1, strokeOpacity:0.8
+            });
+          });
+          // Adatta bounds
+          if (points.length>0) {
+            const bounds = new window.google.maps.LatLngBounds();
+            points.forEach(p=>bounds.extend({lat:p.lat,lng:p.lng}));
+            map.fitBounds(bounds);
+          }
+        };
+        tryInit();
+      } catch(e){}
+    };
+    load();
+  },[]);
+  return(
+    <div>
+      <p style={{color:C.blueGreen,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>📱 {count} aperture registrate</p>
+      <div ref={mapRef} style={{width:"100%",height:220,borderRadius:12,overflow:"hidden",background:"#e8f4f8"}}/>
+    </div>
+  );
+}
+
+function ZoneItem({ zone, index, onSave, onDelete }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const [editName, setEditName] = React.useState(zone.name);
+  const [editRadius, setEditRadius] = React.useState(zone.radius||300);
+  const C2 = { deepBlue:"#023047", skyBlue:"#8ECAE6", blueGreen:"#219EBC", warmOrange:"#FB8500" };
+  const ds2 = { fontFamily:"'DM Sans', sans-serif" };
+  return(
+    <div className="zone-item" data-name={zone.name} style={{background:"white",borderRadius:14,marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",overflow:"hidden"}}>
+      <div style={{padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpanded(e=>!e)}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/>
+          <div>
+            <p style={{color:C2.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds2}}>{zone.name}</p>
+            <p style={{color:"#aaa",fontSize:11,...ds2,margin:"2px 0 0"}}>{zone.type} · {zone.shape}{zone.radius?` · ${Math.round(zone.radius)}m`:""}</p>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <span style={{color:"#ccc",fontSize:14,...ds2}}>{expanded?"▲":"▼"}</span>
+          <button onClick={e=>{e.stopPropagation();onDelete(index);}} style={{background:"#FB850015",border:"none",borderRadius:8,padding:"5px 10px",color:C2.warmOrange,fontSize:12,cursor:"pointer",...ds2}}>🗑️</button>
+        </div>
+      </div>
+      {expanded&&(
+        <div style={{padding:"0 14px 14px",borderTop:"1px solid #8ECAE630"}}>
+          <p style={{color:C2.deepBlue,fontSize:11,fontWeight:600,margin:"10px 0 4px",...ds2}}>Nome zona</p>
+          <input value={editName} onChange={e=>setEditName(e.target.value)}
+            style={{width:"100%",padding:"8px 12px",borderRadius:10,border:`1.5px solid ${C2.skyBlue}`,fontSize:13,fontFamily:"'DM Sans'",color:C2.deepBlue,marginBottom:8}}/>
+          {zone.shape==="circle"&&<>
+            <p style={{color:C2.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 4px",...ds2}}>Raggio (metri)</p>
+            <input type="number" value={editRadius} onChange={e=>setEditRadius(parseInt(e.target.value)||300)}
+              style={{width:"100%",padding:"8px 12px",borderRadius:10,border:`1.5px solid ${C2.skyBlue}`,fontSize:13,fontFamily:"'DM Sans'",color:C2.deepBlue,marginBottom:8}}/>
+            {zone.center&&<p style={{color:"#aaa",fontSize:11,...ds2,margin:"0 0 8px"}}>📍 {zone.center.lat?.toFixed(5)}, {zone.center.lng?.toFixed(5)}</p>}
           </>}
           <div style={{display:"flex",gap:8}}>
             <button onClick={()=>{ onSave(index,{...zone,name:editName,radius:editRadius}); setExpanded(false); }}
@@ -1002,81 +1077,82 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
   );
 }
 
-function AdminApp({ user, onLogout, t }) {
-  if (!t) t = (k) => k;
-  const [tab, setTab] = React.useState("dashboard");
-  const [bikes, setBikes] = React.useState(initBikes);
-  const [selBike, setSelBike] = React.useState(null);
-  const [filter, setFilter] = React.useState("Tutti");
-  const [mapFilter, setMapFilter] = React.useState("Tutti");
-  const [editNote, setEditNote] = React.useState("");
-  const [editChecks, setEditChecks] = React.useState({});
-  const [showBikeDetail, setShowBikeDetail] = React.useState(false);
-  const [incassiPeriod, setIncassiPeriod] = React.useState("oggi");
-  const [fbUsers, setFbUsers] = React.useState([]);
-  const [usersPage, setUsersPage] = React.useState(0);
-  const [userSearch, setUserSearch] = React.useState("");
-  const USERS_PER_PAGE = 10;
-  const [rides, setRides] = React.useState([]);
-  const [loadingUsers, setLoadingUsers] = React.useState(false);
-  const [selectedRide, setSelectedRide] = React.useState(null);
-  const [showTrack, setShowTrack] = React.useState(false);
-  const [zoneType, setZoneType] = React.useState("operativa");
-  const [drawingMode, setDrawingMode] = React.useState("circle");
-  const [drawingActive, setDrawingActive] = React.useState(false);
-  const [zoneName, setZoneName] = React.useState("");
-  const [savedZones, setSavedZones] = React.useState(DEFAULT_ZONES);
-  const [zonesLoaded, setZonesLoaded] = React.useState(false);
-  const [zoneFilters, setZoneFilters] = React.useState({operativa:true,sosta:true,lenta:true,fuori:true});
+function PromoAdmin() {
+  const [codes, setCodes] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showForm, setShowForm] = React.useState(false);
+  // Form fields
+  const [newCode, setNewCode] = React.useState("");
+  const [newType, setNewType] = React.useState("dipendente"); // dipendente | famiglia | hotel
+  const [newHotelOption, setNewHotelOption] = React.useState("scontata"); // scontata | cashback
+  const [newHotelName, setNewHotelName] = React.useState("");
+  const [newExpiry, setNewExpiry] = React.useState("2026-09-30");
+  const [newNoExpiry, setNewNoExpiry] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [formError, setFormError] = React.useState("");
 
-  React.useEffect(()=>{
-    const loadZones=async()=>{ try { await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const snap=await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()) setSavedZones(snap.data().zones||DEFAULT_ZONES); } catch(e){} setZonesLoaded(true); };
-    loadZones();
-  },[]);
-  React.useEffect(()=>{
-    if(!zonesLoaded) return;
-    const saveZones=async()=>{ try { await waitFB(); const {doc,setDoc}=window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()}); } catch(e){} };
-    saveZones();
-  },[savedZones]);
-
-  const today=new Date().toLocaleDateString("it-IT");
-  const todayRides=rides.filter(r=>r.date===today);
-  const monthRides=rides;
-  const todayIncassi=todayRides.filter(r=>r.status==="Completata").reduce((a,r)=>a+(r.cost||0),0);
-  const monthIncassi=monthRides.filter(r=>r.status==="Completata").reduce((a,r)=>a+(r.cost||0),0);
-  const available=bikes.filter(b=>b.status==="Disponibile").length;
-  const maint=bikes.filter(b=>b.status==="Manutenzione").length;
-  const low=bikes.filter(b=>b.battery<50).length;
-  const avg=Math.round(bikes.reduce((a,b)=>a+b.battery,0)/bikes.length);
-  const filteredBikes=filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>b.battery<50);
-  const mapBikes=mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
-  const visibleZones=savedZones.filter(z=>zoneFilters[z.type]);
-
-  const [bikesRealtime, setBikesRealtime] = React.useState({});
-
-  // Aggiorna lista bici admin da Firebase real-time
-  React.useEffect(()=>{
-    const load = async () => {
+  const loadCodes = async () => {
+    setLoading(true);
+    try {
       await waitFB();
-      const {collection, onSnapshot} = window.firebaseFunctions;
-      // MTB sulla mappa admin
-      onSnapshot(collection(window.firebaseDb,"mtbBikers"), snap=>{
-        window._adminMTBBikes = snap.docs.map(d=>({id:d.id,...d.data()})).filter(b=>b.lat&&b.lng);
-      });
-      onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
-        const positions = {};
-        const updatedBikes = [...initBikes];
-        snap.docs.forEach(d => {
-          const data = d.data();
-          positions[d.id] = data;
-          const normalizedId = 'PA-' + d.id.replace('PED','').padStart(3,'0');
-          const idx = updatedBikes.findIndex(b => b.id === normalizedId);
-          if (idx >= 0) {
-            updatedBikes[idx] = {
-              ...updatedBikes[idx],
-              battery: data.batteryPercent || data.battery || updatedBikes[idx].battery,
-              lat: data.lat || updatedBikes[idx].lat,
-              lng: data.lng || updatedBikes[idx].lng,
+      const {collection, getDocs} = window.firebaseFunctions;
+      const snap = await getDocs(collection(window.firebaseDb, "promoCodes"));
+      setCodes(snap.docs.map(d => ({id: d.id, ...d.data()})));
+    } catch(e) {}
+    setLoading(false);
+  };
+
+  React.useEffect(() => { loadCodes(); }, []);
+
+  const handleSave = async () => {
+    const code = newCode.trim().toUpperCase();
+    if (!code) { setFormError("Inserisci il codice"); return; }
+    if (newType === "hotel" && !newHotelName.trim()) { setFormError("Inserisci il nome dell'hotel"); return; }
+    setSaving(true); setFormError("");
+    try {
+      await waitFB();
+      const {doc, setDoc} = window.firebaseFunctions;
+      const data = {
+        type: newType,
+        active: true,
+        createdAt: new Date().toISOString(),
+        expiresAt: newNoExpiry ? null : new Date(newExpiry).toISOString(),
+        totalUses: 0,
+      };
+      if (newType === "hotel") {
+        data.hotelOption = newHotelOption;
+        data.hotelName = newHotelName.trim();
+        data.totalCashback = 0;
+      }
+      await setDoc(doc(window.firebaseDb, "promoCodes", code), data);
+      setShowForm(false);
+      setNewCode(""); setNewHotelName(""); setNewType("dipendente"); setNewNoExpiry(false);
+      loadCodes();
+    } catch(e) { setFormError("Errore: " + e.message); }
+    setSaving(false);
+  };
+
+  const toggleActive = async (code, current) => {
+    try {
+      await waitFB();
+      const {doc, updateDoc} = window.firebaseFunctions;
+      await updateDoc(doc(window.firebaseDb, "promoCodes", code), {active: !current});
+      loadCodes();
+    } catch(e) {}
+  };
+
+  const deleteCode = async (code) => {
+    if (!window.confirm(`Eliminare il codice ${code}?`)) return;
+    try {
+      await waitFB();
+      const {doc} = window.firebaseFunctions;
+      // Firestore SDK non ha deleteDoc nel bundle CDN v10 compat — usiamo updateDoc con active:false
+      const {updateDoc} = window.firebaseFunctions;
+      await updateDoc(doc(window.firebaseDb, "promoCodes", code), {active: false, deleted: true});
+      loadCodes();
+    } catch(e) {}
+  };
+
   const typeLabel = (c) => {
     if (c.type === "dipendente") return "👷 Dipendente";
     if (c.type === "famiglia") return "👨‍👩‍👧 Famiglia";
@@ -1394,53 +1470,6 @@ function HeatmapView() {
   );
 }
 
-function ZoneItem({ zone, index, onSave, onDelete }) {
-  const [expanded, setExpanded] = React.useState(false);
-  const [editName, setEditName] = React.useState(zone.name);
-  const [editRadius, setEditRadius] = React.useState(zone.radius||300);
-  const C2 = { deepBlue:"#023047", skyBlue:"#8ECAE6", blueGreen:"#219EBC", warmOrange:"#FB8500" };
-  const ds2 = { fontFamily:"'DM Sans', sans-serif" };
-  return(
-    <div className="zone-item" data-name={zone.name} style={{background:"white",borderRadius:14,marginBottom:8,boxShadow:"0 2px 8px rgba(2,48,71,0.07)",overflow:"hidden"}}>
-      <div style={{padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpanded(e=>!e)}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:12,height:12,borderRadius:3,background:zone.color,flexShrink:0}}/>
-          <div>
-            <p style={{color:C2.deepBlue,fontSize:13,fontWeight:600,margin:0,...ds2}}>{zone.name}</p>
-            <p style={{color:"#aaa",fontSize:11,...ds2,margin:"2px 0 0"}}>{zone.type} · {zone.shape}{zone.radius?` · ${Math.round(zone.radius)}m`:""}</p>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <span style={{color:"#ccc",fontSize:14,...ds2}}>{expanded?"▲":"▼"}</span>
-          <button onClick={e=>{e.stopPropagation();onDelete(index);}} style={{background:"#FB850015",border:"none",borderRadius:8,padding:"5px 10px",color:C2.warmOrange,fontSize:12,cursor:"pointer",...ds2}}>🗑️</button>
-        </div>
-      </div>
-      {expanded&&(
-        <div style={{padding:"0 14px 14px",borderTop:"1px solid #8ECAE630"}}>
-          <p style={{color:C2.deepBlue,fontSize:11,fontWeight:600,margin:"10px 0 4px",...ds2}}>Nome zona</p>
-          <input value={editName} onChange={e=>setEditName(e.target.value)}
-            style={{width:"100%",padding:"8px 12px",borderRadius:10,border:`1.5px solid ${C2.skyBlue}`,fontSize:13,fontFamily:"'DM Sans'",color:C2.deepBlue,marginBottom:8}}/>
-          {zone.shape==="circle"&&<>
-            <p style={{color:C2.deepBlue,fontSize:11,fontWeight:600,margin:"0 0 4px",...ds2}}>Raggio (metri)</p>
-            <input type="number" value={editRadius} onChange={e=>setEditRadius(parseInt(e.target.value)||300)}
-              style={{width:"100%",padding:"8px 12px",borderRadius:10,border:`1.5px solid ${C2.skyBlue}`,fontSize:13,fontFamily:"'DM Sans'",color:C2.deepBlue,marginBottom:8}}/>
-            {zone.center&&<p style={{color:"#aaa",fontSize:11,...ds2,margin:"0 0 8px"}}>📍 {zone.center.lat?.toFixed(5)}, {zone.center.lng?.toFixed(5)}</p>}
-          </>}
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>{ onSave(index,{...zone,name:editName,radius:editRadius}); setExpanded(false); }}
-              style={{flex:1,background:C2.blueGreen,border:"none",borderRadius:10,padding:"8px",color:"white",fontSize:12,...ds2,fontWeight:700,cursor:"pointer"}}>
-              💾 Salva
-            </button>
-            <button onClick={()=>setExpanded(false)} style={{background:"#8ECAE620",border:"none",borderRadius:10,padding:"8px 14px",color:C2.deepBlue,fontSize:12,...ds2,cursor:"pointer"}}>
-              Annulla
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function AdminApp({ user, onLogout, t }) {
   if (!t) t = (k) => k;
   const [tab, setTab] = React.useState("dashboard");
@@ -1624,6 +1653,28 @@ function AdminApp({ user, onLogout, t }) {
                   <div key={i} style={{background:C.white,borderRadius:12,padding:"10px 8px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:16,marginBottom:2}}>{icon}</div><div style={{color,fontSize:12,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:9,...ds}}>{label}</div></div>
                 ))}
               </div>
+              {/* Libera bici se bloccata */}
+              {selBike.inUse&&(
+                <button onClick={async()=>{
+                  if(!window.confirm(`Liberare ${selBike.id}? La corsa attiva verrà terminata forzatamente.`)) return;
+                  try {
+                    await waitFB();
+                    const {doc,setDoc,collection,addDoc,getDocs,query,where}=window.firebaseFunctions;
+                    // Libera bikesStatus
+                    await setDoc(doc(window.firebaseDb,"bikesStatus",selBike.id),{inUse:false,userId:null,updatedAt:new Date().toISOString()},{merge:true});
+                    // Chiudi corsa attiva se esiste
+                    const ridesSnap=await getDocs(query(collection(window.firebaseDb,"rides"),where("bikeId","==",selBike.id),where("status","==","In corso")));
+                    ridesSnap.forEach(async d=>await d.ref.update({status:"Terminata da admin",endTime:new Date().toISOString()}));
+                    // Manda lock IoT
+                    const pedId='PED'+selBike.id.replace('PA-','').padStart(3,'0');
+                    await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
+                    await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date().toISOString()});
+                    alert(`✅ ${selBike.id} liberata!`);
+                  } catch(e){alert("Errore: "+e.message);}
+                }} style={{width:"100%",background:`${C.warmOrange}15`,border:`1.5px solid ${C.warmOrange}`,borderRadius:12,padding:11,color:C.warmOrange,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
+                  🔓 Libera bici (in uso da utente)
+                </button>
+              )}
               {/* Badge online + link Maps + suona */}
               <div style={{display:"flex",gap:8,marginBottom:8}}>
                 <div style={{background:selBike.online?`${C.blueGreen}20`:`${C.warmOrange}20`,border:`1px solid ${selBike.online?C.blueGreen:C.warmOrange}`,borderRadius:10,padding:"8px 14px",display:"flex",alignItems:"center",gap:6}}>
@@ -2011,85 +2062,48 @@ function AdminApp({ user, onLogout, t }) {
   );
 }
 
+
 function Main() {
   const [user, setUser] = React.useState(null);
-  const [lang, setLang] = React.useState(() => {
-    const l = navigator.language?.slice(0,2);
-    return LANG_LIST.includes(l) ? l : 'en';
-  });
-  const [installPrompt, setInstallPrompt] = React.useState(null);
-  const [showInstallBanner, setShowInstallBanner] = React.useState(false);
-  const [isIOS, setIsIOS] = React.useState(false);
-
-  React.useEffect(()=>{
-    const isIOSDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isInStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-    setIsIOS(isIOSDevice);
-    if (!isInStandalone) setShowInstallBanner(true);
-    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  },[]);
-
+  const [lang, setLang] = React.useState('it');
   const t = (k) => (TRANSLATIONS[lang] || TRANSLATIONS.en)[k] || k;
-  const handleLogin=(u)=>setUser(u);
   const handleLogout=()=>{ if(window.firebaseAuth) window.firebaseFunctions.signOut(window.firebaseAuth).catch(()=>{}); setUser(null); };
 
-  const installBanner = showInstallBanner && (
-    <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 -4px 20px rgba(2,48,71,0.5)"}}>
-      <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:44,height:44,borderRadius:10,objectFit:"contain",background:"white",padding:2}} alt=""/>
-      <div style={{flex:1}}>
-        <p style={{color:C.white,fontSize:14,fontWeight:700,margin:0,...ds}}>Installa PedalAgilla</p>
-        <p style={{color:C.skyBlue,fontSize:12,margin:0,...ds}}>
-          {isIOS ? "Tocca ⎋ → 'Aggiungi a schermata Home'" : "Aggiungi alla schermata Home per un accesso rapido"}
-        </p>
-      </div>
-      {!isIOS && installPrompt && (
-        <button onClick={async()=>{ installPrompt.prompt(); await installPrompt.userChoice; setShowInstallBanner(false); }}
-          style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-          Installa
-        </button>
-      )}
-      <button onClick={()=>setShowInstallBanner(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.5)",fontSize:22,cursor:"pointer",padding:"0 4px",flexShrink:0}}>✕</button>
+  // Login admin diretto
+  if (!user) return (
+    <div style={{minHeight:"100vh",background:`linear-gradient(160deg,#023047 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <AdminLogin onLogin={setUser}/>
     </div>
   );
-
-  if(!user) return <>{installBanner}<AuthScreen onLogin={handleLogin} lang={lang} setLang={setLang} t={t}/></>;
-  if(user.type==="admin") return <AdminApp user={user} onLogout={handleLogout} t={t}/>;
-  return <>{installBanner}<ClienteApp user={user} onLogout={handleLogout} lang={lang} setLang={setLang} t={t}/></>;
+  return <AdminApp user={user} onLogout={handleLogout} t={t}/>;
 }
-
-ReactDOM.createRoot(document.getElementById('root')).render(COMING_SOON ? <ComingSoonScreen/> : <Main/>);
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
-    });
-  }
-</script>
-</body>
-</html>
 
 function AdminLogin({ onLogin }) {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const C2 = C; const ds2 = ds;
+  const C2 = { deepBlue:"#023047", skyBlue:"#8ECAE6", blueGreen:"#219EBC", white:"#ffffff", bgLight:"#F5F9FB" };
+  const ds2 = {fontFamily:"'DM Sans',sans-serif"};
+
   const handleLogin = async () => {
     if (!email||!password) { setError("Inserisci email e password"); return; }
     setLoading(true); setError("");
     try {
+      await waitFB();
       const {signInWithEmailAndPassword, doc, getDoc} = window.firebaseFunctions;
       const cred = await signInWithEmailAndPassword(window.firebaseAuth, email, password);
       const snap = await getDoc(doc(window.firebaseDb, "users", cred.user.uid));
       const data = snap.data();
-      if (data?.type !== "admin") { await window.firebaseFunctions.signOut(window.firebaseAuth); setError("Accesso non autorizzato"); setLoading(false); return; }
+      if (data?.type !== "admin") {
+        await window.firebaseFunctions.signOut(window.firebaseAuth);
+        setError("Accesso non autorizzato"); setLoading(false); return;
+      }
       onLogin({type:"admin", nome:data.nome||"Admin", email:data.email||email, uid:cred.user.uid});
     } catch(e) { setError("Email o password errati"); }
     setLoading(false);
   };
+
   return (
     <div style={{width:360,background:C2.bgLight,borderRadius:32,border:`5px solid ${C2.deepBlue}`,overflow:"hidden",boxShadow:"0 40px 80px rgba(2,48,71,0.5)"}}>
       <div style={{background:C2.deepBlue,padding:"28px 24px",textAlign:"center"}}>
@@ -2106,24 +2120,12 @@ function AdminLogin({ onLogin }) {
           style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C2.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C2.deepBlue,marginBottom:12}}/>
         {error && <p style={{color:"#FB8500",fontSize:12,margin:"0 0 10px",...ds2}}>⚠️ {error}</p>}
         <button onClick={handleLogin} disabled={loading}
-          style={{width:"100%",background:`linear-gradient(90deg,${C2.blueGreen},${C2.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C2.white,fontSize:15,...ds2,fontWeight:700,cursor:"pointer"}}>
+          style={{width:"100%",background:`linear-gradient(90deg,#219EBC,#023047)`,border:"none",borderRadius:14,padding:15,color:C2.white,fontSize:15,...ds2,fontWeight:700,cursor:"pointer"}}>
           {loading ? "⏳ Accesso..." : "Accedi come Admin 🔐"}
         </button>
       </div>
     </div>
   );
-}
-
-function Main() {
-  const [user, setUser] = React.useState(null);
-  const t = (k) => (TRANSLATIONS['it'] || TRANSLATIONS.en)[k] || k;
-  const handleLogout=()=>{ if(window.firebaseAuth) window.firebaseFunctions.signOut(window.firebaseAuth).catch(()=>{}); setUser(null); };
-  if (!user) return (
-    <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <AdminLogin onLogin={setUser}/>
-    </div>
-  );
-  return <AdminApp user={user} onLogout={handleLogout} t={t}/>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Main/>);
