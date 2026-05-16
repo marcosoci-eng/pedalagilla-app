@@ -1441,50 +1441,43 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       rideMapInstance.current = map;
+      // Carica zone subito dopo init mappa
+      const loadZones = async () => {
+        let zones = window._clientZones || [];
+        if (zones.length === 0) {
+          try {
+            await waitFB();
+            const {doc, getDoc} = window.firebaseFunctions;
+            const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
+            if (snap.exists()) zones = snap.data().zones || [];
+          } catch(e) {}
+        }
+        zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
+          new window.google.maps.Circle({
+            map, center: zone.center,
+            radius: Math.max(zone.radius||300, 200),
+            fillColor:"#2196F3", fillOpacity:0.25,
+            strokeColor:"#2196F3", strokeWeight:2.5, clickable:false
+          });
+          new window.google.maps.Marker({
+            position: zone.center, map,
+            label:{text:"🅿️", fontSize:"20px"},
+            icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+            clickable:false, zIndex:10
+          });
+          if(zone.name) new window.google.maps.Marker({
+            position: zone.center, map,
+            label:{text:zone.name,color:"#023047",fontSize:"11px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"},
+            icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+            clickable:false, zIndex:9
+          });
+        });
+        rideZonesDrawn.current = true;
+      };
+      loadZones();
     };
     tryInit();
   }, []);
-
-  // Carica zone e disegnale sulla mappa corsa
-  React.useEffect(()=>{
-    if (!rideMapInstance.current || !window.google || rideZonesDrawn.current) return;
-    const loadAndDraw = async () => {
-      let zones = window._clientZones || [];
-      // Se non ci sono zone in memoria le carica da Firebase
-      if (zones.length === 0) {
-        try {
-          await waitFB();
-          const {doc, getDoc} = window.firebaseFunctions;
-          const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
-          if (snap.exists()) zones = snap.data().zones || [];
-        } catch(e) {}
-      }
-      if (zones.length === 0) return;
-      rideZonesDrawn.current = true;
-      zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
-        new window.google.maps.Circle({
-          map: rideMapInstance.current, center: zone.center,
-          radius: zone.radius||300,
-          fillColor:"#2196F3", fillOpacity:0.2,
-          strokeColor:"#2196F3", strokeWeight:2, clickable:false
-        });
-        new window.google.maps.Marker({
-          position: zone.center, map: rideMapInstance.current,
-          label:{text:"🅿️",fontSize:"18px"},
-          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
-          title: zone.name||"Parcheggio", clickable:false, zIndex:10
-        });
-        // Nome zona
-        if (zone.name) new window.google.maps.Marker({
-          position: zone.center, map: rideMapInstance.current,
-          label:{text:zone.name,color:"#023047",fontSize:"10px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"},
-          icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
-          clickable:false, zIndex:9
-        });
-      });
-    };
-    loadAndDraw();
-  }, [rideMapInstance.current]);
 
   // Aggiorna posizione utente sulla mappa durante corsa
   React.useEffect(()=>{
