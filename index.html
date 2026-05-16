@@ -682,7 +682,11 @@ const getBattColor = (b) => b>=80 ? C.blueGreen : b>=50 ? C.sunYellow : C.warmOr
 const getStatusColor = (s) => s==="Disponibile" ? C.blueGreen : C.warmOrange;
 const getRange = (battery) => Math.round((battery/100)*80);
 const css = `.card{transition:all 0.2s;cursor:pointer}.card:hover{transform:translateY(-2px)}.btn{transition:all 0.15s;cursor:pointer}.btn:active{transform:scale(0.97)}@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.slide{animation:su 0.3s ease}`;
-const waitFB = () => new Promise(r=>{ if(window.firebaseReady) r(); else window.addEventListener("firebaseReady",r); });
+const waitFB = () => new Promise(r=>{ 
+  if(window.firebaseDb && window.firebaseFunctions) { r(); return; }
+  const check = setInterval(()=>{ if(window.firebaseDb && window.firebaseFunctions){ clearInterval(check); r(); }}, 100);
+  setTimeout(()=>{ clearInterval(check); r(); }, 5000); // max 5 secondi poi continua
+});
 const getUrlBike = () => { const params = new URLSearchParams(window.location.search); return params.get("bike"); };
 
 function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], zones=[], userPos=null }) {
