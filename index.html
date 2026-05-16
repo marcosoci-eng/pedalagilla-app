@@ -2606,7 +2606,10 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         sendBikeCommand(bike.id, 'gps_high'),
         setBikeInUse(bike.id, true),
       ]))).catch(e=>console.error('Errore comandi IoT:', e));
-    } catch(e){console.error(e); setConfirmed(selectedBikes.length>0?selectedBikes:[selectedBike]);}=(secs,cost,bikeId)=>{
+    } catch(e){console.error(e); setConfirmed(selectedBikes.length>0?selectedBikes:[selectedBike]);}
+  };
+
+  const handleEndRide=(secs,cost,bikeId)=>{
     sendBikeCommand(bikeId, 'lock');
     sendBikeCommand(bikeId, 'gps_normal'); // Ripristina frequenza normale
     setBikeInUse(bikeId, false);
