@@ -2538,14 +2538,13 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       }
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
-      // Sblocca tutte le bici e attiva GPS alta frequenza
-      for(const bike of bks) {
-        await sendBikeCommand(bike.id, 'unlock');
-        await sendBikeCommand(bike.id, 'gps_high');
-        await setBikeInUse(bike.id, true);
-      }
-    } catch(e){console.error(e);}
-    setRiding(true);
+      setRiding(true); // Mostra timer SUBITO senza aspettare i comandi IoT
+      // Sblocca tutte le bici in parallelo in background
+      Promise.all(bks.map(bike => Promise.all([
+        sendBikeCommand(bike.id, 'unlock'),
+        sendBikeCommand(bike.id, 'gps_high'),
+        setBikeInUse(bike.id, true),
+      ]))).catch(e=>console.error('Errore comandi IoT:', e));
   };
 
   // ── COMANDI IoT ──
@@ -2599,10 +2598,14 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       }
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
-    } catch(e){console.error(e); setConfirmed(selectedBikes.length>0?selectedBikes:[selectedBike]);}
-  };
-
-  const handleEndRide=(secs,cost,bikeId)=>{
+      setRiding(true); // Mostra timer SUBITO
+      // Comandi IoT in parallelo in background
+      Promise.all(bks.map(bike => Promise.all([
+        sendBikeCommand(bike.id, 'unlock'),
+        sendBikeCommand(bike.id, 'gps_high'),
+        setBikeInUse(bike.id, true),
+      ]))).catch(e=>console.error('Errore comandi IoT:', e));
+    } catch(e){console.error(e); setConfirmed(selectedBikes.length>0?selectedBikes:[selectedBike]);}=(secs,cost,bikeId)=>{
     sendBikeCommand(bikeId, 'lock');
     sendBikeCommand(bikeId, 'gps_normal'); // Ripristina frequenza normale
     setBikeInUse(bikeId, false);
