@@ -1441,22 +1441,13 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       rideMapInstance.current = map;
-      // Carica zone con retry — aspetta che Firebase sia pronto
-      const loadZones = async (attempt=0) => {
-        let zones = window._clientZones || [];
-        if (zones.length === 0 && attempt < 10) {
-          try {
-            if (!window.firebaseDb || !window.firebaseFunctions) {
-              setTimeout(()=>loadZones(attempt+1), 500);
-              return;
-            }
-            const {doc, getDoc} = window.firebaseFunctions;
-            const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
-            if (snap.exists()) zones = snap.data().zones || [];
-            window._clientZones = zones; // salva per uso futuro
-          } catch(e) { setTimeout(()=>loadZones(attempt+1), 500); return; }
+      // Disegna zone parcheggio — riprova ogni 300ms finché non sono disponibili
+      const drawParkingZones = (attempt=0) => {
+        const zones = window._clientZones || [];
+        if (zones.length === 0 && attempt < 20) { 
+          setTimeout(()=>drawParkingZones(attempt+1), 300); 
+          return; 
         }
-        if (zones.length === 0 && attempt < 10) { setTimeout(()=>loadZones(attempt+1), 500); return; }
         zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
           new window.google.maps.Circle({
             map, center: zone.center,
@@ -1479,7 +1470,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         });
         rideZonesDrawn.current = true;
       };
-      loadZones();
+      drawParkingZones();
     };
     tryInit();
   }, []);
@@ -2362,7 +2353,19 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   },[]);
 
   React.useEffect(()=>{
-    const load=async()=>{ try { await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const snap=await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()) setClientZones(snap.data().zones||[]); else setClientZones(DEFAULT_ZONES); } catch(e){ setClientZones(DEFAULT_ZONES); } };
+    const load=async()=>{ 
+      try { 
+        await waitFB(); 
+        const {doc,getDoc}=window.firebaseFunctions; 
+        const snap=await getDoc(doc(window.firebaseDb,"config","zones")); 
+        const zones = snap.exists() ? (snap.data().zones||[]) : DEFAULT_ZONES;
+        setClientZones(zones); 
+        window._clientZones = zones; // Disponibile subito per RideTimer
+      } catch(e){ 
+        setClientZones(DEFAULT_ZONES); 
+        window._clientZones = DEFAULT_ZONES;
+      } 
+    };
     load();
   },[]);
 
