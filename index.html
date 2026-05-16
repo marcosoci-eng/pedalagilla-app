@@ -1501,6 +1501,8 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       rideMapInstance.current.setZoom(16);
     }
   }, [userPos]);
+
+  if(showEndFlow) return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:400,display:"flex",flexDirection:"column",overflowY:"auto"}}>
       <div style={{background:C.deepBlue,padding:"14px 22px"}}>
         <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>TERMINA CORSA</p>
