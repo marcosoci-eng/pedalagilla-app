@@ -1340,7 +1340,24 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
   const totalCost=Math.min(rideCost+pauseCost, TARIFFA_GIORNATA);
   const cappedAtMax = !isGiornata && totalCost >= TARIFFA_GIORNATA;
-  const handleParkPhoto=(e)=>{ const file=e.target.files[0]; if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);} };
+  const handleParkPhoto=(e)=>{ 
+    const file=e.target.files[0]; 
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const MAX=1200; let w=img.width, h=img.height;
+        if(w>MAX){h=Math.round(h*MAX/w);w=MAX;} if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        canvas.toBlob(blob=>{setParkPhoto(blob);setParkPreview(URL.createObjectURL(blob));},'image/jpeg',0.75);
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
   const handleEndConfirm=async()=>{
     if(!parkPhoto){alert("📸");return;}
     // Controlla se la posizione attuale è in una zona sosta - OBBLIGATORIO
@@ -1592,7 +1609,24 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
   const activeBikes=bikes.filter(b=>!completedBikes.includes(b.id));
   const totalCost=Math.min((costPerBike+pauseCost), TARIFFA_GIORNATA)*activeBikes.length;
 
-  const handleParkPhoto=(e)=>{ const file=e.target.files[0]; if(file){setParkPhoto(file);const r=new FileReader();r.onload=ev=>setParkPreview(ev.target.result);r.readAsDataURL(file);} };
+  const handleParkPhoto=(e)=>{ 
+    const file=e.target.files[0]; 
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        const MAX=1200; let w=img.width, h=img.height;
+        if(w>MAX){h=Math.round(h*MAX/w);w=MAX;} if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        canvas.toBlob(blob=>{setParkPhoto(blob);setParkPreview(URL.createObjectURL(blob));},'image/jpeg',0.75);
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
   const startEndFlow=(bike)=>{ setEndingBike(bike);setShowEndFlow(true);setParkPhoto(null);setParkPreview(null); };
 
   const handleEndConfirm=async()=>{
