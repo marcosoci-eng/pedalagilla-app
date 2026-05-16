@@ -1441,17 +1441,22 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       rideMapInstance.current = map;
-      // Carica zone subito dopo init mappa
-      const loadZones = async () => {
+      // Carica zone con retry — aspetta che Firebase sia pronto
+      const loadZones = async (attempt=0) => {
         let zones = window._clientZones || [];
-        if (zones.length === 0) {
+        if (zones.length === 0 && attempt < 10) {
           try {
-            await waitFB();
+            if (!window.firebaseDb || !window.firebaseFunctions) {
+              setTimeout(()=>loadZones(attempt+1), 500);
+              return;
+            }
             const {doc, getDoc} = window.firebaseFunctions;
             const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
             if (snap.exists()) zones = snap.data().zones || [];
-          } catch(e) {}
+            window._clientZones = zones; // salva per uso futuro
+          } catch(e) { setTimeout(()=>loadZones(attempt+1), 500); return; }
         }
+        if (zones.length === 0 && attempt < 10) { setTimeout(()=>loadZones(attempt+1), 500); return; }
         zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
           new window.google.maps.Circle({
             map, center: zone.center,
@@ -2560,9 +2565,10 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   // ── COMANDI IoT ──
   const sendBikeCommand = async (bikeId, type) => {
     try {
-      await waitFB();
+      // Se Firebase già pronto non aspettare
+      if (!window.firebaseDb || !window.firebaseFunctions) await waitFB();
       const {collection, addDoc} = window.firebaseFunctions;
-      const pedId = bikeId.replace('PA-', 'PED');
+      const pedId = 'PED' + bikeId.replace('PA-','').padStart(3,'0');
       const cmdRef = collection(window.firebaseDb, 'bikes', pedId, 'commands');
       const result = await addDoc(cmdRef, {
         type, status: 'pending', createdAt: new Date().toISOString()
@@ -2570,7 +2576,6 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       console.log(`✅ Comando ${type} inviato a ${pedId}, doc:`, result.id);
     } catch(e) {
       console.error('❌ Errore comando IoT:', e.code, e.message);
-      alert(`Errore sblocco: ${e.message}`);
     }
   };
 
