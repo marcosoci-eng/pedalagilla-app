@@ -1394,12 +1394,8 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             return;
           }
         }
-        // Controlla distanza da ogni zona sosta
-        sostaZones.forEach(z => {
-          if(z.center) console.log(`  📌 ${z.name}: ${Math.round(dist(lat,lng,z.center.lat,z.center.lng))}m (raggio: ${z.radius||300}m)`);
-        });
-        // Raggio minimo 1000m per compensare imprecisione GPS
-        const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= Math.max(z.radius||300, 1000));
+        // Raggio minimo 200m per compensare imprecisione GPS
+        const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= Math.max(z.radius||300, 200));
         if (!inSosta) {
           resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nPorta la bici vicino a uno dei punti 🅿️ sulla mappa.\n\nAssistenza: +39 349 524 0422"});
           return;
@@ -1533,29 +1529,27 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         {paused&&<div style={{background:C.sunYellow,borderRadius:8,padding:"3px 10px"}}><p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,margin:0}}>PAUSA</p></div>}
       </div>
 
-      {/* MAPPA GRANDE */}
-      <div style={{flex:1,position:"relative"}}>
+      {/* MAPPA */}
+      <div style={{flex:1,position:"relative",minHeight:0}}>
         <div ref={rideMapRef} style={{width:"100%",height:"100%"}}/>
-        {/* Label zona */}
         <div style={{position:"absolute",top:8,left:8,background:"rgba(2,48,71,0.85)",borderRadius:10,padding:"4px 10px"}}>
           <p style={{color:C.white,fontSize:11,...ds,margin:0,fontWeight:600}}>📍 {bike.zone}</p>
         </div>
-        {/* Bottone centrami */}
         <button onClick={()=>{ if(rideMapInstance.current&&userPos) rideMapInstance.current.setCenter(userPos); }}
           style={{position:"absolute",top:8,right:8,background:"white",border:"none",borderRadius:10,padding:"6px 10px",fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.2)"}}>📍</button>
       </div>
 
-      {/* BOTTONI IN BASSO */}
-      <div style={{padding:"10px 14px 16px",flexShrink:0,background:C.white,boxShadow:"0 -2px 12px rgba(2,48,71,0.08)"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-          <button onClick={handlePauseToggle} style={{background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:12,padding:12,color:paused?C.white:C.deepBlue,fontSize:14,...ds,fontWeight:700,cursor:"pointer"}}>
-            {paused?t('resumeBtn'):t('pauseBtn')}
+      {/* BOTTONI IN BASSO — più spazio e più grandi */}
+      <div style={{padding:"12px 14px 20px",flexShrink:0,background:C.white,boxShadow:"0 -2px 12px rgba(2,48,71,0.08)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:6}}>
+          <button onClick={handlePauseToggle} style={{background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:"16px 8px",color:paused?C.white:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+            {paused?`▶️ ${t('resumeBtn')}`:`⏸️ ${t('pauseBtn')}`}
           </button>
-          <button onClick={()=>setShowEndFlow(true)} style={{background:C.warmOrange,border:"none",borderRadius:12,padding:12,color:C.white,fontSize:14,...ds,fontWeight:700,cursor:"pointer"}}>
+          <button onClick={()=>setShowEndFlow(true)} style={{background:C.warmOrange,border:"none",borderRadius:14,padding:"16px 8px",color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
             🏁 {t('endRide')}
           </button>
         </div>
-        <div style={{display:"flex",justifyContent:"center",gap:16}}>
+        <div style={{display:"flex",justifyContent:"center",gap:20}}>
           {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
             <p key={k} style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{k}: <span style={{color:C.deepBlue,fontWeight:600}}>{v}</span></p>
           ))}
