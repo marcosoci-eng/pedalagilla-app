@@ -1445,36 +1445,6 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       rideMapInstance.current = map;
-      // Disegna zone parcheggio — riprova ogni 300ms finché non sono disponibili
-      const drawParkingZones = (attempt=0) => {
-        const zones = window._clientZones || [];
-        if (zones.length === 0 && attempt < 20) { 
-          setTimeout(()=>drawParkingZones(attempt+1), 300); 
-          return; 
-        }
-        zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
-          new window.google.maps.Circle({
-            map, center: zone.center,
-            radius: Math.max(zone.radius||300, 200),
-            fillColor:"#2196F3", fillOpacity:0.25,
-            strokeColor:"#2196F3", strokeWeight:2.5, clickable:false
-          });
-          new window.google.maps.Marker({
-            position: zone.center, map,
-            label:{text:"🅿️", fontSize:"20px"},
-            icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
-            clickable:false, zIndex:10
-          });
-          if(zone.name) new window.google.maps.Marker({
-            position: zone.center, map,
-            label:{text:zone.name,color:"#023047",fontSize:"11px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"},
-            icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
-            clickable:false, zIndex:9
-          });
-        });
-        rideZonesDrawn.current = true;
-      };
-      drawParkingZones();
     };
     tryInit();
   }, []);
@@ -1492,6 +1462,33 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       });
       rideMapInstance.current.setCenter(userPos);
       rideMapInstance.current.setZoom(16);
+      // Disegna zone parcheggio la prima volta che arriva la posizione
+      if (!rideZonesDrawn.current) {
+        const zones = window._clientZones || [];
+        if (zones.length > 0) {
+          zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
+            new window.google.maps.Circle({
+              map: rideMapInstance.current, center: zone.center,
+              radius: Math.max(zone.radius||300, 200),
+              fillColor:"#2196F3", fillOpacity:0.25,
+              strokeColor:"#2196F3", strokeWeight:2.5, clickable:false
+            });
+            new window.google.maps.Marker({
+              position: zone.center, map: rideMapInstance.current,
+              label:{text:"🅿️", fontSize:"20px"},
+              icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+              clickable:false, zIndex:10
+            });
+            if(zone.name) new window.google.maps.Marker({
+              position: zone.center, map: rideMapInstance.current,
+              label:{text:zone.name,color:"#023047",fontSize:"11px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"},
+              icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+              clickable:false, zIndex:9
+            });
+          });
+          rideZonesDrawn.current = true;
+        }
+      }
     }
   }, [userPos]);
 
@@ -2600,7 +2597,6 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     setShowPlan(false);
     setRiding(true);
     try {
-      await waitFB();
       const {collection,addDoc}=window.firebaseFunctions;
       const bks=selectedBikes.length>0?selectedBikes:[selectedBike];
       const rideIds=[];
@@ -2614,13 +2610,9 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           promoCode:promoApplied?.code||null, promoType:promoApplied?.type||null, isFree:true,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
-        await sendBikeCommand(bike.id, 'unlock');
-        await sendBikeCommand(bike.id, 'gps_high');
-        await setBikeInUse(bike.id, true);
       }
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
-      setRiding(true); // Mostra timer SUBITO
       // Comandi IoT in parallelo in background
       Promise.all(bks.map(bike => Promise.all([
         sendBikeCommand(bike.id, 'unlock'),
