@@ -1317,11 +1317,19 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       });
       rideMapInstance.current = map;
       // Disegna zone parcheggio
-      const drawParkingZones = (attempt=0) => {
-        const zones = window._clientZones || [];
-        if (zones.length === 0 && attempt < 20) { 
-          setTimeout(()=>drawParkingZones(attempt+1), 300); 
-          return; 
+      const drawParkingZones = async (attempt=0) => {
+        let zones = window._clientZones || [];
+        if (zones.length === 0) {
+          try {
+            const {doc, getDoc} = window.firebaseFunctions;
+            const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
+            if (snap.exists()) zones = snap.data().zones || [];
+            window._clientZones = zones;
+          } catch(e) {}
+        }
+        if (zones.length === 0 && attempt < 10) {
+          setTimeout(()=>drawParkingZones(attempt+1), 500);
+          return;
         }
         zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
           new window.google.maps.Circle({
