@@ -1090,7 +1090,6 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
         return;
       }
       onLogin({type:"admin", nome:data.nome||"Admin", email:data.email||adminUser});
-      window.location.href = "/admin";
     } catch(e) { setError(t('errAdmin')); }
     setLoading(false);
   };
@@ -1395,24 +1394,12 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       rideMapInstance.current = map;
-      // Disegna zone parcheggio — carica sempre da Firebase
-      const drawParkingZones = async (attempt=0) => {
-        let zones = window._clientZones || [];
-        // Prova sempre a caricare da Firebase se Firebase è pronto
-        if (window.firebaseDb && window.firebaseFunctions) {
-          try {
-            const {doc, getDoc} = window.firebaseFunctions;
-            const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
-            if (snap.exists()) {
-              zones = snap.data().zones || [];
-              window._clientZones = zones;
-              console.log(`🗺️ Zone caricate per mappa corsa: ${zones.filter(z=>z.type==='sosta').length} sosta`);
-            }
-          } catch(e) { console.warn('Zone fetch error:', e.message); }
-        }
-        if (zones.length === 0 && attempt < 5) {
-          setTimeout(()=>drawParkingZones(attempt+1), 1000);
-          return;
+      // Disegna zone parcheggio — riprova ogni 300ms finché non sono disponibili
+      const drawParkingZones = (attempt=0) => {
+        const zones = window._clientZones || [];
+        if (zones.length === 0 && attempt < 20) { 
+          setTimeout(()=>drawParkingZones(attempt+1), 300); 
+          return; 
         }
         zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
           new window.google.maps.Circle({
@@ -2436,7 +2423,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   React.useEffect(() => {
     const bikeId=getUrlBike();
-    if(bikeId){ const bike=bikes.find(b=>b.id===bikeId); if(bike){setSelectedBike(bike);setSelectedBikes([bike]);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`); window.history.replaceState({},"","/"); }
+    if(bikeId){ if(user?.type==="admin"){window.location.href="/admin";return;} const bike=bikes.find(b=>b.id===bikeId); if(bike){setSelectedBike(bike);setSelectedBikes([bike]);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`); window.history.replaceState({},"","/"); }
   },[]);
 
   const handleBikeClick=(bike)=>{ setSelectedBike(bike); setSelectedBikes([bike]); setShowPlan(true); };
@@ -2577,10 +2564,13 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           promoCode:promoApplied?.code||null, promoType:promoApplied?.type||null, isFree:true,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
+        await sendBikeCommand(bike.id, 'unlock');
+        await sendBikeCommand(bike.id, 'gps_high');
+        await setBikeInUse(bike.id, true);
       }
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
-      setRiding(true);
+      setRiding(true); // Mostra timer SUBITO
       // Comandi IoT in parallelo in background
       Promise.all(bks.map(bike => Promise.all([
         sendBikeCommand(bike.id, 'unlock'),
@@ -3078,8 +3068,7 @@ function Main() {
 
   if(COMING_SOON) return <ComingSoonScreen/>;
   if(!user) return <>{installBanner}<AuthScreen onLogin={handleLogin} lang={lang} setLang={setLang} t={t}/></>;
-  if(user.type==="admin") { window.location.href="/admin"; return null; }
-  return <>{installBanner}<ClienteApp user={user} onLogout={handleLogout} lang={lang} setLang={setLang} t={t}/>;</>
+  return <>{installBanner}<ClienteApp user={user} onLogout={handleLogout} lang={lang} setLang={setLang} t={t}/></>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Main/>);
