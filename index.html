@@ -1282,6 +1282,28 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
+
+// ─── Helper zona parcheggio ────────────────────────────────────────────────
+function haversineDist(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function getParkingStatus(userPos) {
+  const zones = (window._clientZones && window._clientZones.length > 0) ? window._clientZones : DEFAULT_ZONES;
+  const sostaZones = zones.filter(z => z.type === 'sosta' && z.center);
+  if (!userPos || sostaZones.length === 0) return { inParking: null, nearest: null, dist: null };
+  let nearest = null, minDist = Infinity;
+  for (const z of sostaZones) {
+    const d = haversineDist(userPos.lat, userPos.lng, z.center.lat, z.center.lng);
+    if (d < minDist) { minDist = d; nearest = z; }
+  }
+  return { inParking: minDist <= (nearest.radius || 300), nearest, dist: Math.round(minDist) };
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
@@ -1424,12 +1446,27 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       const parkPhotoURL=await getDownloadURL(sRef);
       if(rideId) await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,parkPhotoURL,track:trackRef.current});
     } catch(e){console.error(e);}
-    setUploading(false); onEnd(seconds,totalCost,bike.id);
+    setUploading(false);
+    // Libera la bici subito — doppia sicurezza oltre a handleEndRide
+    try {
+      await waitFB();
+      const {doc,setDoc}=window.firebaseFunctions;
+      await setDoc(doc(window.firebaseDb,'bikesStatus',bike.id),
+        {inUse:false,userId:null,updatedAt:new Date().toISOString()},{merge:true});
+    } catch(e){ console.error('Errore liberazione bici:', e); }
+    onEnd(seconds,totalCost,bike.id);
   };
   const rideMapRef = React.useRef(null);
   const rideMapInstance = React.useRef(null);
   const rideUserMarker = React.useRef(null);
   const rideZonesDrawn = React.useRef(false);
+  // Stato zona parcheggio (aggiornato ogni volta che userPos cambia)
+  const parkingStatus = React.useMemo(()=>getParkingStatus(userPos),[userPos]);
+  const inParking = parkingStatus.inParking;
+  const nearestParking = parkingStatus.nearest;
+  const distToParking = parkingStatus.dist;
+  // Marco/admin può sempre terminare ovunque
+  const isOwner = user?.email && (user.email.includes('pedalagilla') || user.email.includes('marco'));
 
   // Inizializza mappa durante la corsa
   React.useEffect(()=>{
@@ -1520,8 +1557,33 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             </div>
           ))}
         </div>
-        <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading} style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
-          {uploading?t('saving'):t('confirmEnd')}
+        {/* Banner zona parcheggio */}
+        {inParking===false&&!isOwner&&(
+          <div style={{background:"#fff3cd",border:"1.5px solid #FFB703",borderRadius:14,padding:"12px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:24}}>🅿️</span>
+            <div>
+              <p style={{color:"#7a5c00",fontSize:13,fontWeight:700,margin:0,...ds}}>Parcheggia prima di terminare</p>
+              {nearestParking&&<p style={{color:"#997a00",fontSize:12,margin:"3px 0 0",...ds}}>📍 {nearestParking.name} · {distToParking}m</p>}
+            </div>
+          </div>
+        )}
+        {inParking===true&&(
+          <div style={{background:`${C.blueGreen}15`,border:`1.5px solid ${C.blueGreen}`,borderRadius:14,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:20}}>✅</span>
+            <p style={{color:C.blueGreen,fontSize:13,fontWeight:700,margin:0,...ds}}>Sei in zona parcheggio — puoi terminare</p>
+          </div>
+        )}
+        {inParking===null&&(
+          <div style={{background:"#f0f0f0",border:"1.5px solid #ccc",borderRadius:14,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:18}}>📡</span>
+            <p style={{color:"#999",fontSize:12,margin:0,...ds}}>Rilevamento posizione...</p>
+          </div>
+        )}
+        <button
+          onClick={handleEndConfirm}
+          disabled={!parkPhoto||uploading||(inParking===false&&!isOwner)}
+          style={{width:"100%",background:(parkPhoto&&!uploading&&(inParking!==false||isOwner))?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:(parkPhoto&&(inParking!==false||isOwner))?"pointer":"not-allowed",marginBottom:10}}>
+          {uploading?t('saving'):(inParking===false&&!isOwner)?`🅿️ Vai al parcheggio (${distToParking||'?'}m)`:t('confirmEnd')}
         </button>
         <button onClick={()=>setShowEndFlow(false)} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('backToRide')}</button>
       </div>
@@ -2371,7 +2433,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         window._clientZones = DEFAULT_ZONES;
       } 
     };
-    window._clientZones = DEFAULT_ZONES; // disponibile subito per drawParkingZones
+    window._clientZones = DEFAULT_ZONES;
     load();
   },[]);
 
