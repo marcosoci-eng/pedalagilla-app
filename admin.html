@@ -1501,13 +1501,8 @@ function AdminApp({ user, onLogout, t }) {
     const loadZones=async()=>{ try { await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const snap=await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()) setSavedZones(snap.data().zones||DEFAULT_ZONES); } catch(e){} setZonesLoaded(true); };
     loadZones();
   },[]);
-  React.useEffect(()=>{
-    // ⚠️ FIX: salva solo DOPO che il caricamento da Firebase è completato
-    // Evita di sovrascrivere le zone salvate con DEFAULT_ZONES al mount
-    if(!zonesLoaded) return;
-    const saveZones=async()=>{ try { await waitFB(); const {doc,setDoc}=window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()}); } catch(e){} };
-    saveZones();
-  },[savedZones, zonesLoaded]);
+  // Salvataggio SOLO manuale tramite bottone — nessun auto-save
+  // Evita sovrascritture accidentali durante il caricamento o con dati parziali
 
   const today=new Date().toLocaleDateString("it-IT");
   const todayRides=rides.filter(r=>r.date===today);
@@ -2009,11 +2004,23 @@ function AdminApp({ user, onLogout, t }) {
               <button onClick={async()=>{ 
                 try { 
                   await waitFB(); 
-                  const {doc,setDoc}=window.firebaseFunctions; 
-                  // Usa le zone dal ref (include modifiche manuali) o savedZones
-                  // ⚠️ FIX: usa savedZones (lista completa) non _zoneEditorRef (lista filtrata)
-                  const zonesToSave = savedZones;
+                  const {doc,setDoc}=window.firebaseFunctions;
+                  // Prende savedZones (lista completa con tutte le zone)
+                  // e aggiorna le posizioni/raggi modificati manualmente sulla mappa
+                  // tramite _zoneEditorRef, ma solo per le zone visibili (non sovrascrive le altre)
+                  let zonesToSave = [...savedZones];
+                  if (window._zoneEditorRef?.current) {
+                    const editorZones = window._zoneEditorRef.current;
+                    // Sostituisce solo le zone visibili con le versioni aggiornate dall'editor
+                    const visibleNames = new Set(visibleZones.map(z=>z.name+z.type));
+                    zonesToSave = savedZones.map(z => {
+                      if (!visibleNames.has(z.name+z.type)) return z; // zona non visibile: lascia invariata
+                      const updated = editorZones.find(ez=>ez.name===z.name&&ez.type===z.type);
+                      return updated || z;
+                    });
+                  }
                   await setDoc(doc(window.firebaseDb,"config","zones"),{zones:zonesToSave,updatedAt:new Date().toISOString()}); 
+                  setSavedZones(zonesToSave);
                   alert("✅ Zone salvate! ("+ zonesToSave.length +" zone)"); 
                 } catch(e){ alert("Errore: "+e.message); } 
               }} style={{width:"100%",background:`linear-gradient(90deg,${C.sunYellow},${C.warmOrange})`,border:"none",borderRadius:12,padding:"12px",color:C.deepBlue,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>💾 Salva zone su Firebase</button>
