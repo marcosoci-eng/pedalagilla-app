@@ -1282,6 +1282,30 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
+
+// ─── HELPER: verifica zona parcheggio ──────────────────────────────────────
+function haversineDist(lat1, lng1, lat2, lng2) {
+  const R = 6371000; // metri
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function getParkingStatus(userPos, zones) {
+  if (!userPos || !zones || zones.length === 0) return { inParking: null, nearest: null, dist: null };
+  const sostaZones = zones.filter(z => z.type === 'sosta' && z.center);
+  if (sostaZones.length === 0) return { inParking: null, nearest: null, dist: null };
+  let nearest = null, minDist = Infinity;
+  for (const z of sostaZones) {
+    const d = haversineDist(userPos.lat, userPos.lng, z.center.lat, z.center.lng);
+    if (d < minDist) { minDist = d; nearest = z; }
+  }
+  const radius = nearest.radius || 300;
+  const inParking = minDist <= radius;
+  return { inParking, nearest, dist: Math.round(minDist) };
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
@@ -1379,6 +1403,13 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const rideMapInstance = React.useRef(null);
   const rideUserMarker = React.useRef(null);
   const rideZonesDrawn = React.useRef(false);
+  // Stato parcheggio live
+  const parkingStatus = React.useMemo(()=>getParkingStatus(userPos, window._clientZones||[]),[userPos]);
+  const inParking = parkingStatus.inParking;
+  const nearestParking = parkingStatus.nearest;
+  const distToParking = parkingStatus.dist;
+  // Marco (email pedalagilla) può sempre terminare
+  const isOwner = user?.email && (user.email.includes('marco') || user.email.includes('pedalagilla'));
 
   // Inizializza mappa durante la corsa
   React.useEffect(()=>{
@@ -1468,8 +1499,32 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             </div>
           ))}
         </div>
-        <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading} style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
-          {uploading?t('saving'):t('confirmEnd')}
+        {/* Banner zona parcheggio */}
+        {inParking===false&&!isOwner&&(
+          <div style={{background:"#fff3cd",border:"1.5px solid #FFB703",borderRadius:14,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:22}}>🅿️</span>
+            <div>
+              <p style={{color:"#7a5c00",fontSize:13,fontWeight:700,margin:0,...ds}}>Non sei in zona parcheggio</p>
+              {nearestParking&&<p style={{color:"#997a00",fontSize:12,margin:"2px 0 0",...ds}}>
+                {nearestParking.name} · {distToParking}m
+              </p>}
+            </div>
+          </div>
+        )}
+        {inParking===true&&(
+          <div style={{background:`${C.blueGreen}15`,border:`1.5px solid ${C.blueGreen}`,borderRadius:14,padding:"10px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:20}}>✅</span>
+            <p style={{color:C.blueGreen,fontSize:13,fontWeight:700,margin:0,...ds}}>Sei in zona parcheggio — {nearestParking?.name}</p>
+          </div>
+        )}
+        {inParking===null&&(
+          <div style={{background:"#f0f0f0",border:"1.5px solid #ccc",borderRadius:14,padding:"10px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:20}}>📡</span>
+            <p style={{color:"#888",fontSize:12,margin:0,...ds}}>Rilevamento posizione...</p>
+          </div>
+        )}
+        <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading||(inParking===false&&!isOwner)} style={{width:"100%",background:(parkPhoto&&!uploading&&(inParking!==false||isOwner))?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:(parkPhoto&&(inParking!==false||isOwner))?"pointer":"not-allowed",marginBottom:10}}>
+          {uploading?t('saving'):(inParking===false&&!isOwner)?`🅿️ Vai al parcheggio (${distToParking||'?'}m)`:t('confirmEnd')}
         </button>
         <button onClick={()=>setShowEndFlow(false)} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('backToRide')}</button>
       </div>
@@ -1512,6 +1567,21 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
           <button onClick={()=>setShowEndFlow(true)} style={{background:C.warmOrange,border:"none",borderRadius:14,padding:"16px 8px",color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
             🏁 {t('endRide')}
           </button>
+          {/* Banner parcheggio live durante corsa */}
+          {inParking===true?(
+            <div style={{margin:"8px 0 0",background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}50`,borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:16}}>✅</span>
+              <span style={{color:C.blueGreen,fontSize:12,fontWeight:700,...ds}}>Sei in zona parcheggio — puoi terminare</span>
+            </div>
+          ):inParking===false?(
+            <div style={{margin:"8px 0 0",background:"#fff8e8",border:"1px solid #FFB70350",borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:16}}>🅿️</span>
+              <div>
+                <span style={{color:"#7a5c00",fontSize:12,fontWeight:700,...ds}}>Parcheggio più vicino: </span>
+                <span style={{color:"#997a00",fontSize:12,...ds}}>{nearestParking?.name} · {distToParking}m</span>
+              </div>
+            </div>
+          ):null}
         </div>
         <div style={{display:"flex",justifyContent:"center",gap:20}}>
           {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
