@@ -648,7 +648,7 @@ function ComingSoonScreen() {
 
 const STRIPE_KEY = "pk_live_51Sx6QaIBfjLC7EABTMhjj2CIIiX6SvonHXOK04P9aWB5YNPycW8Z80liP9DRk4yOgDPVRLlBqwDisS4phwMUZc9x00wj7ZHLIi";
 const stripeInstance = Stripe(STRIPE_KEY);
-const stripeElements = stripeInstance.elements();
+// NON creare elements a livello globale — lo creiamo dentro PaymentForm
 const C = { blueGreen:"#219EBC", deepBlue:"#023047", skyBlue:"#8ECAE6", sunYellow:"#FFB703", warmOrange:"#FB8500", white:"#FFFFFF", bgLight:"#F5F9FB" };
 const ds = { fontFamily:"'DM Sans', sans-serif" };
 const MARCO_TEL = "+393495240422";
@@ -988,6 +988,7 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
 function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=false }) {
   const cardRef = React.useRef(null);
   const cardEl = React.useRef(null);
+  const elementsRef = React.useRef(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [nome, setNome] = React.useState("");
@@ -995,8 +996,11 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
   const preAuth = nBikes * 10;
   React.useEffect(() => {
     if (!cardRef.current||cardEl.current) return;
-    const card = stripeElements.create("card",{style:{base:{fontSize:"16px",color:"#023047",fontFamily:"'DM Sans',sans-serif","::placeholder":{color:"#aaa"}}},hidePostalCode:true});
+    // Crea una nuova istanza Elements per ogni mount del form
+    if (!elementsRef.current) elementsRef.current = stripeInstance.elements();
+    const card = elementsRef.current.create("card",{style:{base:{fontSize:"16px",color:"#023047",fontFamily:"'DM Sans',sans-serif","::placeholder":{color:"#aaa"}}},hidePostalCode:true});
     card.mount(cardRef.current); cardEl.current = card;
+    return () => { try { card.unmount(); } catch(e){} cardEl.current = null; };
   }, []);
   const handlePay = async () => {
     if (!nome.trim()) { setError(t('errName')); return; }
@@ -1285,23 +1289,21 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 
 // ─── HELPER: verifica zona parcheggio ──────────────────────────────────────
 function haversineDist(lat1, lng1, lat2, lng2) {
-  const R = 6371000; // metri
+  const R = 6371000;
   const dLat = (lat2-lat1)*Math.PI/180;
   const dLng = (lng2-lng1)*Math.PI/180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 function getParkingStatus(userPos, zones) {
-  if (!userPos || !zones || zones.length === 0) return { inParking: null, nearest: null, dist: null };
-  const sostaZones = zones.filter(z => z.type === 'sosta' && z.center);
-  if (sostaZones.length === 0) return { inParking: null, nearest: null, dist: null };
+  const sostaZones = (zones||[]).filter(z => z.type === 'sosta' && z.center);
+  if (!userPos || sostaZones.length === 0) return { inParking: null, nearest: null, dist: null };
   let nearest = null, minDist = Infinity;
   for (const z of sostaZones) {
     const d = haversineDist(userPos.lat, userPos.lng, z.center.lat, z.center.lng);
     if (d < minDist) { minDist = d; nearest = z; }
   }
-  const radius = nearest.radius || 300;
-  const inParking = minDist <= radius;
+  const inParking = minDist <= (nearest.radius || 300);
   return { inParking, nearest, dist: Math.round(minDist) };
 }
 // ───────────────────────────────────────────────────────────────────────────
@@ -1403,13 +1405,13 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const rideMapInstance = React.useRef(null);
   const rideUserMarker = React.useRef(null);
   const rideZonesDrawn = React.useRef(false);
-  // Stato parcheggio live
-  const parkingStatus = React.useMemo(()=>getParkingStatus(userPos, window._clientZones||[]),[userPos]);
+  // ── Stato parcheggio live ──
+  const activeZones = (window._clientZones && window._clientZones.length > 0) ? window._clientZones : DEFAULT_ZONES;
+  const parkingStatus = React.useMemo(()=>getParkingStatus(userPos, (window._clientZones&&window._clientZones.length>0)?window._clientZones:DEFAULT_ZONES),[userPos]);
   const inParking = parkingStatus.inParking;
   const nearestParking = parkingStatus.nearest;
   const distToParking = parkingStatus.dist;
-  // Marco (email pedalagilla) può sempre terminare
-  const isOwner = user?.email && (user.email.includes('marco') || user.email.includes('pedalagilla'));
+  const isOwner = user?.email && (user.email.includes('pedalagilla') || user.email.includes('marco'));
 
   // Inizializza mappa durante la corsa
   React.useEffect(()=>{
@@ -1499,15 +1501,13 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             </div>
           ))}
         </div>
-        {/* Banner zona parcheggio */}
+        {/* ── Banner zona parcheggio ── */}
         {inParking===false&&!isOwner&&(
           <div style={{background:"#fff3cd",border:"1.5px solid #FFB703",borderRadius:14,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:22}}>🅿️</span>
             <div>
               <p style={{color:"#7a5c00",fontSize:13,fontWeight:700,margin:0,...ds}}>Non sei in zona parcheggio</p>
-              {nearestParking&&<p style={{color:"#997a00",fontSize:12,margin:"2px 0 0",...ds}}>
-                {nearestParking.name} · {distToParking}m
-              </p>}
+              {nearestParking&&<p style={{color:"#997a00",fontSize:12,margin:"2px 0 0",...ds}}>{nearestParking.name} · {distToParking}m</p>}
             </div>
           </div>
         )}
@@ -1520,7 +1520,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         {inParking===null&&(
           <div style={{background:"#f0f0f0",border:"1.5px solid #ccc",borderRadius:14,padding:"10px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:20}}>📡</span>
-            <p style={{color:"#888",fontSize:12,margin:0,...ds}}>Rilevamento posizione...</p>
+            <p style={{color:"#888",fontSize:12,margin:0,...ds}}>Rilevamento posizione GPS...</p>
           </div>
         )}
         <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading||(inParking===false&&!isOwner)} style={{width:"100%",background:(parkPhoto&&!uploading&&(inParking!==false||isOwner))?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:(parkPhoto&&(inParking!==false||isOwner))?"pointer":"not-allowed",marginBottom:10}}>
@@ -1567,21 +1567,19 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
           <button onClick={()=>setShowEndFlow(true)} style={{background:C.warmOrange,border:"none",borderRadius:14,padding:"16px 8px",color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
             🏁 {t('endRide')}
           </button>
-          {/* Banner parcheggio live durante corsa */}
-          {inParking===true?(
-            <div style={{margin:"8px 0 0",background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}50`,borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:16}}>✅</span>
-              <span style={{color:C.blueGreen,fontSize:12,fontWeight:700,...ds}}>Sei in zona parcheggio — puoi terminare</span>
+          {/* Banner parcheggio live */}
+          {inParking===true&&(
+            <div style={{marginTop:8,background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}50`,borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:14}}>✅</span>
+              <span style={{color:C.blueGreen,fontSize:11,fontWeight:700,...ds}}>Sei in zona parcheggio</span>
             </div>
-          ):inParking===false?(
-            <div style={{margin:"8px 0 0",background:"#fff8e8",border:"1px solid #FFB70350",borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:16}}>🅿️</span>
-              <div>
-                <span style={{color:"#7a5c00",fontSize:12,fontWeight:700,...ds}}>Parcheggio più vicino: </span>
-                <span style={{color:"#997a00",fontSize:12,...ds}}>{nearestParking?.name} · {distToParking}m</span>
-              </div>
+          )}
+          {inParking===false&&(
+            <div style={{marginTop:8,background:"#fff8e8",border:"1px solid #FFB70360",borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:14}}>🅿️</span>
+              <span style={{color:"#997a00",fontSize:11,...ds}}>{nearestParking?.name} · {distToParking}m</span>
             </div>
-          ):null}
+          )}
         </div>
         <div style={{display:"flex",justifyContent:"center",gap:20}}>
           {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
@@ -2332,7 +2330,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [restoringRide, setRestoringRide] = React.useState(true);
   const [restoredElapsed, setRestoredElapsed] = React.useState(0); // controlla corsa attiva al login
   const qrIntervalRef = React.useRef(null);
-  const [clientZones, setClientZones] = React.useState([]);
+  const [clientZones, setClientZones] = React.useState(DEFAULT_ZONES); // parte con default, poi sovrascrive da Firebase
   const [userPos, setUserPos] = React.useState(null);
 
   const [bikeFilter, setBikeFilter] = React.useState("tutte");
@@ -2381,14 +2379,16 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         await waitFB(); 
         const {doc,getDoc}=window.firebaseFunctions; 
         const snap=await getDoc(doc(window.firebaseDb,"config","zones")); 
-        const zones = snap.exists() ? (snap.data().zones||[]) : DEFAULT_ZONES;
+        const zones = snap.exists() && (snap.data().zones||[]).length > 0 ? snap.data().zones : DEFAULT_ZONES;
         setClientZones(zones); 
-        window._clientZones = zones; // Disponibile subito per RideTimer
+        window._clientZones = zones;
       } catch(e){ 
-        setClientZones(DEFAULT_ZONES); 
+        // mantieni DEFAULT_ZONES già in stato
         window._clientZones = DEFAULT_ZONES;
       } 
     };
+    // Setta subito window._clientZones con il default per RideTimer
+    window._clientZones = DEFAULT_ZONES;
     load();
   },[]);
 
