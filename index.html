@@ -2349,7 +2349,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         const allActiveRides = ridesSnap.docs
           .filter(d => {
             const data = d.data();
-            return data.status === "In corso" && data.userId === user.uid;
+            const isRecent = data.startTime && (Date.now() - new Date(data.startTime).getTime()) < 24 * 60 * 60 * 1000;
+            return data.status === "In corso" && data.userId === user.uid && isRecent;
           })
           .map(d => ({id: d.id, ...d.data()}));
         // Deduplica per bikeId — tieni la più recente
