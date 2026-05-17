@@ -1575,7 +1575,7 @@ function AdminApp({ user, onLogout, t }) {
       // Libera la bici su bikesStatus
       await setDoc(doc(window.firebaseDb,"bikesStatus",ride.bike),{inUse:false,userId:null,updatedAt:new Date().toISOString()},{merge:true});
       // Manda comando lock alla bici IoT
-      const pedId = ride.bike ? 'PED' + ride.bike.replace('PA-','').padStart(3,'0') : null;
+      const pedId = ride.bike?.replace('PA-','PED');
       if(pedId) await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
       // Ripristina GPS normale
       if(pedId) await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date().toISOString()});
@@ -1812,7 +1812,7 @@ function AdminApp({ user, onLogout, t }) {
               <div style={{background:`${C.warmOrange}10`,border:`1px solid ${C.warmOrange}30`,borderRadius:12,padding:"10px 14px",marginBottom:10}}>
                 <p style={{color:C.warmOrange,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>🚴 Ciclisti attivi</p>
                 {rides.filter(r=>r.status==="In corso").map(ride=>{
-                  const pedId = ride.bike ? 'PED' + ride.bike.replace('PA-','').padStart(3,'0') : null;
+                  const pedId = ride.bike?.replace('PA-','PED');
                   const rt = pedId ? bikesRealtime[pedId] : null;
                   return(
                     <div key={ride.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
