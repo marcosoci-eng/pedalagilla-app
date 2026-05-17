@@ -1502,10 +1502,12 @@ function AdminApp({ user, onLogout, t }) {
     loadZones();
   },[]);
   React.useEffect(()=>{
+    // ⚠️ FIX: salva solo DOPO che il caricamento da Firebase è completato
+    // Evita di sovrascrivere le zone salvate con DEFAULT_ZONES al mount
     if(!zonesLoaded) return;
     const saveZones=async()=>{ try { await waitFB(); const {doc,setDoc}=window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","zones"),{zones:savedZones,updatedAt:new Date().toISOString()}); } catch(e){} };
     saveZones();
-  },[savedZones]);
+  },[savedZones, zonesLoaded]);
 
   const today=new Date().toLocaleDateString("it-IT");
   const todayRides=rides.filter(r=>r.date===today);
@@ -1839,6 +1841,58 @@ function AdminApp({ user, onLogout, t }) {
             {(window._adminMTBBikes||[]).map(bike=>(<div key={bike.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${bike.status==="Disponibile"?C.blueGreen:C.warmOrange}`}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:22,background:`${C.warmOrange}15`,border:`2px solid ${C.warmOrange}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🏔️</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:bike.status==="Disponibile"?C.blueGreen:C.warmOrange,fontSize:12,...ds,fontWeight:600}}>● {bike.status}</span></div><p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0"}}>📍 {bike.zone||"—"} · 🔒 {bike.lockCode||"—"}</p></div></div></div>))}
           </div>}
 
+          {tab==="migrazione"&&<div className="slide" style={{padding:"16px 18px 0"}}>
+            {(()=>{
+              const allBikeIds = Array.from({length:40},(_,i)=>'PED'+(i+1).toString().padStart(3,'0'));
+              const migrated = allBikeIds.filter(id=>bikesRealtime[id]?.online);
+              const seen = allBikeIds.filter(id=>bikesRealtime[id] && !bikesRealtime[id]?.online);
+              const missing = allBikeIds.filter(id=>!bikesRealtime[id]);
+              return (<>
+                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:"16px",marginBottom:12,color:"white"}}>
+                  <p style={{margin:"0 0 4px",fontSize:11,...ds,opacity:0.7}}>MIGRAZIONE IoT — Joyride → PedalAgilla</p>
+                  <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                    <span style={{fontSize:36,fontFamily:"Lora",fontWeight:700}}>{migrated.length}</span>
+                    <span style={{fontSize:16,opacity:0.6}}>/ 40</span>
+                    <span style={{fontSize:13,...ds,opacity:0.7,marginLeft:4}}>bici online</span>
+                  </div>
+                  <div style={{height:6,background:"rgba(255,255,255,0.2)",borderRadius:3,margin:"10px 0 8px",overflow:"hidden"}}>
+                    <div style={{width:`${(migrated.length/40)*100}%`,height:"100%",background:C.blueGreen,borderRadius:3,transition:"width 0.5s"}}/>
+                  </div>
+                  <div style={{display:"flex",gap:16}}>
+                    <span style={{fontSize:11,...ds}}>✅ {migrated.length} online</span>
+                    <span style={{fontSize:11,...ds}}>📡 {seen.length} viste</span>
+                    <span style={{fontSize:11,...ds}}>⏳ {missing.length} mancanti</span>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8,marginBottom:12}}>
+                  <a href="tel:+393495240422" style={{flex:1,background:C.blueGreen,color:"white",borderRadius:12,padding:"10px 0",textAlign:"center",fontSize:13,...ds,fontWeight:600,textDecoration:"none"}}>📞 Chiama Marco</a>
+                  <a href="https://wa.me/393495240422" style={{flex:1,background:"#25D366",color:"white",borderRadius:12,padding:"10px 0",textAlign:"center",fontSize:13,...ds,fontWeight:600,textDecoration:"none"}}>💬 WhatsApp</a>
+                </div>
+                {[
+                  {label:"✅ Online — migrate", ids:migrated, color:C.blueGreen, bg:"#e8f7f5"},
+                  {label:"📡 Viste ma offline", ids:seen, color:C.warmOrange, bg:"#fff5e8"},
+                  {label:"⏳ Mai viste", ids:missing, color:"#aaa", bg:"#f8f8f8"}
+                ].map(group=>group.ids.length>0&&(
+                  <div key={group.label} style={{marginBottom:12}}>
+                    <p style={{color:group.color,fontSize:11,fontWeight:700,...ds,margin:"0 0 6px"}}>{group.label} ({group.ids.length})</p>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {group.ids.map(pedId=>{
+                        const paId='PA-'+pedId.replace('PED','');
+                        const rt=bikesRealtime[pedId];
+                        return(
+                          <div key={pedId} style={{background:group.bg,border:`1.5px solid ${group.color}40`,borderRadius:10,padding:"6px 10px",minWidth:70,textAlign:"center"}}>
+                            <div style={{color:C.deepBlue,fontSize:12,fontWeight:700,...ds}}>{paId}</div>
+                            {rt&&<div style={{color:"#888",fontSize:9,...ds,marginTop:2}}>⚡{rt.batteryPercent||"??"}%</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </>);
+            })()}
+          </div>}
+
           {tab==="corse"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"flex",gap:8,marginBottom:12}}>
               {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>setIncassiPeriod(v)} style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>))}
@@ -1957,14 +2011,19 @@ function AdminApp({ user, onLogout, t }) {
                   await waitFB(); 
                   const {doc,setDoc}=window.firebaseFunctions; 
                   // Usa le zone dal ref (include modifiche manuali) o savedZones
-                  const zonesToSave = window._zoneEditorRef?.current || savedZones;
-                  setSavedZones(zonesToSave);
+                  // ⚠️ FIX: usa savedZones (lista completa) non _zoneEditorRef (lista filtrata)
+                  const zonesToSave = savedZones;
                   await setDoc(doc(window.firebaseDb,"config","zones"),{zones:zonesToSave,updatedAt:new Date().toISOString()}); 
                   alert("✅ Zone salvate! ("+ zonesToSave.length +" zone)"); 
                 } catch(e){ alert("Errore: "+e.message); } 
               }} style={{width:"100%",background:`linear-gradient(90deg,${C.sunYellow},${C.warmOrange})`,border:"none",borderRadius:12,padding:"12px",color:C.deepBlue,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>💾 Salva zone su Firebase</button>
             </div>
-            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><ZoneMapEditor zones={visibleZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName} onZoneSaved={(zone)=>{setSavedZones(prev=>[...prev,zone]);setDrawingActive(false);setZoneName("");}} onZoneUpdated={(idx,updated)=>setSavedZones(prev=>prev.map((z,i)=>i===idx?updated:z))}/></div>
+            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><ZoneMapEditor zones={visibleZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName} onZoneSaved={(zone)=>{
+                    // ⚠️ FIX BUG2: aggiunge alla lista COMPLETA (savedZones), non a visibleZones
+                    setSavedZones(prev=>[...prev,zone]);
+                    setDrawingActive(false);
+                    setZoneName("");
+                  }} onZoneUpdated={(idx,updated)=>setSavedZones(prev=>prev.map((z,i)=>i===idx?updated:z))}/></div>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone ({savedZones.length})</p>
             <input placeholder="🔍 Cerca zona..." onChange={e=>{const v=e.target.value.toLowerCase(); const els=document.querySelectorAll('.zone-item'); els.forEach(el=>{el.style.display=el.dataset.name.toLowerCase().includes(v)?'block':'none';});}} style={{width:"100%",padding:"8px 12px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
             {savedZones.map((zone,i)=>(
@@ -2049,7 +2108,7 @@ function AdminApp({ user, onLogout, t }) {
         </div>
 
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"8px 0 16px",zIndex:20}}>
-          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["promo","🎟️","Promo"],["mtb","🚵","MTB"],["feedback","⭐","Feedback"],["stats","📊","Stats"]].map(([tid,icon,label])=>(
+          {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["migrazione","🔄","Migra"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["promo","🎟️","Promo"],["mtb","🚵","MTB"],["feedback","⭐","Feedback"],["stats","📊","Stats"]].map(([tid,icon,label])=>(
             <button key={tid} className="btn" onClick={()=>setTab(tid)} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <span style={{fontSize:16}}>{icon}</span>
               <span style={{color:tab===tid?C.blueGreen:"#bbb",fontSize:8,...ds,fontWeight:tab===tid?600:400}}>{label}</span>
