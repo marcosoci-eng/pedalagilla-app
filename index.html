@@ -1364,57 +1364,6 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   };
   const handleEndConfirm=async()=>{
     if(!parkPhoto){alert("📸");return;}
-    // Controlla se la posizione attuale è in una zona sosta - OBBLIGATORIO
-    const checkZone = () => new Promise(resolve => {
-      if (!navigator.geolocation) { resolve({ok:true}); return; }
-      // Carica zone fresche da Firebase
-      const getZones = async () => {
-        try {
-          await waitFB();
-          const {doc, getDoc} = window.firebaseFunctions;
-          const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
-          return snap.exists() ? (snap.data().zones||[]) : (window._clientZones||[]);
-        } catch(e) { return window._clientZones||[]; }
-      };
-      navigator.geolocation.getCurrentPosition(async pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const zones = await getZones();
-        const sostaZones = zones.filter(z => z.type === "sosta");
-        console.log(`🅿️ Zone sosta trovate: ${sostaZones.length}`, sostaZones.map(z=>z.name));
-        console.log(`📍 Posizione utente: ${lat}, ${lng}`);
-        if (sostaZones.length === 0) { resolve({ok:true}); return; }
-        const operativaZone = zones.find(z => z.type === "operativa");
-        const dist = (lat1,lng1,lat2,lng2) => {
-          const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
-          const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-          return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-        };
-        if (operativaZone?.center) {
-          const d = dist(lat,lng,operativaZone.center.lat,operativaZone.center.lng);
-          console.log(`🗺️ Distanza da area operativa: ${Math.round(d)}m (max: ${operativaZone.radius||25000}m)`);
-          if (d > (operativaZone.radius||25000)) {
-            resolve({ok:false, msg:"🚫 Sei fuori dall'area operativa!\n\nRientra nell'area del Lago Trasimeno e parcheggia in una zona 🅿️."});
-            return;
-          }
-        }
-        // Raggio minimo 200m per compensare imprecisione GPS
-        const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= Math.max(z.radius||300, 200));
-        if (!inSosta) {
-          resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nPorta la bici vicino a uno dei punti 🅿️ sulla mappa.\n\nAssistenza: +39 349 524 0422"});
-          return;
-        }
-        resolve({ok:true});
-      }, () => resolve({ok:true}), {enableHighAccuracy:true, timeout:10000});
-    });
-    const zoneCheck = await checkZone();
-    if (!zoneCheck.ok) {
-      const confirm = window.confirm(
-        zoneCheck.msg + 
-        "\n\n⚠️ Terminando fuori zona verrà applicata una penale di €50.\n\nVuoi terminare comunque?"
-      );
-      if (!confirm) return;
-    }
     setUploading(true);
     try {
       await waitFB();
