@@ -1316,8 +1316,40 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const [parkPhoto, setParkPhoto] = React.useState(null);
   const [parkPreview, setParkPreview] = React.useState(null);
   const [uploading, setUploading] = React.useState(false);
+  const [autoPauseBanner, setAutoPauseBanner] = React.useState(false); // banner auto-pausa
   const trackRef = React.useRef([]);
   const isGiornata = plan==="giornata";
+
+  // ── Listener auto-pausa da server IoT ──────────────────────────────────────
+  React.useEffect(() => {
+    if (!rideId || !bike?.id) return;
+    const pedId = 'PED' + bike.id.replace('PA-','').padStart(3,'0');
+    const waitAndListen = async () => {
+      await waitFB();
+      const {doc, onSnapshot} = window.firebaseFunctions;
+      const unsub = onSnapshot(doc(window.firebaseDb, 'bikes', pedId), async (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        if (data.autoPause === true && !paused) {
+          console.log('⏸️ Auto-pausa ricevuta dal server IoT');
+          // Attiva la pausa esattamente come handlePauseToggle
+          pauseStartRef.current = Date.now();
+          totalPausedRef.current = totalPausedRef.current || 0;
+          setPaused(true);
+          setAutoPauseBanner(true);
+          // Nascondi il banner dopo 8 secondi
+          setTimeout(() => setAutoPauseBanner(false), 8000);
+        }
+        // Se autoPause torna false (bici si rimette in moto) non facciamo nulla:
+        // è l'utente che deve riprendere manualmente premendo il bottone
+      });
+      return unsub;
+    };
+    let unsub;
+    waitAndListen().then(u => { unsub = u; });
+    return () => { if (unsub) unsub(); };
+  }, [rideId, bike?.id]); // non dipende da `paused` per evitare re-subscribe
+  // ──────────────────────────────────────────────────────────────────────────
   React.useEffect(() => {
     const i = setInterval(() => {
       if (!paused) {
@@ -1348,10 +1380,12 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       pauseStartRef.current = null;
       try {
         await waitFB();
-        const {collection, addDoc} = window.firebaseFunctions;
+        const {collection, addDoc, doc, updateDoc} = window.firebaseFunctions;
         const pedId = 'PED' + bike.id.replace('PA-','').padStart(3,'0');
         console.log('▶️ Riprendi — invio unlock a', pedId);
         await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'unlock',status:'pending',createdAt:new Date().toISOString()});
+        // Reset autoPause su Firestore così il server non rimanda in pausa subito
+        await updateDoc(doc(window.firebaseDb,'bikes',pedId),{autoPause:false});
       } catch(e){ console.error('Errore unlock ripresa:', e); }
     }
     setPaused(p => !p);
@@ -1431,11 +1465,15 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
     });
     const zoneCheck = await checkZone();
     if (!zoneCheck.ok) {
-      const confirm = window.confirm(
-        zoneCheck.msg + 
-        "\n\n⚠️ Terminando fuori zona verrà applicata una penale di €50.\n\nVuoi terminare comunque?"
-      );
-      if (!confirm) return;
+      // Blocco secco — nessuna eccezione per l'utente
+      if (isOwner) {
+        // Solo Marco/admin può forzare
+        const force = window.confirm("⚠️ ADMIN: " + zoneCheck.msg + "\n\nForzare la fine corsa?");
+        if (!force) return;
+      } else {
+        alert(zoneCheck.msg);
+        return; // BLOCCATO — nessun confirm, nessuna via d'uscita
+      }
     }
     setUploading(true);
     try {
@@ -1605,6 +1643,15 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
           <p style={{color:C.sunYellow,fontSize:22,fontWeight:700,margin:0,...ds}}>€{totalCost.toFixed(2)}</p>
         </div>
         {paused&&<div style={{background:C.sunYellow,borderRadius:8,padding:"3px 10px"}}><p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,margin:0}}>PAUSA</p></div>}
+        {autoPauseBanner&&(
+          <div style={{position:"absolute",top:70,left:12,right:12,background:"rgba(2,48,71,0.95)",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,zIndex:10,boxShadow:"0 4px 16px rgba(0,0,0,0.3)"}}>
+            <span style={{fontSize:20}}>⏸️</span>
+            <div>
+              <p style={{color:C.sunYellow,fontSize:12,fontWeight:700,margin:0,...ds}}>Bici in auto-pausa</p>
+              <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,margin:"2px 0 0",...ds}}>Ferma da 15 min — premi Riprendi quando sei pronto</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MAPPA */}
