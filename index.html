@@ -1445,21 +1445,23 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         styles:[{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       rideMapInstance.current = map;
-      // Disegna zone parcheggio — riprova ogni 300ms finché non sono disponibili
+      // Disegna zone parcheggio — carica sempre da Firebase
       const drawParkingZones = async (attempt=0) => {
         let zones = window._clientZones || [];
-        if (zones.length === 0) {
+        // Prova sempre a caricare da Firebase se Firebase è pronto
+        if (window.firebaseDb && window.firebaseFunctions) {
           try {
-            if (window.firebaseDb && window.firebaseFunctions) {
-              const {doc, getDoc} = window.firebaseFunctions;
-              const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
-              if (snap.exists()) zones = snap.data().zones || [];
+            const {doc, getDoc} = window.firebaseFunctions;
+            const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
+            if (snap.exists()) {
+              zones = snap.data().zones || [];
               window._clientZones = zones;
+              console.log(`🗺️ Zone caricate per mappa corsa: ${zones.filter(z=>z.type==='sosta').length} sosta`);
             }
-          } catch(e) {}
+          } catch(e) { console.warn('Zone fetch error:', e.message); }
         }
-        if (zones.length === 0 && attempt < 10) {
-          setTimeout(()=>drawParkingZones(attempt+1), 500);
+        if (zones.length === 0 && attempt < 5) {
+          setTimeout(()=>drawParkingZones(attempt+1), 1000);
           return;
         }
         zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
@@ -2603,7 +2605,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       await setDoc(doc(window.firebaseDb, 'bikesStatus', bikeId), {
         inUse, userId: inUse ? (user.uid||"") : null, updatedAt: new Date().toISOString()
       }, {merge: true});
-    } catch(e) { console.error('Errore setBikeInUse:', e); }
+      console.log(`✅ setBikeInUse: ${bikeId} → inUse=${inUse}`);
+    } catch(e) { console.error('❌ Errore setBikeInUse:', e.code, e.message); }
   };
 
   const handleFreeStart = async () => {
