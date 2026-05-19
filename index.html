@@ -2638,7 +2638,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const getEffectiveAmount = () => {
     const base = plan==="settimana" ? TARIFFA_SETTIMANALE*nBikes : plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
     if (!promoApplied) return base;
-    if (promoApplied.type === "dipendente" || promoApplied.type === "famiglia" || promoApplied.type === "struttura") return 0;
+    if (promoApplied.type === "dipendente" || promoApplied.type === "famiglia" || promoApplied.type === "struttura" || (promoApplied.type === "hotel" && promoApplied.hotelOption === "bonifico")) return 0;
     if (promoApplied.type === "hotel") {
       if (promoApplied.hotelOption === "scontata") return 16 * nBikes;
       if (promoApplied.hotelOption === "cashback") return 18.90 * nBikes;
@@ -2646,7 +2646,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     return base;
   };
   const payAmount = getEffectiveAmount();
-  const isFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia");
+  const isFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia"||promoApplied.type==="struttura"||(promoApplied.type==="hotel"&&promoApplied.hotelOption==="bonifico"));
 
   const handlePaySuccess=async(paymentMethodId)=>{
     setShowPayment(false); setShowPlan(false);
@@ -2667,6 +2667,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           promoCode: promoApplied?.code||null,
           promoType: promoApplied?.type||null,
           hotelName: promoApplied?.hotelName||null,
+          hotelOption: promoApplied?.hotelOption||null,
           hotelCashback,
           isFree: isFree||false,
           paymentMethodId: paymentMethodId||null,
@@ -3033,7 +3034,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                         <div>
                           <p style={{color:isFree?C.blueGreen:"#1565C0",fontSize:13,fontWeight:700,margin:"0 0 2px",...ds}}>
-                            {isFree ? "🎉 "+t('promoFreeRide') : promoApplied.type==="hotel" ? "🏨 Tariffa hotel convenzionata" : "🏨 "+t('promoHotelDiscount')}
+                            {isFree ? ((promoApplied.type==="hotel"&&promoApplied.hotelOption==="bonifico") ? "🏨 Convenzione hotel" : "🎉 "+t('promoFreeRide')) : promoApplied.type==="hotel" ? "🏨 Tariffa hotel convenzionata" : "🏨 "+t('promoHotelDiscount')}
                           </p>
                           <p style={{color:"#555",fontSize:11,...ds,margin:0}}>
                             🎟️ {promoApplied.code}
@@ -3045,6 +3046,9 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                           {promoApplied.type==="hotel" && promoApplied.hotelOption==="cashback" && (
                             <p style={{color:"#1565C0",fontSize:12,...ds,margin:"4px 0 0",fontWeight:600}}>€18,90/giornata · pausa gratuita</p>
                           )}
+                          {promoApplied.type==="hotel" && promoApplied.hotelOption==="bonifico" && (
+                            <p style={{color:"#2E7D32",fontSize:12,...ds,margin:"4px 0 0",fontWeight:600}}>✅ Incluso nella tua struttura</p>
+                          )}
                         </div>
                         <button onClick={removePromo} style={{background:"none",border:"none",color:"#aaa",fontSize:18,cursor:"pointer",padding:"0 4px"}}>✕</button>
                       </div>
@@ -3054,7 +3058,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   {/* BOTTONE CONTINUA / PARTI GRATIS */}
                   {isFree ? (
                     <button onClick={handleFreeStart} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},#027a4e)`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:4}}>
-                      {promoApplied?.type==="struttura" ? "🏨 Attiva noleggio struttura" : "🎉 "+t('promoStartFree')}
+                      {(promoApplied?.type==="struttura"||(promoApplied?.type==="hotel"&&promoApplied?.hotelOption==="bonifico"))?"🏨 Attiva noleggio convenzionato":"🎉 "+t('promoStartFree')}
                     </button>
                   ) : (
                     <button onClick={()=>setShowPayment(true)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:4}}>
