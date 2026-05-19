@@ -1160,7 +1160,11 @@ function PromoAdmin() {
   const typeLabel = (c) => {
     if (c.type === "dipendente") return "👷 Dipendente";
     if (c.type === "famiglia") return "👨‍👩‍👧 Famiglia";
-    if (c.type === "hotel") return c.hotelOption === "scontata" ? "🏨 Hotel €16" : "🏨 Hotel cashback €3";
+    if (c.type === "hotel") {
+      if (c.hotelOption === "scontata") return "🏨 Hotel €16 · Stripe";
+      if (c.hotelOption === "cashback") return "🏨 Hotel €18,90 + €3 cashback";
+      if (c.hotelOption === "bonifico") return "🏨 Hotel €0 · bonifico mensile";
+    }
     if (c.type === "struttura") return "🏪 Struttura partner";
     return c.type;
   };
@@ -1181,13 +1185,16 @@ function PromoAdmin() {
             const now = new Date();
             const from = new Date(now.getFullYear(), now.getMonth()-mesi+1, 1);
             const rows = codes
-              .filter(c=>c.type==="hotel"&&c.hotelOption==="cashback"&&!c.deleted)
+              .filter(c=>c.type==="hotel"&&!c.deleted)
               .map(c=>({
                 "Hotel": c.hotelName||c.id,
                 "Codice": c.id,
+                "Convenzione": c.hotelOption==="scontata"?"€16 Stripe":c.hotelOption==="cashback"?"€18,90+€3 cashback":"€0 bonifico",
                 "Corse totali": c.totalUses||0,
-                "Cashback unitario (€)": 3,
-                "Totale cashback (€)": (c.totalCashback||0).toFixed(2),
+                "Cashback €3 (corse)": c.hotelOption==="cashback"?c.totalUses||0:0,
+                "Totale cashback (€)": c.hotelOption==="cashback"?(c.totalCashback||0).toFixed(2):"0.00",
+                "Corse bonifico": c.hotelOption==="bonifico"?c.totalUses||0:0,
+                "Importo bonifico dovuto (€)": c.hotelOption==="bonifico"?((c.totalUses||0)*16).toFixed(2):"0.00",
                 "Periodo": label==="mensile"
                   ? from.toLocaleDateString("it-IT",{month:"long",year:"numeric"})
                   : `${from.toLocaleDateString("it-IT",{month:"short",year:"numeric"})} - ${now.toLocaleDateString("it-IT",{month:"short",year:"numeric"})}`,
@@ -1243,7 +1250,7 @@ function PromoAdmin() {
               style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:13,...ds,color:C.deepBlue,background:C.white,marginBottom:12}}/>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>Tipo convenzione</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-              {[["scontata","€16/giorno","Tariffa scontata per il cliente"],["cashback","€18,90 + €3","Rimborso €3 all'hotel per corsa"]].map(([v,price,desc])=>(
+              {[["scontata","€16/giorno","Cliente paga su Stripe"],["cashback","€18,90 + €3","Cliente paga su Stripe · €3 rimborso struttura"],["bonifico","€0 per utente","Struttura incassa e ti gira €16/mese"]].map(([v,price,desc])=>(
                 <div key={v} onClick={()=>setNewHotelOption(v)}
                   style={{background:newHotelOption===v?"#E3F2FD":"#f5f5f5",borderRadius:10,padding:12,cursor:"pointer",border:`2px solid ${newHotelOption===v?"#2196F3":"transparent"}`}}>
                   <p style={{color:newHotelOption===v?"#1565C0":C.deepBlue,fontSize:13,...ds,fontWeight:700,margin:"0 0 2px"}}>{price}</p>
