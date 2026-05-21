@@ -1467,6 +1467,24 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
   const totalCost=isGiornata?tariffaFissa:Math.min(rideCost+pauseCost, TARIFFA_GIORNATA);
   const cappedAtMax = !isGiornata && totalCost >= TARIFFA_GIORNATA;
+
+  // ── Calcolo km e velocità media dal tracciato GPS ──────────────────────────
+  const rideStats = React.useMemo(() => {
+    const track = trackRef.current || [];
+    if (track.length < 2) return { km: 0, velMedia: 0 };
+    let km = 0;
+    for (let i = 1; i < track.length; i++) {
+      const R = 6371;
+      const dLat = (track[i].lat - track[i-1].lat) * Math.PI / 180;
+      const dLng = (track[i].lng - track[i-1].lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(track[i-1].lat*Math.PI/180) * Math.cos(track[i].lat*Math.PI/180) * Math.sin(dLng/2)**2;
+      km += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+    const oreEffettive = (seconds - pauseSeconds) / 3600;
+    const velMedia = oreEffettive > 0 ? km / oreEffettive : 0;
+    return { km: Math.max(0, km), velMedia: Math.max(0, velMedia) };
+  }, [seconds]); // ricalcola ogni secondo (seconds cambia)
+  // ──────────────────────────────────────────────────────────────────────────
   const handleParkPhoto=(e)=>{ 
     const file=e.target.files[0]; 
     if(!file) return;
@@ -1559,7 +1577,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       const sRef=ref(window.firebaseStorage,`parcheggi/${bike.id}_${Date.now()}`);
       await uploadBytes(sRef,parkPhoto);
       const parkPhotoURL=await getDownloadURL(sRef);
-      if(rideId) await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,parkPhotoURL,track:trackRef.current});
+      if(rideId) await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,parkPhotoURL,track:trackRef.current,kmPercorsi:parseFloat(rideStats.km.toFixed(2)),velMediaKmh:parseFloat(rideStats.velMedia.toFixed(1))});
     } catch(e){console.error(e);}
     setUploading(false);
     // Libera la bici subito — doppia sicurezza oltre a handleEndRide
@@ -1575,13 +1593,39 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const rideMapInstance = React.useRef(null);
   const rideUserMarker = React.useRef(null);
   const rideZonesDrawn = React.useRef(false);
-  // Stato zona parcheggio (aggiornato ogni volta che userPos cambia)
-  const parkingStatus = React.useMemo(()=>getParkingStatus(userPos),[userPos]);
+  // Stato zona parcheggio — si ricalcola ogni 3s e ad ogni cambio posizione
+  const [parkingStatus, setParkingStatus] = React.useState({inParking:null,nearest:null,dist:null});
   const inParking = parkingStatus.inParking;
   const nearestParking = parkingStatus.nearest;
   const distToParking = parkingStatus.dist;
-  // Marco/admin può sempre terminare ovunque
   const isOwner = user?.email && (user.email.includes('pedalagilla') || user.email.includes('marco'));
+
+  React.useEffect(() => {
+    const compute = () => {
+      // Usa sempre le zone più aggiornate da window._clientZones
+      const zones = (window._clientZones && window._clientZones.length > 0)
+        ? window._clientZones : DEFAULT_ZONES;
+      const sostaZones = zones.filter(z => z.type === 'sosta' && z.center);
+      if (!userPos || sostaZones.length === 0) {
+        setParkingStatus({inParking:null,nearest:null,dist:null});
+        return;
+      }
+      let nearest = null, minDist = Infinity;
+      for (const z of sostaZones) {
+        const d = haversineDist(userPos.lat, userPos.lng, z.center.lat, z.center.lng);
+        if (d < minDist) { minDist = d; nearest = z; }
+      }
+      setParkingStatus({
+        inParking: minDist <= (nearest.radius || 300),
+        nearest,
+        dist: Math.round(minDist)
+      });
+    };
+    compute();
+    // Ricalcola ogni 3 secondi per aggiornamento continuo
+    const interval = setInterval(compute, 3000);
+    return () => clearInterval(interval);
+  }, [userPos]); // si resetta ad ogni nuova posizione GPS
 
   // Inizializza mappa durante la corsa
   React.useEffect(()=>{
@@ -1671,6 +1715,18 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
               <span style={{color:C.deepBlue,fontWeight:700,...ds}}>{v}</span>
             </div>
           ))}
+          {rideStats.km > 0 && (
+            <div style={{borderTop:`1px solid ${C.skyBlue}20`,paddingTop:8,marginTop:4,display:"flex",justifyContent:"space-between"}}>
+              <span style={{color:"#888",fontSize:13,...ds}}>🛣️ Distanza percorsa</span>
+              <span style={{color:C.blueGreen,fontWeight:700,...ds}}>{rideStats.km.toFixed(2)} km</span>
+            </div>
+          )}
+          {rideStats.velMedia > 0 && (
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+              <span style={{color:"#888",fontSize:13,...ds}}>⚡ Velocità media</span>
+              <span style={{color:C.blueGreen,fontWeight:700,...ds}}>{rideStats.velMedia.toFixed(1)} km/h</span>
+            </div>
+          )}
         </div>
         {/* Banner zona parcheggio */}
         {inParking===false&&(
@@ -1719,6 +1775,11 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         <div style={{textAlign:"right"}}>
           <p style={{color:C.skyBlue,fontSize:9,margin:0,...ds}}>Totale</p>
           <p style={{color:C.sunYellow,fontSize:22,fontWeight:700,margin:0,...ds}}>€{totalCost.toFixed(2)}</p>
+          {rideStats.km > 0 && (
+            <p style={{color:"rgba(255,255,255,0.6)",fontSize:10,margin:"2px 0 0",...ds}}>
+              🛣️ {rideStats.km.toFixed(1)}km · ⚡{rideStats.velMedia.toFixed(1)}km/h
+            </p>
+          )}
         </div>
         {paused&&<div style={{background:C.sunYellow,borderRadius:8,padding:"3px 10px"}}><p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,margin:0}}>PAUSA</p></div>}
         {autoPauseBanner&&(
@@ -1752,7 +1813,25 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             🏁 {t('endRide')}
           </button>
         </div>
-        <div style={{display:"flex",justifyContent:"center",gap:20}}>
+        {/* Banner parcheggio in tempo reale */}
+        {inParking===true&&(
+          <div style={{margin:"8px 0 0",background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}50`,borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16}}>✅</span>
+            <span style={{color:C.blueGreen,fontSize:12,fontWeight:700,...ds}}>Sei in zona parcheggio</span>
+            {nearestParking&&<span style={{color:C.blueGreen,fontSize:11,...ds}}>— {nearestParking.name}</span>}
+          </div>
+        )}
+        {inParking===false&&(
+          <div style={{margin:"8px 0 0",background:"#fff8e8",border:"1px solid #FFB70360",borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16}}>🅿️</span>
+            <div>
+              <span style={{color:"#7a5c00",fontSize:12,fontWeight:700,...ds}}>Fuori zona · </span>
+              {nearestParking&&<span style={{color:"#997a00",fontSize:11,...ds}}>{nearestParking.name} {distToParking}m</span>}
+            </div>
+          </div>
+        )}
+
+        <div style={{display:"flex",justifyContent:"center",gap:20,marginTop:6}}>
           {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
             <p key={k} style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{k}: <span style={{color:C.deepBlue,fontWeight:600}}>{v}</span></p>
           ))}
