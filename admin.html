@@ -1753,6 +1753,29 @@ function AdminApp({ user, onLogout, t }) {
               {/* Comandi remoti */}
               <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
                 <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 10px",...ds,letterSpacing:1,textTransform:"uppercase",opacity:0.6}}>🎮 Comandi remoti</p>
+
+                {/* Badge e bottone fuori zona */}
+                {selBike.outOfZone&&(
+                  <div style={{background:`${C.warmOrange}15`,border:`1.5px solid ${C.warmOrange}`,borderRadius:12,padding:"10px 14px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <p style={{color:C.warmOrange,fontSize:13,fontWeight:700,margin:0,...ds}}>🚨 Bici fuori zona operativa</p>
+                      <p style={{color:"#aaa",fontSize:11,margin:"2px 0 0",...ds}}>Allarme attivo — lock + beep ogni 60s</p>
+                    </div>
+                    <button onClick={async()=>{
+                      try {
+                        await waitFB();
+                        const {collection,addDoc} = window.firebaseFunctions;
+                        const normalPedId = 'PED' + selBike.id.replace('PA-','');
+                        await addDoc(collection(window.firebaseDb,'bikes',normalPedId,'commands'),
+                          {type:'stop_alarm',status:'pending',createdAt:new Date().toISOString()});
+                        alert("🛑 Comando inviato — allarme in arresto");
+                      } catch(e){alert("Errore: "+e.message);}
+                    }} style={{background:C.warmOrange,border:"none",borderRadius:10,padding:"8px 12px",color:C.white,fontSize:11,...ds,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                      🛑 Ferma
+                    </button>
+                  </div>
+                )}
+
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                   {[
                     ["unlock","🔓","Sblocca",C.blueGreen],
