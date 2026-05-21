@@ -3045,24 +3045,57 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   )}
 
                   {/* Selezione piano */}
-                  {[{id:"minuti",label:t('planMinutes')||"Al minuto",icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)}×${nBikes} + €${TARIFFA_MIN}/min`},{id:"giornata",label:t('planDay')||"Giornata",icon:"☀️",desc:`€${(TARIFFA_GIORNATA*nBikes).toFixed(2)} — pausa gratis`},{id:"settimana",label:t('planWeek')||"Settimana",icon:"🗓️",desc:`€${(TARIFFA_SETTIMANALE*nBikes).toFixed(2)} — 7 giorni illimitati`}].map(p=>(
-                    <div key={p.id} onClick={()=>setPlan(p.id)} style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"14px 16px",marginBottom:10,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14}}>
-                      <div style={{fontSize:28}}>{p.icon}</div>
-                      <div style={{flex:1}}>
-                        <p style={{color:plan===p.id?C.white:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{p.label}</p>
-                        <p style={{color:plan===p.id?C.skyBlue:"#aaa",fontSize:11,margin:"2px 0 0",...ds}}>{p.desc}</p>
+                  {[
+                    {id:"minuti", icon:"⏱️", label:t('planMinutes')||"Al minuto",
+                     price:`€${SBLOCCO.toFixed(2)}`, unit:"sblocco",
+                     details:[`€${TARIFFA_MIN}/min in corsa`,`€${TARIFFA_PAUSA}/min in pausa`],
+                     tag:null},
+                    {id:"giornata", icon:"☀️", label:t('planDay')||"Giornata intera",
+                     price:`€${(TARIFFA_GIORNATA*nBikes).toFixed(2)}`, unit:"tutto il giorno",
+                     details:["Sblocco incluso","Pausa gratuita"],
+                     tag:"PIÙ USATA"},
+                    {id:"settimana", icon:"🗓️", label:t('planWeek')||"Settimana",
+                     price:`€${(TARIFFA_SETTIMANALE*nBikes).toFixed(2)}`, unit:"7 giorni",
+                     details:["Uso illimitato","Pausa gratuita"],
+                     tag:"CONVENIENTE"},
+                  ].map(p=>(
+                    <div key={p.id} onClick={()=>setPlan(p.id)}
+                      style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,position:"relative",overflow:"hidden"}}>
+                      {p.tag&&<div style={{position:"absolute",top:0,right:0,background:plan===p.id?C.blueGreen:C.sunYellow,padding:"2px 10px",borderRadius:"0 12px 0 10px"}}><span style={{color:plan===p.id?C.white:C.deepBlue,fontSize:9,...ds,fontWeight:700}}>{p.tag}</span></div>}
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontSize:26}}>{p.icon}</span>
+                        <div style={{flex:1}}>
+                          <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:4}}>
+                            <p style={{color:plan===p.id?C.white:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{p.label}</p>
+                            <p style={{color:plan===p.id?C.sunYellow:C.blueGreen,fontWeight:700,fontSize:16,margin:0,...ds}}>{p.price}</p>
+                            <p style={{color:plan===p.id?"rgba(255,255,255,0.6)":"#aaa",fontSize:10,margin:0,...ds}}>{p.unit}</p>
+                          </div>
+                          <div style={{display:"flex",gap:10}}>
+                            {p.details.map(d=>(
+                              <span key={d} style={{color:plan===p.id?"rgba(255,255,255,0.75)":"#888",fontSize:10,...ds}}>• {d}</span>
+                            ))}
+                          </div>
+                        </div>
+                        {plan===p.id&&<div style={{width:22,height:22,borderRadius:11,background:C.blueGreen,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:13,flexShrink:0}}>✓</div>}
                       </div>
-                      {plan===p.id&&<div style={{width:22,height:22,borderRadius:11,background:C.blueGreen,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:13}}>✓</div>}
                     </div>
                   ))}
 
-                  {/* Distanza a piedi (solo per bici singola) */}
+                  {/* Distanza a piedi — usa posizione aggiornata da Firebase */}
                   {userPos&&selectedBike&&selectedBikes.length===1&&(()=>{
+                    // Cerca la bici aggiornata in allBikes (con posizione reale da Firebase)
+                    const liveBike = allBikes.find(b=>b.id===selectedBike.id) || selectedBike;
+                    const bikeLat = liveBike.lat;
+                    const bikeLng = liveBike.lng;
+                    // Calcola solo se le coordinate sono valide e non di default
+                    if (!bikeLat || !bikeLng || (bikeLat===43.0950&&bikeLng===12.0650)) return null;
                     const R=6371000;
-                    const dLat=(selectedBike.lat-userPos.lat)*Math.PI/180;
-                    const dLng=(selectedBike.lng-userPos.lng)*Math.PI/180;
-                    const a=Math.sin(dLat/2)**2+Math.cos(userPos.lat*Math.PI/180)*Math.cos(selectedBike.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+                    const dLat=(bikeLat-userPos.lat)*Math.PI/180;
+                    const dLng=(bikeLng-userPos.lng)*Math.PI/180;
+                    const a=Math.sin(dLat/2)**2+Math.cos(userPos.lat*Math.PI/180)*Math.cos(bikeLat*Math.PI/180)*Math.sin(dLng/2)**2;
                     const d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+                    // Nascondi se distanza > 50km (probabilmente coordinate sbagliate)
+                    if (d > 50000) return null;
                     const mins=Math.round(d/80);
                     const distText=d<1000?`${Math.round(d)}m · ~${mins} min`:`${(d/1000).toFixed(1)}km · ~${mins} min`;
                     return(
