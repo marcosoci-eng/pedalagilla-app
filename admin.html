@@ -1184,25 +1184,26 @@ function PromoAdmin() {
           <button key={label} onClick={()=>{
             const now = new Date();
             const from = new Date(now.getFullYear(), now.getMonth()-mesi+1, 1);
-            const rows = codes
+            const hdr = ["Hotel","Codice","Convenzione","Corse totali","Cashback EUR 3 corse","Totale cashback EUR","Corse bonifico","Importo bonifico EUR","Periodo"];
+            const dataRows = codes
               .filter(c=>c.type==="hotel"&&!c.deleted)
-              .map(c=>({
-                "Hotel": c.hotelName||c.id,
-                "Codice": c.id,
-                "Convenzione": c.hotelOption==="scontata"?"€16 Stripe":c.hotelOption==="cashback"?"€18,90+€3 cashback":"€0 bonifico",
-                "Corse totali": c.totalUses||0,
-                "Cashback €3 (corse)": c.hotelOption==="cashback"?c.totalUses||0:0,
-                "Totale cashback (€)": c.hotelOption==="cashback"?(c.totalCashback||0).toFixed(2):"0.00",
-                "Corse bonifico": c.hotelOption==="bonifico"?c.totalUses||0:0,
-                "Importo bonifico dovuto (€)": c.hotelOption==="bonifico"?((c.totalUses||0)*16).toFixed(2):"0.00",
-                "Periodo": label==="mensile"
+              .map(c=>[
+                String(c.hotelName||c.id),
+                String(c.id),
+                String(c.hotelOption==="scontata"?"16 Stripe":c.hotelOption==="cashback"?"18.90+3 cashback":"0 bonifico"),
+                Number(c.totalUses||0),
+                Number(c.hotelOption==="cashback"?c.totalUses||0:0),
+                Number(c.hotelOption==="cashback"?(c.totalCashback||0):0),
+                Number(c.hotelOption==="bonifico"?c.totalUses||0:0),
+                Number(c.hotelOption==="bonifico"?(c.totalUses||0)*16:0),
+                String(label==="mensile"
                   ? from.toLocaleDateString("it-IT",{month:"long",year:"numeric"})
-                  : `${from.toLocaleDateString("it-IT",{month:"short",year:"numeric"})} - ${now.toLocaleDateString("it-IT",{month:"short",year:"numeric"})}`,
-              }));
-            if(!rows.length){alert("Nessun hotel cashback trovato");return;}
-            const ws=XLSX.utils.json_to_sheet(rows);
+                  : from.toLocaleDateString("it-IT",{month:"short",year:"numeric"})+" - "+now.toLocaleDateString("it-IT",{month:"short",year:"numeric"})),
+              ]);
+            if(!dataRows.length){alert("Nessun hotel trovato");return;}
+            const ws=XLSX.utils.aoa_to_sheet([hdr,...dataRows]);
             const wb=XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb,"Cashback Hotel",ws);
+            XLSX.utils.book_append_sheet(wb,"Hotel",ws);
             const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
             const blob=new Blob([wbout],{type:"application/octet-stream"});
             const url=URL.createObjectURL(blob);
@@ -1596,37 +1597,31 @@ function AdminApp({ user, onLogout, t }) {
       onSnapshot(collection(window.firebaseDb,"mtbBikers"), snap=>{
         window._adminMTBBikes = snap.docs.map(d=>({id:d.id,...d.data()})).filter(b=>b.lat&&b.lng);
       });
-      // Carica stati manutenzione da bikesStatus prima di settare le bici
-      const loadBikeStatuses = async () => {
-        try {
-          const statusSnap = await getDocs(collection(window.firebaseDb, "bikesStatus"));
-          const statuses = {};
-          statusSnap.docs.forEach(d => { statuses[d.id] = d.data(); });
-          return statuses;
-        } catch(e) { return {}; }
-      };
+      // Carica stati manutenzione UNA VOLTA al mount
+      let bikeStatuses = {};
+      try {
+        const statusSnap = await getDocs(collection(window.firebaseDb, "bikesStatus"));
+        statusSnap.docs.forEach(d => { bikeStatuses[d.id] = d.data(); });
+      } catch(e) { console.error("Errore stati bici:", e); }
 
-      onSnapshot(collection(window.firebaseDb, "bikes"), async snap => {
+      onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
         const positions = {};
         const updatedBikes = [...initBikes];
-        // Legge stati manutenzione da Firestore
-        const statuses = await loadBikeStatuses();
         snap.docs.forEach(d => {
           const data = d.data();
           positions[d.id] = data;
           const normalizedId = 'PA-' + d.id.replace('PED','').padStart(3,'0');
           const idx = updatedBikes.findIndex(b => b.id === normalizedId);
           if (idx >= 0) {
-            const bikeStatus = statuses[normalizedId] || {};
+            const st = bikeStatuses[normalizedId];
             updatedBikes[idx] = {
               ...updatedBikes[idx],
               battery: data.batteryPercent || data.battery || updatedBikes[idx].battery,
               lat: data.lat || updatedBikes[idx].lat,
               lng: data.lng || updatedBikes[idx].lng,
               online: data.online || false,
-              // Preserva stato manutenzione da Firestore
-              status: bikeStatus.inManutenzione ? "Manutenzione" : "Disponibile",
-              inUse: bikeStatus.inUse || false,
+              // Stato manutenzione solo se esplicitamente true in Firestore
+              status: (st && st.inManutenzione === true) ? "Manutenzione" : "Disponibile",
             };
           }
         });
