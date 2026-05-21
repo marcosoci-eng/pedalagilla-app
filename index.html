@@ -986,64 +986,75 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
-function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=false }) {
-  const cardRef = React.useRef(null);
-  const cardEl = React.useRef(null);
+function PaymentForm({ amount, bike, plan, user, onSuccess, onCancel, t, hidePreAuth=false }) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
-  const [nome, setNome] = React.useState("");
   const nBikes = Array.isArray(bike) ? bike.length : 1;
   const preAuth = nBikes * 10;
-  React.useEffect(() => {
-    if (!cardRef.current||cardEl.current) return;
-    const card = stripeElements.create("card",{style:{base:{fontSize:"16px",color:"#023047",fontFamily:"'DM Sans',sans-serif","::placeholder":{color:"#aaa"}}},hidePostalCode:true});
-    card.mount(cardRef.current); cardEl.current = card;
-  }, []);
+
   const handlePay = async () => {
-    if (!nome.trim()) { setError(t('errName')); return; }
     setLoading(true); setError(null);
     try {
-      const {paymentMethod,error:e} = await stripeInstance.createPaymentMethod({type:"card",card:cardEl.current,billing_details:{name:nome}});
-      if (e) { setError(e.message); setLoading(false); return; }
-      setTimeout(()=>{ setLoading(false); onSuccess(paymentMethod.id); },1500);
+      const bikeIds = Array.isArray(bike) ? bike.map(b=>b.id) : [bike.id];
+      const planKey = plan && (plan.includes('min')||plan.includes('Min')||plan.includes('minute')||plan.includes('minuto')) ? 'minuti' : plan && (plan.includes('ett')||plan.includes('eek')||plan.includes('oche')) ? 'settimana' : 'giornata';
+      const res = await fetch('https://web-production-eafa5.up.railway.app/create-checkout', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          amount,
+          planLabel: plan,
+          bikeIds,
+          plan: planKey,
+          userId: user?.uid || '',
+          userName: `${user?.nome||''} ${user?.cognome||''}`.trim(),
+          userEmail: user?.email || '',
+        })
+      });
+      const data = await res.json();
+      if (data.error) { setError(data.error); setLoading(false); return; }
+      // Salva dati corsa in sessionStorage per recuperarli al ritorno da Stripe
+      sessionStorage.setItem('pendingCheckout', JSON.stringify({
+        sessionId: data.sessionId,
+        bikeIds, plan: planKey, amount,
+      }));
+      window.location.href = data.url;
     } catch(e) { setError(t('errPayment')); setLoading(false); }
   };
   const bikeIds = Array.isArray(bike) ? bike.map(b=>b.id).join(', ') : bike.id;
   return (
     <div style={{padding:"20px 18px"}}>
-      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:12,textAlign:"center"}}>
+      {/* Riepilogo importo */}
+      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:20,marginBottom:16,textAlign:"center"}}>
         <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{t('total')}</p>
-        <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{amount.toFixed(2)}</p>
+        <p style={{color:C.sunYellow,fontSize:40,fontWeight:700,margin:"0 0 6px",...ds}}>€{amount.toFixed(2)}</p>
         <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,margin:0,...ds}}>{bikeIds} · {plan}</p>
       </div>
 
-      {/* Box pre-autorizzazione */}
-      {!hidePreAuth&&<div style={{background:"#FFF8E1",border:"2px solid #FFB703",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
+      {/* Info metodi di pagamento accettati */}
+      <div style={{background:`${C.skyBlue}15`,border:`1px solid ${C.skyBlue}40`,borderRadius:14,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
+        <span style={{fontSize:28}}>🔒</span>
+        <div>
+          <p style={{color:C.deepBlue,fontSize:13,fontWeight:700,margin:0,...ds}}>Pagamento sicuro con Stripe</p>
+          <p style={{color:"#888",fontSize:11,margin:"3px 0 0",...ds}}>Carta di credito/debito · Apple Pay · Google Pay</p>
+          <p style={{color:"#aaa",fontSize:10,margin:"2px 0 0",...ds}}>Verrai reindirizzato alla pagina di pagamento Stripe</p>
+        </div>
+      </div>
+
+      {!hidePreAuth&&<div style={{background:"#FFF8E1",border:"2px solid #FFB703",borderRadius:14,padding:"12px 14px",marginBottom:16}}>
         <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-          <span style={{fontSize:22,flexShrink:0}}>🔒</span>
+          <span style={{fontSize:20,flexShrink:0}}>🔒</span>
           <div>
-            <p style={{color:"#7a5800",fontSize:13,fontWeight:700,margin:"0 0 4px",...ds}}>
-              {t('preAuthTitle')} €{preAuth.toFixed(2)}
-            </p>
-            <p style={{color:"#7a5800",fontSize:12,margin:0,...ds,lineHeight:"1.5"}}>
-              {t('preAuthDesc')}
-            </p>
-            {nBikes > 1 && (
-              <p style={{color:"#b38600",fontSize:11,margin:"6px 0 0",...ds}}>
-                {nBikes} {t('bikesSelected')} × €10 = €{preAuth.toFixed(2)}
-              </p>
-            )}
+            <p style={{color:"#7a5800",fontSize:13,fontWeight:700,margin:"0 0 4px",...ds}}>{t('preAuthTitle')} €{preAuth.toFixed(2)}</p>
+            <p style={{color:"#7a5800",fontSize:11,margin:0,...ds,lineHeight:"1.5"}}>{t('preAuthDesc')}</p>
           </div>
         </div>
       </div>}
 
-      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('cardName')}</p>
-      <input value={nome} onChange={e=>setNome(e.target.value)} placeholder={t('cardNamePh')} style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,marginBottom:12,background:C.white}} />
-      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('card')}</p>
-      <div ref={cardRef} style={{background:C.white,padding:14,borderRadius:10,border:`1.5px solid ${C.skyBlue}`,marginBottom:12}} />
-      {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
-      <button onClick={handlePay} disabled={loading} style={{width:"100%",background:loading?`${C.blueGreen}80`:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:8}}>
-        {loading?t('paying'):`${t('payBtn')} €${amount.toFixed(2)}`}
+      {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 12px",...ds}}>⚠️ {error}</p>}
+
+      <button onClick={handlePay} disabled={loading}
+        style={{width:"100%",background:loading?`${C.blueGreen}80`:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
+        {loading ? "⏳ Preparazione pagamento..." : `💳 Paga €${amount.toFixed(2)} →`}
       </button>
       <button onClick={onCancel} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('cancel')}</button>
     </div>
@@ -2515,6 +2526,69 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   // Recupera corsa attiva al login
   React.useEffect(()=>{
+    // ── Gestione ritorno da Stripe Checkout ──────────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutSuccess = urlParams.get('checkout_success');
+    const checkoutCancelled = urlParams.get('checkout_cancelled');
+
+    if (checkoutCancelled) {
+      window.history.replaceState({}, '', '/');
+      setRestoringRide(false);
+      return;
+    }
+
+    if (checkoutSuccess) {
+      window.history.replaceState({}, '', '/');
+      const pending = sessionStorage.getItem('pendingCheckout');
+      if (pending) {
+        try {
+          const { sessionId, bikeIds, plan, amount } = JSON.parse(pending);
+          sessionStorage.removeItem('pendingCheckout');
+          // Verifica pagamento su Railway
+          const res = await fetch('https://web-production-eafa5.up.railway.app/checkout-status', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ sessionId })
+          });
+          const data = await res.json();
+          if (data.paid) {
+            // Pagamento confermato — avvia la corsa
+            await waitFB();
+            const {collection,addDoc} = window.firebaseFunctions;
+            const bks = bikeIds.map(id => {
+              const found = initBikes.find(b => b.id === id);
+              return found || {id, zone:'', battery:80, status:'Disponibile', lat:43.15, lng:12.08};
+            });
+            const rideIds = [];
+            for (const bike of bks) {
+              const rideDoc = await addDoc(collection(window.firebaseDb,'rides'), {
+                bikeId: bike.id, userId: user.uid||'',
+                userName: `${user.nome||''} ${user.cognome||''}`.trim()||'Cliente',
+                userEmail: user.email||'', zone: bike.zone, plan,
+                status: 'In corso', startTime: new Date().toISOString(),
+                track: [], cost: 0, groupSize: bks.length,
+                paymentIntentId: data.paymentIntentId||null,
+                sessionId,
+              });
+              rideIds.push({bikeId: bike.id, rideId: rideDoc.id});
+              await sendBikeCommand(bike.id, 'unlock');
+              await sendBikeCommand(bike.id, 'gps_high');
+              await setBikeInUse(bike.id, true);
+            }
+            setCurrentRideIds(rideIds);
+            setConfirmed(bks);
+            setPlan(plan);
+            setRiding(true);
+            setRestoringRide(false);
+            return;
+          }
+        } catch(e) { console.error('Errore verifica checkout:', e); }
+      }
+      setRestoringRide(false);
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const restore = async () => {
       console.log("🔄 Restore avviato, user.uid:", user?.uid);
       try {
@@ -2930,7 +3004,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>{t('payment')}</p>
                   <div style={{width:30}}/>
                 </div>
-                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="giornata"?t('planDay'):t('planMinutes')} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
+                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="settimana"?t('planWeek')||"Settimana":plan==="giornata"?t('planDay'):t('planMinutes')} user={user} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
               </>
             ):(
               <>
