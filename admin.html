@@ -1901,13 +1901,16 @@ function AdminApp({ user, onLogout, t }) {
               ))}
             </div>
 
-            {/* Filtri stato */}
-            <div style={{display:"flex",gap:6,marginBottom:10,overflowX:"auto"}}>
-              {[["Tutti","Tutte le bici"],["Disponibile","✅ In servizio"],["Manutenzione","🔧 Manutenzione"],["Batteria Bassa","🔴 Bassa carica"]].map(([f,label])=>(
+            {/* Filtri stato — griglia 2x2 */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:10}}>
+              {[["Tutti","🚲 Tutte"],["Disponibile","✅ In servizio"],["Manutenzione","🔧 Manutenzione"],["Batteria Bassa","🔴 Bassa carica"]].map(([f,label])=>(
                 <button key={f} className="btn" onClick={()=>setFilter(f)}
-                  style={{background:filter===f?C.deepBlue:C.white,border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,
-                    borderRadius:20,padding:"5px 14px",color:filter===f?C.white:C.deepBlue,
-                    fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:filter===f?700:500}}>
+                  style={{background:filter===f?C.deepBlue:C.white,
+                    border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,
+                    borderRadius:12,padding:"8px 10px",
+                    color:filter===f?C.white:C.deepBlue,
+                    fontSize:12,cursor:"pointer",...ds,
+                    fontWeight:filter===f?700:500,textAlign:"center"}}>
                   {label}
                 </button>
               ))}
