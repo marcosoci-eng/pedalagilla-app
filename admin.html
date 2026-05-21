@@ -1201,14 +1201,15 @@ function PromoAdmin() {
                   : from.toLocaleDateString("it-IT",{month:"short",year:"numeric"})+" - "+now.toLocaleDateString("it-IT",{month:"short",year:"numeric"})),
               ]);
             if(!dataRows.length){alert("Nessun hotel trovato");return;}
-            const ws=XLSX.utils.aoa_to_sheet([hdr,...dataRows]);
-            const wb=XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb,"Hotel",ws);
-            const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-            const blob=new Blob([wbout],{type:"application/octet-stream"});
+            const csvH = hdr.map(h=>'"'+h+'"').join(",");
+            const csvD = dataRows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(","));
+            const csvContent = [csvH,...csvD].join("
+");
+            const BOM = "﻿";
+            const blob=new Blob([BOM+csvContent],{type:"text/csv;charset=utf-8"});
             const url=URL.createObjectURL(blob);
             const a=document.createElement("a");
-            a.href=url; a.download=`cashback_hotel_${label}_${now.toISOString().slice(0,10)}.xlsx`; a.click();
+            a.href=url; a.download=`cashback_hotel_${label}_${now.toISOString().slice(0,10)}.csv`; a.click();
             URL.revokeObjectURL(url);
           }} style={{flex:1,background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:10,padding:"8px 6px",color:"#7a5800",fontSize:11,...ds,fontWeight:600,cursor:"pointer",textAlign:"center"}}>
             📊 Excel {label}
@@ -1712,30 +1713,33 @@ function AdminApp({ user, onLogout, t }) {
         userStats[r.userId].costoTotale += (r.cost||0);
       });
 
-      // Usa aoa_to_sheet (array of arrays) — più robusto di json_to_sheet
-      const headers = ["Nome","Cognome","Email","Telefono","Tipo","Registrato il","Doc verificato","N corse","Km totali","Vel media kmh","Spesa totale EUR"];
-      const rows = fbUsers.filter(u=>u.type!=="admin").map(u=>{
+      // CSV fallback — nessuna dipendenza da XLSX per evitare indexOf errors
+      const csvHeaders = ["Nome","Cognome","Email","Telefono","Tipo","Registrato il","Doc verificato","N corse","Km totali","Vel media kmh","Spesa totale EUR"];
+      const csvRows = fbUsers.filter(u=>u.type!=="admin").map(u=>{
         const stats = userStats[u.id] || {corse:0,kmTotali:0,tempoTotale:0,costoTotale:0};
-        const velMedia = stats.tempoTotale>0 ? stats.kmTotali/stats.tempoTotale : 0;
-        const kmSafe = isFinite(stats.kmTotali) ? stats.kmTotali : 0;
-        const velSafe = isFinite(velMedia) ? velMedia : 0;
-        const costoSafe = isFinite(stats.costoTotale) ? stats.costoTotale : 0;
+        const velMedia = isFinite(stats.tempoTotale) && stats.tempoTotale>0 ? stats.kmTotali/stats.tempoTotale : 0;
+        const km = isFinite(stats.kmTotali) ? stats.kmTotali : 0;
+        const vel = isFinite(velMedia) ? velMedia : 0;
+        const costo = isFinite(stats.costoTotale) ? stats.costoTotale : 0;
         return [
-          String(u.nome||""),
-          String(u.cognome||""),
-          String(u.email||""),
-          String(u.telefono||""),
-          String(u.type||"cliente"),
-          String(u.createdAt ? new Date(u.createdAt).toLocaleDateString("it-IT") : ""),
-          String(u.docReviewed===true ? "Si" : u.docReviewed==="rejected" ? "Rifiutato" : "Da verificare"),
-          Number(stats.corse||0),
-          Number(kmSafe.toFixed(1)),
-          Number(velSafe.toFixed(1)),
-          Number(costoSafe.toFixed(2)),
-        ];
+          u.nome||"", u.cognome||"", u.email||"", u.telefono||"",
+          u.type||"cliente",
+          u.createdAt ? new Date(u.createdAt).toLocaleDateString("it-IT") : "",
+          u.docReviewed===true ? "Si" : u.docReviewed==="rejected" ? "Rifiutato" : "Da verificare",
+          stats.corse||0, km.toFixed(1), vel.toFixed(1), costo.toFixed(2)
+        ].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",");
       });
-      if(!rows.length){alert("Nessun utente");return;}
-      const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+      if(!csvRows.length){alert("Nessun utente");return;}
+      const csvContent = [csvHeaders.map(h=>'"'+h+'"').join(","), ...csvRows].join("
+");
+      const BOM = "﻿"; // BOM per Excel italiano
+      const blob=new Blob([BOM+csvContent],{type:"text/csv;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url; a.download=`utenti_pedalagilla_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+      URL.revokeObjectURL(url);
+      return; // esce prima del wb/wbout
+      const ws=XLSX.utils.aoa_to_sheet([[]]); // mai raggiunto
       const wb=XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb,"Utenti",ws); 
       const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
