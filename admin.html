@@ -1559,8 +1559,20 @@ function AdminApp({ user, onLogout, t }) {
   const today=new Date().toLocaleDateString("it-IT");
   const todayRides=rides.filter(r=>r.date===today);
   const monthRides=rides;
-  const todayIncassi=todayRides.filter(r=>r.status==="Completata").reduce((a,r)=>a+(r.cost||0),0);
-  const monthIncassi=monthRides.filter(r=>r.status==="Completata").reduce((a,r)=>a+(r.cost||0),0);
+  // Corsa a pagamento = non gratuita (esclude dipendente/famiglia/struttura/bonifico)
+  const isPaidRide = r => {
+    if (r.isFree) return false;
+    if (r.promoType === "dipendente" || r.promoType === "famiglia" || r.promoType === "struttura") return false;
+    if (r.promoType === "hotel" && r.hotelOption === "bonifico") return false;
+    return true;
+  };
+  const todayIncassi=todayRides.filter(r=>r.status==="Completata"&&isPaidRide(r)).reduce((a,r)=>a+(r.cost||0),0);
+  const monthIncassi=monthRides.filter(r=>r.status==="Completata"&&isPaidRide(r)).reduce((a,r)=>a+(r.cost||0),0);
+  // Corse totali vs corse a pagamento
+  const todayPaidCount=todayRides.filter(r=>r.status==="Completata"&&isPaidRide(r)).length;
+  const todayFreeCount=todayRides.filter(r=>r.status==="Completata"&&!isPaidRide(r)).length;
+  const monthPaidCount=monthRides.filter(r=>r.status==="Completata"&&isPaidRide(r)).length;
+  const monthFreeCount=monthRides.filter(r=>r.status==="Completata"&&!isPaidRide(r)).length;
   const available=bikes.filter(b=>b.status==="Disponibile").length;
   const maint=bikes.filter(b=>b.status==="Manutenzione").length;
   const low=bikes.filter(b=>b.battery<50).length;
@@ -1908,7 +1920,13 @@ function AdminApp({ user, onLogout, t }) {
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div style={{background:`linear-gradient(135deg,${C.blueGreen},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>INCASSI</p><p style={{color:C.sunYellow,fontSize:20,fontWeight:700,margin:0,...ds}}>€{(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)}</p></div>
-                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>CORSE</p><p style={{color:C.blueGreen,fontSize:20,fontWeight:700,margin:0,...ds}}>{incassiPeriod==="oggi"?todayRides.length:monthRides.length}</p></div>
+                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+                    <p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>CORSE PAGATE</p>
+                    <p style={{color:C.blueGreen,fontSize:20,fontWeight:700,margin:0,...ds}}>{incassiPeriod==="oggi"?todayPaidCount:monthPaidCount}</p>
+                    {(incassiPeriod==="oggi"?todayFreeCount:monthFreeCount)>0&&(
+                      <p style={{color:"rgba(255,255,255,0.4)",fontSize:9,...ds,margin:"2px 0 0"}}>+{incassiPeriod==="oggi"?todayFreeCount:monthFreeCount} gratuite</p>
+                    )}
+                  </div>
               </div>
             </div>
             {bikes.filter(b=>b.status==="Manutenzione").length>0&&(<div style={{background:`${C.sunYellow}10`,border:`1px solid ${C.sunYellow}40`,borderRadius:14,padding:"12px 14px",marginBottom:12}}><p style={{color:C.sunYellow,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>🔧 In manutenzione</p>{bikes.filter(b=>b.status==="Manutenzione").map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{display:"flex",justifyContent:"space-between",padding:"6px 8px",background:"rgba(255,255,255,0.5)",borderRadius:8,marginBottom:4}}><span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{bike.id} · {bike.zone}</span><span style={{color:"#888",fontSize:11,...ds}}>{bike.battery}% ›</span></div>))}</div>)}
@@ -2091,14 +2109,16 @@ function AdminApp({ user, onLogout, t }) {
               {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>setIncassiPeriod(v)} style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>))}
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
-              {[["💶",(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)+"€","Incassi",C.sunYellow],["🏁",(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata").length,"Completate",C.blueGreen],["🚴",rides.filter(r=>r.status==="In corso").length,"In corso",C.warmOrange]].map(([icon,val,label,color])=>(<div key={label} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:18,marginBottom:4}}>{icon}</div><div style={{color,fontSize:18,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div></div>))}
+              {[["💶",(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)+"€","Incassi",C.sunYellow],["🏁",(incassiPeriod==="oggi"?todayPaidCount:monthPaidCount)+" / "+((incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata").length),"Pagate / Tot.",C.blueGreen],["🚴",rides.filter(r=>r.status==="In corso").length,"In corso",C.warmOrange]].map(([icon,val,label,color])=>(<div key={label} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:18,marginBottom:4}}>{icon}</div><div style={{color,fontSize:18,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div></div>))}
             </div>
             {rides.filter(r=>r.status==="In corso").length>0&&<>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>🔴 In corso</p>
               {[...rides].filter(r=>r.status==="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p><p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>💶 €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min</p><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button></div>))}
             </>}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"12px 0 8px",...ds,opacity:0.5}}>Completate</p>
-            {[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>
+            {[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:ride.isFree||(ride.promoType&&["dipendente","famiglia","struttura"].includes(ride.promoType))||(ride.promoType==="hotel"&&ride.hotelOption==="bonifico")?"#aaa":C.blueGreen,fontWeight:700,fontSize:13,...ds}}>
+                      {ride.isFree||(ride.promoType&&["dipendente","famiglia","struttura"].includes(ride.promoType))||(ride.promoType==="hotel"&&ride.hotelOption==="bonifico")?"🎟️ Gratuita":`€${(ride.cost||0).toFixed(2)}`}
+                    </span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>
                   {(()=>{
                     // Usa dati già calcolati se disponibili, altrimenti calcola dalla traccia
                     if (ride.kmPercorsi > 0) {
