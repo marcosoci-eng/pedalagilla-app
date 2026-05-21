@@ -2619,8 +2619,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       const {collection, onSnapshot} = window.firebaseFunctions;
       onSnapshot(collection(window.firebaseDb, "bikesStatus"), snap => {
         const active = snap.docs
-          .filter(d => d.data().inUse === true)
-          .map(d => d.id); // id è bikeId tipo PA-027
+          .filter(d => d.data().inUse === true || d.data().inManutenzione === true)
+          .map(d => d.id); // include bici in uso E in manutenzione
         setActiveBikeIds(active);
       });
     };
