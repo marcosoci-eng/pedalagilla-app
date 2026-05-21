@@ -1106,7 +1106,7 @@ function DeveloperCard({ C, ds }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function AuthScreen({ onLogin, lang, setLang, t }) {
-  const [mode, setMode] = React.useState("login");
+  const [mode, setMode] = React.useState("login"); // login | register | adminLogin | developer
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [nome, setNome] = React.useState("");
@@ -1224,7 +1224,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       <div style={{width:390,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
         <div style={{background:C.deepBlue,padding:"22px 24px 16px",textAlign:"center"}}>
           <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
-          <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
+          <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap",marginBottom:8}}>
             {LANG_LIST.map(l=>(
               <button key={l} onClick={()=>{setLang(l);setError(null);}}
                 style={{background:lang===l?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.15)",border:`1px solid ${lang===l?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.2)"}`,borderRadius:8,padding:"3px 6px",cursor:"pointer",fontSize:20,lineHeight:1}}>
@@ -1232,16 +1232,26 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               </button>
             ))}
           </div>
+          <button onClick={()=>setMode(m=>m==="developer"?"login":"developer")}
+            style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"4px 14px",color:"rgba(255,255,255,0.7)",fontSize:11,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",letterSpacing:0.5}}>
+            {mode==="developer" ? "← Torna" : "👨‍💻 Sviluppatore"}
+          </button>
         </div>
         <div style={{padding:"18px 20px",maxHeight:"72vh",overflowY:"auto"}}>
-          {mode!=="adminLogin"&&(
+          {mode!=="adminLogin"&&mode!=="developer"&&(
             <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:18}}>
               {[["login",t('login')],["register",t('register')]].map(([m,l])=>(
                 <button key={m} onClick={()=>{setMode(m);setError(null);setShowResend(false);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
           )}
-          {mode==="login"&&<>
+          {mode==="developer"&&(
+            <div style={{padding:"20px 4px"}}>
+              <DeveloperCard C={C} ds={ds}/>
+            </div>
+          )}
+
+          {mode!=="developer"&&mode==="login"&&<>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('email')}</p>
             <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder={t('emailPlaceholder')} style={inp} />
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('password')}</p>
@@ -1260,7 +1270,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               {t('adminAccess')}
             </a>
           </>}
-          {mode==="register"&&<>
+          {mode!=="developer"&&mode==="register"&&<>
             {[[t('nome'),nome,setNome,"text",t('nomePh')],[t('cognome'),cognome,setCognome,"text",t('cognomePh')],[t('email'),email,setEmail,"email",t('emailPlaceholder')],[t('telefono'),telefono,setTelefono,"tel",t('telefonoPh')]].map(([label,val,setter,type,ph])=>(
               <div key={label}>
                 <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{label}</p>
@@ -1314,7 +1324,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               {loading?t('registerLoading'):t('createAccount')}
             </button>
           </>}
-          {mode==="adminLogin"&&<>
+          {mode!=="developer"&&mode==="adminLogin"&&<>
             <button onClick={()=>{setMode("login");setError(null);}} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,cursor:"pointer",...ds,fontWeight:600,marginBottom:14}}>{t('adminBack')}</button>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('adminUsername')}</p>
             <input value={adminUser} onChange={e=>setAdminUser(e.target.value)} type="email" placeholder={t('adminUsernamePh')} style={inp} />
@@ -1329,10 +1339,6 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             {error&&<p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
             <button onClick={handleAdminLogin} style={{width:"100%",background:`linear-gradient(90deg,${C.deepBlue},#034a6e)`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>{t('adminLoginBtn')}</button>
           </>}
-        </div>
-        {/* Sezione sviluppatore — visibile prima del login */}
-        <div style={{padding:"0 20px 24px"}}>
-          <DeveloperCard C={C} ds={ds}/>
         </div>
       </div>
     </div>
