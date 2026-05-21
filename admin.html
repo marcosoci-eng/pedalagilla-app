@@ -1592,7 +1592,7 @@ function AdminApp({ user, onLogout, t }) {
   React.useEffect(()=>{
     const load = async () => {
       await waitFB();
-      const {collection, onSnapshot} = window.firebaseFunctions;
+      const {collection, onSnapshot, getDocs} = window.firebaseFunctions;
       // MTB sulla mappa admin
       onSnapshot(collection(window.firebaseDb,"mtbBikers"), snap=>{
         window._adminMTBBikes = snap.docs.map(d=>({id:d.id,...d.data()})).filter(b=>b.lat&&b.lng);
@@ -1717,18 +1717,21 @@ function AdminApp({ user, onLogout, t }) {
       const rows = fbUsers.filter(u=>u.type!=="admin").map(u=>{
         const stats = userStats[u.id] || {corse:0,kmTotali:0,tempoTotale:0,costoTotale:0};
         const velMedia = stats.tempoTotale>0 ? stats.kmTotali/stats.tempoTotale : 0;
+        const kmSafe = isFinite(stats.kmTotali) ? stats.kmTotali : 0;
+        const velSafe = isFinite(velMedia) ? velMedia : 0;
+        const costoSafe = isFinite(stats.costoTotale) ? stats.costoTotale : 0;
         return [
           String(u.nome||""),
           String(u.cognome||""),
           String(u.email||""),
           String(u.telefono||""),
           String(u.type||"cliente"),
-          u.createdAt ? new Date(u.createdAt).toLocaleDateString("it-IT") : "",
-          u.docReviewed===true ? "Si" : u.docReviewed==="rejected" ? "Rifiutato" : "Da verificare",
-          stats.corse,
-          parseFloat(stats.kmTotali.toFixed(1)),
-          parseFloat(velMedia.toFixed(1)),
-          parseFloat(stats.costoTotale.toFixed(2)),
+          String(u.createdAt ? new Date(u.createdAt).toLocaleDateString("it-IT") : ""),
+          String(u.docReviewed===true ? "Si" : u.docReviewed==="rejected" ? "Rifiutato" : "Da verificare"),
+          Number(stats.corse||0),
+          Number(kmSafe.toFixed(1)),
+          Number(velSafe.toFixed(1)),
+          Number(costoSafe.toFixed(2)),
         ];
       });
       if(!rows.length){alert("Nessun utente");return;}
