@@ -1527,6 +1527,7 @@ function AdminApp({ user, onLogout, t }) {
   const [bikes, setBikes] = React.useState(initBikes);
   const [selBike, setSelBike] = React.useState(null);
   const [filter, setFilter] = React.useState("Tutti");
+  const [battFilter, setBattFilter] = React.useState(0); // 0 = mostra tutte, valore minimo batteria
   const [mapFilter, setMapFilter] = React.useState("Tutti");
   const [editNote, setEditNote] = React.useState("");
   const [editChecks, setEditChecks] = React.useState({});
@@ -1564,7 +1565,11 @@ function AdminApp({ user, onLogout, t }) {
   const maint=bikes.filter(b=>b.status==="Manutenzione").length;
   const low=bikes.filter(b=>b.battery<50).length;
   const avg=Math.round(bikes.reduce((a,b)=>a+b.battery,0)/bikes.length);
-  const filteredBikes=filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>b.battery<50);
+  const filteredBikes=(()=>{
+    let list = filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>b.battery<50);
+    if (battFilter > 0) list = list.filter(b=>b.battery<=battFilter);
+    return list.sort((a,b)=>a.battery-b.battery); // ordina per batteria crescente
+  })();
   const mapBikes=mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
   const visibleZones=savedZones.filter(z=>zoneFilters[z.type]);
 
@@ -1877,9 +1882,73 @@ function AdminApp({ user, onLogout, t }) {
           </div>}
 
           {tab==="bici"&&<div className="slide" style={{padding:"16px 18px 0"}}>
-            <div style={{display:"flex",gap:8,marginBottom:12,overflowX:"auto"}}>
-              {["Tutti","Disponibile","Manutenzione","Batteria Bassa"].map(f=>(<button key={f} className="btn" onClick={()=>setFilter(f)} style={{background:filter===f?C.deepBlue:C.white,border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:filter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>))}
+
+            {/* Contatori rapidi */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+              {[
+                {label:"Totale",val:bikes.length,color:C.deepBlue,icon:"🚲"},
+                {label:"In servizio",val:bikes.filter(b=>b.status==="Disponibile").length,color:C.blueGreen,icon:"✅"},
+                {label:"Manutenzione",val:bikes.filter(b=>b.status==="Manutenzione").length,color:C.warmOrange,icon:"🔧"},
+              ].map(k=>(
+                <div key={k.label} onClick={()=>setFilter(k.label==="Totale"?"Tutti":k.label==="In servizio"?"Disponibile":"Manutenzione")}
+                  style={{background:C.white,borderRadius:12,padding:"10px 8px",textAlign:"center",cursor:"pointer",
+                    boxShadow:"0 2px 8px rgba(2,48,71,0.07)",
+                    border:`2px solid ${(filter==="Tutti"&&k.label==="Totale")||(filter==="Disponibile"&&k.label==="In servizio")||(filter==="Manutenzione"&&k.label==="Manutenzione")?k.color:"transparent"}`}}>
+                  <p style={{fontSize:18,margin:"0 0 2px"}}>{k.icon}</p>
+                  <p style={{color:k.color,fontSize:18,fontWeight:700,margin:0,...ds}}>{k.val}</p>
+                  <p style={{color:"#aaa",fontSize:10,margin:0,...ds}}>{k.label}</p>
+                </div>
+              ))}
             </div>
+
+            {/* Filtri stato */}
+            <div style={{display:"flex",gap:6,marginBottom:10,overflowX:"auto"}}>
+              {[["Tutti","Tutte le bici"],["Disponibile","✅ In servizio"],["Manutenzione","🔧 Manutenzione"],["Batteria Bassa","🔴 Bassa carica"]].map(([f,label])=>(
+                <button key={f} className="btn" onClick={()=>setFilter(f)}
+                  style={{background:filter===f?C.deepBlue:C.white,border:`1.5px solid ${filter===f?C.deepBlue:C.skyBlue+"50"}`,
+                    borderRadius:20,padding:"5px 14px",color:filter===f?C.white:C.deepBlue,
+                    fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:filter===f?700:500}}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Slider filtro batteria */}
+            <div style={{background:C.white,borderRadius:14,padding:"12px 14px",marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.06)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:0,...ds}}>
+                  ⚡ Filtro batteria
+                </p>
+                <p style={{color:battFilter===0?C.blueGreen:C.warmOrange,fontSize:12,fontWeight:700,margin:0,...ds}}>
+                  {battFilter===0 ? "Tutte" : `≤ ${battFilter}%`}
+                  {battFilter>0&&<span style={{color:"#aaa",fontSize:10,fontWeight:400}}> ({filteredBikes.length} bici)</span>}
+                </p>
+              </div>
+              <input type="range" min="0" max="100" step="5" value={battFilter}
+                onChange={e=>setBattFilter(parseInt(e.target.value))}
+                style={{width:"100%",accentColor:battFilter===0?C.blueGreen:battFilter<30?C.warmOrange:battFilter<60?C.sunYellow:C.blueGreen,cursor:"pointer"}}/>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                <span style={{color:"#aaa",fontSize:9,...ds}}>0%</span>
+                <span style={{color:C.warmOrange,fontSize:9,...ds}}>25%</span>
+                <span style={{color:C.sunYellow,fontSize:9,...ds}}>50%</span>
+                <span style={{color:C.blueGreen,fontSize:9,...ds}}>75%</span>
+                <span style={{color:C.blueGreen,fontSize:9,...ds}}>100%</span>
+              </div>
+              {battFilter>0&&(
+                <button onClick={()=>setBattFilter(0)}
+                  style={{marginTop:8,background:`${C.skyBlue}20`,border:`1px solid ${C.skyBlue}`,borderRadius:8,padding:"4px 12px",color:C.deepBlue,fontSize:11,...ds,cursor:"pointer"}}>
+                  ✕ Reset filtro
+                </button>
+              )}
+            </div>
+
+            {/* Lista risultati */}
+            {filteredBikes.length===0&&(
+              <div style={{textAlign:"center",padding:"30px 0",color:"#aaa"}}>
+                <p style={{fontSize:32,margin:"0 0 8px"}}>🔍</p>
+                <p style={{fontSize:13,...ds}}>Nessuna bici con questi filtri</p>
+              </div>
+            )}
             {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
             {/* MTB Muscolari */}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"16px 0 8px",...ds,opacity:0.5}}>🏔️ MTB Muscolari</p>
