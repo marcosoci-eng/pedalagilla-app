@@ -1596,21 +1596,37 @@ function AdminApp({ user, onLogout, t }) {
       onSnapshot(collection(window.firebaseDb,"mtbBikers"), snap=>{
         window._adminMTBBikes = snap.docs.map(d=>({id:d.id,...d.data()})).filter(b=>b.lat&&b.lng);
       });
-      onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
+      // Carica stati manutenzione da bikesStatus prima di settare le bici
+      const loadBikeStatuses = async () => {
+        try {
+          const statusSnap = await getDocs(collection(window.firebaseDb, "bikesStatus"));
+          const statuses = {};
+          statusSnap.docs.forEach(d => { statuses[d.id] = d.data(); });
+          return statuses;
+        } catch(e) { return {}; }
+      };
+
+      onSnapshot(collection(window.firebaseDb, "bikes"), async snap => {
         const positions = {};
         const updatedBikes = [...initBikes];
+        // Legge stati manutenzione da Firestore
+        const statuses = await loadBikeStatuses();
         snap.docs.forEach(d => {
           const data = d.data();
           positions[d.id] = data;
           const normalizedId = 'PA-' + d.id.replace('PED','').padStart(3,'0');
           const idx = updatedBikes.findIndex(b => b.id === normalizedId);
           if (idx >= 0) {
+            const bikeStatus = statuses[normalizedId] || {};
             updatedBikes[idx] = {
               ...updatedBikes[idx],
               battery: data.batteryPercent || data.battery || updatedBikes[idx].battery,
               lat: data.lat || updatedBikes[idx].lat,
               lng: data.lng || updatedBikes[idx].lng,
               online: data.online || false,
+              // Preserva stato manutenzione da Firestore
+              status: bikeStatus.inManutenzione ? "Manutenzione" : "Disponibile",
+              inUse: bikeStatus.inUse || false,
             };
           }
         });
@@ -1701,26 +1717,28 @@ function AdminApp({ user, onLogout, t }) {
         userStats[r.userId].costoTotale += (r.cost||0);
       });
 
-      const data = fbUsers.filter(u=>u.type!=="admin").map(u=>{
+      // Usa aoa_to_sheet (array of arrays) — più robusto di json_to_sheet
+      const headers = ["Nome","Cognome","Email","Telefono","Tipo","Registrato il","Doc verificato","N corse","Km totali","Vel media kmh","Spesa totale EUR"];
+      const rows = fbUsers.filter(u=>u.type!=="admin").map(u=>{
         const stats = userStats[u.id] || {corse:0,kmTotali:0,tempoTotale:0,costoTotale:0};
-        const velMedia = stats.tempoTotale>0 ? (stats.kmTotali/stats.tempoTotale) : 0;
-        return {
-          "Nome": String(u.nome||""),
-          "Cognome": String(u.cognome||""),
-          "Email": String(u.email||""),
-          "Telefono": String(u.telefono||""),
-          "Tipo": String(u.type||"cliente"),
-          "Registrato il": u.createdAt ? new Date(u.createdAt).toLocaleDateString("it-IT") : "",
-          "Doc verificato": u.docReviewed===true ? "Si" : u.docReviewed==="rejected" ? "Rifiutato" : "Da verificare",
-          "N° corse": String(stats.corse),
-          "Km totali": stats.kmTotali.toFixed(1),
-          "Velocità media (km/h)": velMedia.toFixed(1),
-          "Spesa totale (€)": stats.costoTotale.toFixed(2),
-        };
+        const velMedia = stats.tempoTotale>0 ? stats.kmTotali/stats.tempoTotale : 0;
+        return [
+          String(u.nome||""),
+          String(u.cognome||""),
+          String(u.email||""),
+          String(u.telefono||""),
+          String(u.type||"cliente"),
+          u.createdAt ? new Date(u.createdAt).toLocaleDateString("it-IT") : "",
+          u.docReviewed===true ? "Si" : u.docReviewed==="rejected" ? "Rifiutato" : "Da verificare",
+          stats.corse,
+          parseFloat(stats.kmTotali.toFixed(1)),
+          parseFloat(velMedia.toFixed(1)),
+          parseFloat(stats.costoTotale.toFixed(2)),
+        ];
       });
-      if(!data.length){alert("Nessun utente");return;} 
-      const ws=XLSX.utils.json_to_sheet(data); 
-      const wb=XLSX.utils.book_new(); 
+      if(!rows.length){alert("Nessun utente");return;}
+      const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+      const wb=XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb,"Utenti",ws); 
       const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
       const blob=new Blob([wbout],{type:"application/octet-stream"});
