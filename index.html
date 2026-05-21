@@ -1505,50 +1505,9 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   };
   const handleEndConfirm=async()=>{
     if(!parkPhoto){alert("📸");return;}
-    // Controlla se la posizione attuale è in una zona sosta - OBBLIGATORIO
-    const checkZone = () => new Promise(resolve => {
-      if (!navigator.geolocation) { resolve({ok:true}); return; }
-      // Carica zone fresche da Firebase
-      const getZones = async () => {
-        try {
-          await waitFB();
-          const {doc, getDoc} = window.firebaseFunctions;
-          const snap = await getDoc(doc(window.firebaseDb,"config","zones"));
-          return snap.exists() ? (snap.data().zones||[]) : (window._clientZones||[]);
-        } catch(e) { return window._clientZones||[]; }
-      };
-      navigator.geolocation.getCurrentPosition(async pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const zones = await getZones();
-        const sostaZones = zones.filter(z => z.type === "sosta");
-        console.log(`🅿️ Zone sosta trovate: ${sostaZones.length}`, sostaZones.map(z=>z.name));
-        console.log(`📍 Posizione utente: ${lat}, ${lng}`);
-        if (sostaZones.length === 0) { resolve({ok:true}); return; }
-        const operativaZone = zones.find(z => z.type === "operativa");
-        const dist = (lat1,lng1,lat2,lng2) => {
-          const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
-          const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-          return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-        };
-        if (operativaZone?.center) {
-          const d = dist(lat,lng,operativaZone.center.lat,operativaZone.center.lng);
-          console.log(`🗺️ Distanza da area operativa: ${Math.round(d)}m (max: ${operativaZone.radius||25000}m)`);
-          if (d > (operativaZone.radius||25000)) {
-            resolve({ok:false, msg:"🚫 Sei fuori dall'area operativa!\n\nRientra nell'area del Lago Trasimeno e parcheggia in una zona 🅿️."});
-            return;
-          }
-        }
-        // Raggio minimo 200m per compensare imprecisione GPS
-        const inSosta = sostaZones.some(z => z.center && dist(lat,lng,z.center.lat,z.center.lng) <= Math.max(z.radius||300, 200));
-        if (!inSosta) {
-          resolve({ok:false, msg:"🚫 Non sei in una zona di parcheggio!\n\nPorta la bici vicino a uno dei punti 🅿️ sulla mappa.\n\nAssistenza: +39 349 524 0422"});
-          return;
-        }
-        resolve({ok:true});
-      }, () => resolve({ok:true}), {enableHighAccuracy:true, timeout:10000});
-    });
-    const zoneCheck = await checkZone();
+    // Usa parkingStatus già calcolato ogni 3s — stesso sistema del banner
+    // Evita discrepanze tra il banner e il check al momento del click
+    const zoneCheck = { ok: inParking !== false };
     if (!zoneCheck.ok) {
       // Avvisa della penale ma lascia procedere — è l'utente che sceglie
       const proceed = window.confirm(
@@ -1716,15 +1675,19 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             </div>
           ))}
           {rideStats.km > 0 && (
-            <div style={{borderTop:`1px solid ${C.skyBlue}20`,paddingTop:8,marginTop:4,display:"flex",justifyContent:"space-between"}}>
-              <span style={{color:"#888",fontSize:13,...ds}}>🛣️ Distanza percorsa</span>
-              <span style={{color:C.blueGreen,fontWeight:700,...ds}}>{rideStats.km.toFixed(2)} km</span>
-            </div>
-          )}
-          {rideStats.velMedia > 0 && (
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
-              <span style={{color:"#888",fontSize:13,...ds}}>⚡ Velocità media</span>
-              <span style={{color:C.blueGreen,fontWeight:700,...ds}}>{rideStats.velMedia.toFixed(1)} km/h</span>
+            <div style={{borderTop:`1px solid ${C.skyBlue}20`,paddingTop:10,marginTop:6}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div style={{background:`${C.blueGreen}10`,borderRadius:12,padding:"10px 0",textAlign:"center"}}>
+                  <p style={{color:"#888",fontSize:10,...ds,margin:"0 0 2px",letterSpacing:1}}>DISTANZA</p>
+                  <p style={{color:C.blueGreen,fontSize:24,fontWeight:700,margin:0,...ds}}>{rideStats.km.toFixed(2)}</p>
+                  <p style={{color:"#aaa",fontSize:10,...ds,margin:0}}>km</p>
+                </div>
+                <div style={{background:`${C.blueGreen}10`,borderRadius:12,padding:"10px 0",textAlign:"center"}}>
+                  <p style={{color:"#888",fontSize:10,...ds,margin:"0 0 2px",letterSpacing:1}}>VEL. MEDIA</p>
+                  <p style={{color:C.blueGreen,fontSize:24,fontWeight:700,margin:0,...ds}}>{rideStats.velMedia.toFixed(1)}</p>
+                  <p style={{color:"#aaa",fontSize:10,...ds,margin:0}}>km/h</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1776,9 +1739,16 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
           <p style={{color:C.skyBlue,fontSize:9,margin:0,...ds}}>Totale</p>
           <p style={{color:C.sunYellow,fontSize:22,fontWeight:700,margin:0,...ds}}>€{totalCost.toFixed(2)}</p>
           {rideStats.km > 0 && (
-            <p style={{color:"rgba(255,255,255,0.6)",fontSize:10,margin:"2px 0 0",...ds}}>
-              🛣️ {rideStats.km.toFixed(1)}km · ⚡{rideStats.velMedia.toFixed(1)}km/h
-            </p>
+            <div style={{display:"flex",gap:10,marginTop:4,justifyContent:"flex-end"}}>
+              <div style={{textAlign:"center"}}>
+                <p style={{color:"rgba(255,255,255,0.5)",fontSize:8,margin:0,...ds,letterSpacing:1}}>KM</p>
+                <p style={{color:C.white,fontSize:16,fontWeight:700,margin:0,...ds}}>{rideStats.km.toFixed(1)}</p>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <p style={{color:"rgba(255,255,255,0.5)",fontSize:8,margin:0,...ds,letterSpacing:1}}>KM/H</p>
+                <p style={{color:C.white,fontSize:16,fontWeight:700,margin:0,...ds}}>{rideStats.velMedia.toFixed(1)}</p>
+              </div>
+            </div>
           )}
         </div>
         {paused&&<div style={{background:C.sunYellow,borderRadius:8,padding:"3px 10px"}}><p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,margin:0}}>PAUSA</p></div>}
