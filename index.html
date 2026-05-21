@@ -2539,12 +2539,13 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
     if (checkoutSuccess) {
       window.history.replaceState({}, '', '/');
-      const pending = sessionStorage.getItem('pendingCheckout');
-      if (pending) {
+      // Funzione async per gestire il ritorno dal checkout
+      const handleCheckoutReturn = async () => {
+        const pending = sessionStorage.getItem('pendingCheckout');
+        if (!pending) { setRestoringRide(false); return; }
         try {
           const { sessionId, bikeIds, plan, amount } = JSON.parse(pending);
           sessionStorage.removeItem('pendingCheckout');
-          // Verifica pagamento su Railway
           const res = await fetch('https://web-production-eafa5.up.railway.app/checkout-status', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
@@ -2552,7 +2553,6 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           });
           const data = await res.json();
           if (data.paid) {
-            // Pagamento confermato — avvia la corsa
             await waitFB();
             const {collection,addDoc} = window.firebaseFunctions;
             const bks = bikeIds.map(id => {
@@ -2579,12 +2579,11 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
             setConfirmed(bks);
             setPlan(plan);
             setRiding(true);
-            setRestoringRide(false);
-            return;
           }
         } catch(e) { console.error('Errore verifica checkout:', e); }
-      }
-      setRestoringRide(false);
+        setRestoringRide(false);
+      };
+      handleCheckoutReturn();
       return;
     }
     // ─────────────────────────────────────────────────────────────────────────
