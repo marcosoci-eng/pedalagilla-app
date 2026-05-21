@@ -1203,9 +1203,8 @@ function PromoAdmin() {
             if(!dataRows.length){alert("Nessun hotel trovato");return;}
             const csvH = hdr.map(h=>'"'+h+'"').join(",");
             const csvD = dataRows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(","));
-            const csvContent = [csvH,...csvD].join("
-");
-            const BOM = "﻿";
+            const csvContent = [csvH,...csvD].join("\n");
+            const BOM = "\uFEFF";
             const blob=new Blob([BOM+csvContent],{type:"text/csv;charset=utf-8"});
             const url=URL.createObjectURL(blob);
             const a=document.createElement("a");
@@ -1730,9 +1729,8 @@ function AdminApp({ user, onLogout, t }) {
         ].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",");
       });
       if(!csvRows.length){alert("Nessun utente");return;}
-      const csvContent = [csvHeaders.map(h=>'"'+h+'"').join(","), ...csvRows].join("
-");
-      const BOM = "﻿"; // BOM per Excel italiano
+      const csvContent = [csvHeaders.map(h=>'"'+h+'"').join(","), ...csvRows].join("\n");
+      const BOM = "\uFEFF"; // BOM per Excel italiano
       const blob=new Blob([BOM+csvContent],{type:"text/csv;charset=utf-8"});
       const url=URL.createObjectURL(blob);
       const a=document.createElement("a");
