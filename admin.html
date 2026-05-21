@@ -1736,17 +1736,7 @@ function AdminApp({ user, onLogout, t }) {
       const a=document.createElement("a");
       a.href=url; a.download=`utenti_pedalagilla_${new Date().toISOString().slice(0,10)}.csv`; a.click();
       URL.revokeObjectURL(url);
-      return; // esce prima del wb/wbout
-      const ws=XLSX.utils.aoa_to_sheet([[]]); // mai raggiunto
-      const wb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb,"Utenti",ws); 
-      const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-      const blob=new Blob([wbout],{type:"application/octet-stream"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");
-      a.href=url; a.download=`utenti_pedalagilla_${new Date().toISOString().slice(0,10)}.xlsx`; a.click();
-      URL.revokeObjectURL(url);
-    } catch(e) { alert("Errore Excel: "+e.message); console.error(e); }
+    } catch(e) { alert("Errore CSV: "+e.message); console.error(e); }
   };
 
   return(
