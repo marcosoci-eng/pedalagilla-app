@@ -2576,8 +2576,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     load();
   },[user?.uid]);
 
-  // Bici disponibili = non in corsa da altri utenti
-  const bikes = allBikes.filter(b => b.status==="Disponibile" && !activeBikeIds.includes(b.id));
+  // Bici disponibili = non in uso e non in manutenzione (letto da bikesStatus)
+  const bikes = allBikes.filter(b => !activeBikeIds.includes(b.id));
 
   React.useEffect(()=>{ if (!navigator.geolocation) return; navigator.geolocation.watchPosition(pos=>{ setUserPos({lat:pos.coords.latitude,lng:pos.coords.longitude}); window._userPosition={lat:pos.coords.latitude,lng:pos.coords.longitude}; },()=>{},{enableHighAccuracy:true}); 
     // Salva posizione apertura app per heatmap
