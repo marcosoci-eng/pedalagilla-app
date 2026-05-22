@@ -78,8 +78,8 @@ const TRANSLATIONS = {
     tapBike: "👆 Oppure tocca una bici sulla mappa", logout: "Esci",
     scanTitle: "Scansiona il QR della bici", scanDesc: "Inquadra il QR code sul telaio della bici",
     scanManual: "Oppure inserisci il codice:", scanPh: "Es: PA-021", scanClose: "✕",
-    planMinutes: "Al minuto", planDay: "Giornata intera", planWeek: "Settimana",
-    planMinutesDesc: "€1.00 sblocco + €0.19/min · pausa €0.08/min", planDayDesc: "sblocco incluso · pausa gratuita · valida fino alle 23:59", planWeekDesc: "7 giorni illimitati · pausa gratuita",
+    planMinutes: "Al minuto", planDay: "Giornata intera",
+    planMinutesDesc: "€1.00 sblocco + €0.19/min · pausa €0.08/min", planDayDesc: "sblocco incluso · pausa gratuita",
     continueBtn: "💳 Continua", walkDistance: "dalla tua posizione attuale",
     rideInProgress: "CORSA IN CORSO", ridePause: "PAUSA", totalCost: "Costo totale",
     unlock: "🔓 Sblocco", ridePerMin: "⏱️ Corsa", pausePerMin: "⏸️ Pausa", zone: "📍 Zona",
@@ -101,7 +101,7 @@ const TRANSLATIONS = {
     errName: "Inserisci il tuo nome", errPayment: "Errore. Riprova.",
     payment: "💳 Pagamento", min: "min",
     terms1: "Ho letto e accetto i Termini e Condizioni di PedalAgilla",
-    terms2: "Accetto le penali per parcheggio non autorizzato: €35/giorno fuori zona, €80/bici per ritiro dalle isole del lago (le bici possono essere usate sulle isole ma non lasciate)",    terms3: "Confermo di avere almeno 18 anni",
+    terms2: "Accetto la penale di €50/giorno per parcheggio fuori dall'area operativa o in proprietà/rimesse private (non si applica ai parcheggi pubblici nelle zone sosta indicate nell'app)",    terms3: "Confermo di avere almeno 18 anni",
     terms4: "Accetto il trattamento dei miei dati personali (GDPR)",
     termsError: "Devi accettare tutti i termini per procedere",
     termsTitle: "📋 Termini e Condizioni",
@@ -148,8 +148,8 @@ const TRANSLATIONS = {
     tapBike: "👆 Or tap a bike on the map", logout: "Logout",
     scanTitle: "Scan the bike QR code", scanDesc: "Point the camera at the QR code on the bike frame",
     scanManual: "Or enter the code:", scanPh: "E.g.: PA-021", scanClose: "✕",
-    planMinutes: "Per minute", planDay: "Full day", planWeek: "Week pass",
-    planMinutesDesc: "€1.00 unlock + €0.19/min · pause €0.08/min", planDayDesc: "unlock included · free pause · valid until 23:59", planWeekDesc: "7 days unlimited · free pause",
+    planMinutes: "Per minute", planDay: "Full day",
+    planMinutesDesc: "€1.00 unlock + €0.19/min · pause €0.08/min", planDayDesc: "unlock included · free pause",
     continueBtn: "💳 Continue", walkDistance: "from your current location",
     rideInProgress: "RIDE IN PROGRESS", ridePause: "PAUSE", totalCost: "Total cost",
     unlock: "🔓 Unlock", ridePerMin: "⏱️ Ride", pausePerMin: "⏸️ Pause", zone: "📍 Zone",
@@ -171,7 +171,7 @@ const TRANSLATIONS = {
     errName: "Enter your name", errPayment: "Error. Try again.",
     payment: "💳 Payment", min: "min",
     terms1: "I have read and accept the PedalAgilla Terms and Conditions",
-    terms2: "I accept the penalties for unauthorized parking: €35/day outside zone, €80/bike for retrieval from the lake islands (bikes may be used on the islands but not left there)",
+    terms2: "I accept the €50/day penalty for parking outside the operating area or in private property/garages (does not apply to public parking in the designated parking zones in the app)",
     terms3: "I confirm I am at least 18 years old",
     terms4: "I accept the processing of my personal data (GDPR)",
     termsError: "You must accept all terms to proceed",
@@ -242,7 +242,7 @@ const TRANSLATIONS = {
     errName: "Namen eingeben", errPayment: "Fehler. Erneut versuchen.",
     payment: "💳 Zahlung", min: "Min",
     terms1: "Ich habe die Nutzungsbedingungen von PedalAgilla gelesen und akzeptiere sie",
-    terms2: "Ich akzeptiere die Strafe von €35/Tag für Parken außerhalb der Betriebszone oder auf Privatgrundstücken/Garagen",
+    terms2: "Ich akzeptiere die Strafe von €50/Tag für Parken außerhalb der Betriebszone oder auf Privatgrundstücken/Garagen",
     terms3: "Ich bestätige, mindestens 18 Jahre alt zu sein",
     terms4: "Ich akzeptiere die Verarbeitung meiner Daten (DSGVO)",
     termsError: "Sie müssen alle Bedingungen akzeptieren",
@@ -313,7 +313,7 @@ const TRANSLATIONS = {
     errName: "Entrez votre nom", errPayment: "Erreur. Réessayez.",
     payment: "💳 Paiement", min: "min",
     terms1: "J'ai lu et j'accepte les Conditions Générales de PedalAgilla",
-    terms2: "J'accepte la pénalité de €35/jour pour stationnement hors zone",
+    terms2: "J'accepte la pénalité de €50/jour pour stationnement hors zone",
     terms3: "Je confirme avoir au moins 18 ans",
     terms4: "J'accepte le traitement de mes données personnelles (RGPD)",
     termsError: "Vous devez accepter toutes les conditions",
@@ -384,7 +384,7 @@ const TRANSLATIONS = {
     errName: "Introduce tu nombre", errPayment: "Error. Inténtalo de nuevo.",
     payment: "💳 Pago", min: "min",
     terms1: "He leído y acepto los Términos y Condiciones de PedalAgilla",
-    terms2: "Acepto la sanción de €35/día por aparcamiento fuera de zona",
+    terms2: "Acepto la sanción de €50/día por aparcamiento fuera de zona",
     terms3: "Confirmo tener al menos 18 años",
     terms4: "Acepto el tratamiento de mis datos personales (RGPD)",
     termsError: "Debes aceptar todos los términos para continuar",
@@ -455,7 +455,7 @@ const TRANSLATIONS = {
     errName: "Vul uw naam in", errPayment: "Fout. Probeer opnieuw.",
     payment: "💳 Betaling", min: "min",
     terms1: "Ik heb de Gebruiksvoorwaarden van PedalAgilla gelezen en accepteer ze",
-    terms2: "Ik accepteer de boete van €35/dag bij parkeren buiten de operationele zone",
+    terms2: "Ik accepteer de boete van €50/dag bij parkeren buiten de operationele zone",
     terms3: "Ik bevestig minimaal 18 jaar oud te zijn",
     terms4: "Ik accepteer de verwerking van mijn persoonsgegevens (AVG)",
     termsError: "U moet alle voorwaarden accepteren om door te gaan",
@@ -526,7 +526,7 @@ const TRANSLATIONS = {
     errName: "Zadejte své jméno", errPayment: "Chyba. Zkuste znovu.",
     payment: "💳 Platba", min: "min",
     terms1: "Přečetl/a jsem si Podmínky používání PedalAgilla a přijímám je",
-    terms2: "Přijímám sankci €35/den za parkování mimo provozní zónu",
+    terms2: "Přijímám sankci €50/den za parkování mimo provozní zónu",
     terms3: "Potvrzuji, že mám alespoň 18 let",
     terms4: "Přijímám zpracování svých osobních údajů (GDPR)",
     termsError: "Pro pokračování musíte přijmout všechny podmínky",
@@ -566,16 +566,14 @@ Per utilizzare il servizio è necessario: avere almeno 18 anni; fornire document
 
 Art. 3 — Tariffe
 • Al minuto: €1,00 sblocco + €0,19/minuto + €0,08/minuto in pausa
-• Giornaliera: €19,90 con pausa gratuita, valida fino alle 23:59 del giorno di noleggio. Prezzi IVA inclusa.
+• Giornaliera: €19,90 con pausa gratuita. Prezzi IVA inclusa.
 
 Art. 4 — Zona operativa e parcheggio
 Le biciclette devono essere usate nella zona operativa. Al termine parcheggiare in zona sosta (cerchi blu) e fotografare.
 VIETATO: portare in proprietà private, rimesse, garage; lasciare fuori zona operativa.
-ISOLE DEL LAGO: le biciclette possono essere utilizzate sulle isole del Lago Trasimeno, ma NON possono essere lasciate al termine della corsa sulle isole. Ci riserviamo il diritto di addebitare un costo di €80,00 per bicicletta per il ritiro dalle isole.
 
 Art. 5 — Penali
-• €35,00 al giorno per parcheggio fuori zona o in proprietà private (NON si applica ai parcheggi pubblici nelle zone sosta)
-• €80,00 per bicicletta per ritiro dalle isole del Lago Trasimeno
+• €50,00 al giorno per parcheggio fuori zona o in proprietà private (NON si applica ai parcheggi pubblici nelle zone sosta)
 • €50,00 al giorno per mancata restituzione entro 24 ore
 • Costi di recupero a carico dell'utente
 
@@ -659,7 +657,6 @@ const SBLOCCO = 1.00;
 const TARIFFA_MIN = 0.19;
 const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
-const TARIFFA_SETTIMANALE = 99.00; // 7 giorni uso illimitato, pausa gratuita
 const TARIFFA_MTB_ADULTO = 15.00;
 const TARIFFA_MTB_BAMBINO = 10.00;
 const QR_BASE_URL = "https://www.pedalagilla.it/?bike=";
@@ -988,127 +985,77 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
-function PaymentForm({ amount, bike, plan, user, onSuccess, onCancel, t, hidePreAuth=false }) {
+function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=false }) {
+  const cardRef = React.useRef(null);
+  const cardEl = React.useRef(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
+  const [nome, setNome] = React.useState("");
   const nBikes = Array.isArray(bike) ? bike.length : 1;
   const preAuth = nBikes * 10;
-
+  React.useEffect(() => {
+    if (cardEl.current) return;
+    const tryMount = () => {
+      if (!cardRef.current) { setTimeout(tryMount, 200); return; }
+      const card = stripeElements.create("card",{style:{base:{fontSize:"16px",color:"#023047",fontFamily:"'DM Sans',sans-serif","::placeholder":{color:"#aaa"}}},hidePostalCode:true});
+      card.mount(cardRef.current); cardEl.current = card;
+    };
+    setTimeout(tryMount, 100);
+  }, []);
   const handlePay = async () => {
+    if (!nome.trim()) { setError(t('errName')); return; }
+    if (!cardEl.current) { setError("Carta non caricata, riprova"); return; }
     setLoading(true); setError(null);
     try {
-      const bikeIds = Array.isArray(bike) ? bike.map(b=>b.id) : [bike.id];
-      const planKey = plan && (plan.includes('min')||plan.includes('Min')||plan.includes('minute')||plan.includes('minuto')) ? 'minuti' : plan && (plan.includes('ett')||plan.includes('eek')||plan.includes('oche')) ? 'settimana' : 'giornata';
-      const res = await fetch('https://web-production-eafa5.up.railway.app/create-checkout', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          amount,
-          planLabel: plan,
-          bikeIds,
-          plan: planKey,
-          userId: user?.uid || '',
-          userName: `${user?.nome||''} ${user?.cognome||''}`.trim(),
-          userEmail: user?.email || '',
-        })
-      });
-      const data = await res.json();
-      if (data.error) { setError(data.error); setLoading(false); return; }
-      // Salva dati corsa in sessionStorage per recuperarli al ritorno da Stripe
-      sessionStorage.setItem('pendingCheckout', JSON.stringify({
-        sessionId: data.sessionId,
-        bikeIds, plan: planKey, amount,
-      }));
-      window.location.href = data.url;
+      const {paymentMethod,error:e} = await stripeInstance.createPaymentMethod({type:"card",card:cardEl.current,billing_details:{name:nome}});
+      if (e) { setError(e.message); setLoading(false); return; }
+      setTimeout(()=>{ setLoading(false); onSuccess(paymentMethod.id); },1500);
     } catch(e) { setError(t('errPayment')); setLoading(false); }
   };
   const bikeIds = Array.isArray(bike) ? bike.map(b=>b.id).join(', ') : bike.id;
   return (
     <div style={{padding:"20px 18px"}}>
-      {/* Riepilogo importo */}
-      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:20,marginBottom:16,textAlign:"center"}}>
+      <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:12,textAlign:"center"}}>
         <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{t('total')}</p>
-        <p style={{color:C.sunYellow,fontSize:40,fontWeight:700,margin:"0 0 6px",...ds}}>€{amount.toFixed(2)}</p>
+        <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{amount.toFixed(2)}</p>
         <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,margin:0,...ds}}>{bikeIds} · {plan}</p>
       </div>
 
-      {/* Info metodi di pagamento accettati */}
-      <div style={{background:`${C.skyBlue}15`,border:`1px solid ${C.skyBlue}40`,borderRadius:14,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
-        <span style={{fontSize:28}}>🔒</span>
-        <div>
-          <p style={{color:C.deepBlue,fontSize:13,fontWeight:700,margin:0,...ds}}>Pagamento sicuro con Stripe</p>
-          <p style={{color:"#888",fontSize:11,margin:"3px 0 0",...ds}}>Carta di credito/debito · Apple Pay · Google Pay</p>
-          <p style={{color:"#aaa",fontSize:10,margin:"2px 0 0",...ds}}>Verrai reindirizzato alla pagina di pagamento Stripe</p>
-        </div>
-      </div>
-
-      {!hidePreAuth&&<div style={{background:"#FFF8E1",border:"2px solid #FFB703",borderRadius:14,padding:"12px 14px",marginBottom:16}}>
+      {/* Box pre-autorizzazione */}
+      {!hidePreAuth&&<div style={{background:"#FFF8E1",border:"2px solid #FFB703",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
         <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-          <span style={{fontSize:20,flexShrink:0}}>🔒</span>
+          <span style={{fontSize:22,flexShrink:0}}>🔒</span>
           <div>
-            <p style={{color:"#7a5800",fontSize:13,fontWeight:700,margin:"0 0 4px",...ds}}>{t('preAuthTitle')} €{preAuth.toFixed(2)}</p>
-            <p style={{color:"#7a5800",fontSize:11,margin:0,...ds,lineHeight:"1.5"}}>{t('preAuthDesc')}</p>
+            <p style={{color:"#7a5800",fontSize:13,fontWeight:700,margin:"0 0 4px",...ds}}>
+              {t('preAuthTitle')} €{preAuth.toFixed(2)}
+            </p>
+            <p style={{color:"#7a5800",fontSize:12,margin:0,...ds,lineHeight:"1.5"}}>
+              {t('preAuthDesc')}
+            </p>
+            {nBikes > 1 && (
+              <p style={{color:"#b38600",fontSize:11,margin:"6px 0 0",...ds}}>
+                {nBikes} {t('bikesSelected')} × €10 = €{preAuth.toFixed(2)}
+              </p>
+            )}
           </div>
         </div>
       </div>}
 
-      {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 12px",...ds}}>⚠️ {error}</p>}
-
-      <button onClick={handlePay} disabled={loading}
-        style={{width:"100%",background:loading?`${C.blueGreen}80`:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:16,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
-        {loading ? "⏳ Preparazione pagamento..." : `💳 Paga €${amount.toFixed(2)} →`}
+      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('cardName')}</p>
+      <input value={nome} onChange={e=>setNome(e.target.value)} placeholder={t('cardNamePh')} style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,marginBottom:12,background:C.white}} />
+      <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('card')}</p>
+      <div ref={cardRef} style={{background:C.white,padding:14,borderRadius:10,border:`1.5px solid ${C.skyBlue}`,marginBottom:12}} />
+      {error && <p style={{color:C.warmOrange,fontSize:12,margin:"0 0 10px",...ds}}>⚠️ {error}</p>}
+      <button onClick={handlePay} disabled={loading} style={{width:"100%",background:loading?`${C.blueGreen}80`:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:8}}>
+        {loading?t('paying'):`${t('payBtn')} €${amount.toFixed(2)}`}
       </button>
       <button onClick={onCancel} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('cancel')}</button>
     </div>
   );
 }
 
-
-// ─── Sezione sviluppatore (riutilizzata in AuthScreen e Profilo) ──────────────
-function DeveloperCard({ C, ds }) {
-  return (
-    <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:20,marginTop:14}}>
-      <p style={{color:C.skyBlue,fontSize:10,...ds,letterSpacing:2,margin:"0 0 12px"}}>SVILUPPATO DA</p>
-      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
-        <div style={{width:52,height:52,borderRadius:26,background:`linear-gradient(135deg,${C.blueGreen},${C.sunYellow})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>👨‍💻</div>
-        <div>
-          <p style={{color:"#ffffff",fontSize:17,fontWeight:700,margin:0,fontFamily:"Lora"}}>Marco Soci</p>
-          <p style={{color:C.skyBlue,fontSize:12,...ds,margin:"3px 0 0"}}>Sviluppatore App & Sistemi IoT</p>
-        </div>
-      </div>
-      <div style={{background:"rgba(255,255,255,0.07)",borderRadius:14,padding:14,marginBottom:12}}>
-        <p style={{color:"rgba(255,255,255,0.8)",fontSize:12,...ds,margin:0,lineHeight:"1.7"}}>
-          Hai bisogno di un'app simile per il tuo business? Sviluppo applicazioni web e mobile personalizzate per sharing, noleggio, IoT e gestione operativa.
-        </p>
-      </div>
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        <a href="mailto:marco.soci@gmail.com"
-          style={{background:C.blueGreen,borderRadius:12,padding:"11px 16px",color:"#ffffff",fontSize:13,...ds,fontWeight:600,textDecoration:"none",display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:18}}>✉️</span>
-          <span>marco.soci@gmail.com</span>
-        </a>
-        <a href="tel:+393495240422"
-          style={{background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:12,padding:"11px 16px",color:"#ffffff",fontSize:13,...ds,fontWeight:600,textDecoration:"none",display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:18}}>📞</span>
-          <span>+39 349 524 0422</span>
-        </a>
-        <a href="https://wa.me/393495240422?text=Ciao%20Marco%2C%20ho%20visto%20PedalAgilla%20e%20vorrei%20parlare%20di%20un%20progetto%20simile"
-          target="_blank"
-          style={{background:"#25D366",borderRadius:12,padding:"11px 16px",color:"#ffffff",fontSize:13,...ds,fontWeight:600,textDecoration:"none",display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:18}}>💬</span>
-          <span>WhatsApp — scrivimi per un preventivo</span>
-        </a>
-      </div>
-      <p style={{color:"rgba(255,255,255,0.3)",fontSize:10,...ds,textAlign:"center",margin:"12px 0 0"}}>
-        PedalAgilla © 2026 — App sviluppata interamente da Marco Soci
-      </p>
-    </div>
-  );
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 function AuthScreen({ onLogin, lang, setLang, t }) {
-  const [mode, setMode] = React.useState("login"); // login | register | adminLogin | developer
+  const [mode, setMode] = React.useState("login");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [nome, setNome] = React.useState("");
@@ -1226,7 +1173,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       <div style={{width:390,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
         <div style={{background:C.deepBlue,padding:"22px 24px 16px",textAlign:"center"}}>
           <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
-          <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap",marginBottom:8}}>
+          <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
             {LANG_LIST.map(l=>(
               <button key={l} onClick={()=>{setLang(l);setError(null);}}
                 style={{background:lang===l?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.15)",border:`1px solid ${lang===l?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.2)"}`,borderRadius:8,padding:"3px 6px",cursor:"pointer",fontSize:20,lineHeight:1}}>
@@ -1234,26 +1181,16 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               </button>
             ))}
           </div>
-          <button onClick={()=>setMode(m=>m==="developer"?"login":"developer")}
-            style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"4px 14px",color:"rgba(255,255,255,0.7)",fontSize:11,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",letterSpacing:0.5}}>
-            {mode==="developer" ? "← Torna" : "👨‍💻 Sviluppatore"}
-          </button>
         </div>
         <div style={{padding:"18px 20px",maxHeight:"72vh",overflowY:"auto"}}>
-          {mode!=="adminLogin"&&mode!=="developer"&&(
+          {mode!=="adminLogin"&&(
             <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:18}}>
               {[["login",t('login')],["register",t('register')]].map(([m,l])=>(
                 <button key={m} onClick={()=>{setMode(m);setError(null);setShowResend(false);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
           )}
-          {mode==="developer"&&(
-            <div style={{padding:"20px 4px"}}>
-              <DeveloperCard C={C} ds={ds}/>
-            </div>
-          )}
-
-          {mode!=="developer"&&mode==="login"&&<>
+          {mode==="login"&&<>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('email')}</p>
             <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder={t('emailPlaceholder')} style={inp} />
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('password')}</p>
@@ -1272,7 +1209,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               {t('adminAccess')}
             </a>
           </>}
-          {mode!=="developer"&&mode==="register"&&<>
+          {mode==="register"&&<>
             {[[t('nome'),nome,setNome,"text",t('nomePh')],[t('cognome'),cognome,setCognome,"text",t('cognomePh')],[t('email'),email,setEmail,"email",t('emailPlaceholder')],[t('telefono'),telefono,setTelefono,"tel",t('telefonoPh')]].map(([label,val,setter,type,ph])=>(
               <div key={label}>
                 <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{label}</p>
@@ -1326,7 +1263,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               {loading?t('registerLoading'):t('createAccount')}
             </button>
           </>}
-          {mode!=="developer"&&mode==="adminLogin"&&<>
+          {mode==="adminLogin"&&<>
             <button onClick={()=>{setMode("login");setError(null);}} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,cursor:"pointer",...ds,fontWeight:600,marginBottom:14}}>{t('adminBack')}</button>
             <p style={{color:C.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds}}>{t('adminUsername')}</p>
             <input value={adminUser} onChange={e=>setAdminUser(e.target.value)} type="email" placeholder={t('adminUsernamePh')} style={inp} />
@@ -1350,28 +1287,6 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-
-// ─── Helper zona parcheggio ────────────────────────────────────────────────
-function haversineDist(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const dLat = (lat2-lat1)*Math.PI/180;
-  const dLng = (lng2-lng1)*Math.PI/180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-function getParkingStatus(userPos) {
-  const zones = (window._clientZones && window._clientZones.length > 0) ? window._clientZones : DEFAULT_ZONES;
-  const sostaZones = zones.filter(z => z.type === 'sosta' && z.center);
-  if (!userPos || sostaZones.length === 0) return { inParking: null, nearest: null, dist: null };
-  let nearest = null, minDist = Infinity;
-  for (const z of sostaZones) {
-    const d = haversineDist(userPos.lat, userPos.lng, z.center.lat, z.center.lng);
-    if (d < minDist) { minDist = d; nearest = z; }
-  }
-  return { inParking: minDist <= (nearest.radius || 300), nearest, dist: Math.round(minDist) };
-}
-// ──────────────────────────────────────────────────────────────────────────
-
 function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
@@ -1384,41 +1299,8 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const [parkPhoto, setParkPhoto] = React.useState(null);
   const [parkPreview, setParkPreview] = React.useState(null);
   const [uploading, setUploading] = React.useState(false);
-  const [autoPauseBanner, setAutoPauseBanner] = React.useState(false); // banner auto-pausa
   const trackRef = React.useRef([]);
-  const isGiornata = plan==="giornata" || plan==="settimana"; // settimana = tariffa piatta
-  const tariffaFissa = plan==="settimana" ? TARIFFA_SETTIMANALE : TARIFFA_GIORNATA;
-
-  // ── Listener auto-pausa da server IoT ──────────────────────────────────────
-  React.useEffect(() => {
-    if (!rideId || !bike?.id) return;
-    const pedId = 'PED' + bike.id.replace('PA-','').padStart(3,'0');
-    const waitAndListen = async () => {
-      await waitFB();
-      const {doc, onSnapshot} = window.firebaseFunctions;
-      const unsub = onSnapshot(doc(window.firebaseDb, 'bikes', pedId), async (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.data();
-        if (data.autoPause === true && !paused) {
-          console.log('⏸️ Auto-pausa ricevuta dal server IoT');
-          // Attiva la pausa esattamente come handlePauseToggle
-          pauseStartRef.current = Date.now();
-          totalPausedRef.current = totalPausedRef.current || 0;
-          setPaused(true);
-          setAutoPauseBanner(true);
-          // Nascondi il banner dopo 8 secondi
-          setTimeout(() => setAutoPauseBanner(false), 8000);
-        }
-        // Se autoPause torna false (bici si rimette in moto) non facciamo nulla:
-        // è l'utente che deve riprendere manualmente premendo il bottone
-      });
-      return unsub;
-    };
-    let unsub;
-    waitAndListen().then(u => { unsub = u; });
-    return () => { if (unsub) unsub(); };
-  }, [rideId, bike?.id]); // non dipende da `paused` per evitare re-subscribe
-  // ──────────────────────────────────────────────────────────────────────────
+  const isGiornata = plan==="giornata";
   React.useEffect(() => {
     const i = setInterval(() => {
       if (!paused) {
@@ -1449,12 +1331,10 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       pauseStartRef.current = null;
       try {
         await waitFB();
-        const {collection, addDoc, doc, updateDoc} = window.firebaseFunctions;
+        const {collection, addDoc} = window.firebaseFunctions;
         const pedId = 'PED' + bike.id.replace('PA-','').padStart(3,'0');
         console.log('▶️ Riprendi — invio unlock a', pedId);
         await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'unlock',status:'pending',createdAt:new Date().toISOString()});
-        // Reset autoPause su Firestore così il server non rimanda in pausa subito
-        await updateDoc(doc(window.firebaseDb,'bikes',pedId),{autoPause:false});
       } catch(e){ console.error('Errore unlock ripresa:', e); }
     }
     setPaused(p => !p);
@@ -1465,79 +1345,10 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
     saveGPS(); const i=setInterval(saveGPS,30000); return()=>clearInterval(i);
   },[showEndFlow]);
   const mins=Math.floor(seconds/60), secs=seconds%60, pauseMins=Math.floor(pauseSeconds/60);
-  const rideCost=isGiornata?tariffaFissa:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
+  const rideCost=isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
   const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
-  const totalCost=isGiornata?tariffaFissa:Math.min(rideCost+pauseCost, TARIFFA_GIORNATA);
+  const totalCost=Math.min(rideCost+pauseCost, TARIFFA_GIORNATA);
   const cappedAtMax = !isGiornata && totalCost >= TARIFFA_GIORNATA;
-
-  // ── Scadenza giornata a mezzanotte ────────────────────────────────────────
-  React.useEffect(() => {
-    if (!isGiornata) return;
-    // Calcola ms fino a mezzanotte
-    const now = new Date();
-    const midnight = new Date(now);
-    midnight.setHours(23, 59, 0, 0); // 23:59:00
-    const msToMidnight = midnight.getTime() - now.getTime();
-    if (msToMidnight <= 0) return; // già passata mezzanotte
-
-    // Avvisa 15 minuti prima
-    const warningMs = msToMidnight - 15 * 60 * 1000;
-    let warningTimer;
-    if (warningMs > 0) {
-      warningTimer = setTimeout(() => {
-        alert("⏰ Attenzione — la tua corsa giornaliera scade alle 23:59!\n\nParcheggia la bici entro mezzanotte.");
-      }, warningMs);
-    }
-
-    // Termina automaticamente la corsa a mezzanotte
-    const endTimer = setTimeout(async () => {
-      console.log("🌙 Scadenza giornata — termine automatico corsa");
-      // Segna la corsa come scaduta su Firestore
-      if (rideId) {
-        try {
-          await waitFB();
-          const {doc, updateDoc} = window.firebaseFunctions;
-          await updateDoc(doc(window.firebaseDb, "rides", rideId), {
-            status: "Completata",
-            endTime: new Date().toISOString(),
-            duration: seconds,
-            cost: totalCost,
-            expiredAtMidnight: true,
-          });
-        } catch(e) { console.error("Errore scadenza:", e); }
-      }
-      // Blocca la bici e libera
-      await sendBikeCommand?.(bike.id, 'lock');
-      await setBikeInUse?.(bike.id, false);
-      // Mostra messaggio e torna alla mappa
-      alert("🌙 La tua corsa giornaliera è scaduta a mezzanotte.\n\nLa bici è stata bloccata. Buona serata!");
-      onEnd(seconds, totalCost, bike.id);
-    }, msToMidnight);
-
-    return () => {
-      clearTimeout(warningTimer);
-      clearTimeout(endTimer);
-    };
-  }, [isGiornata, rideId]);
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // ── Calcolo km e velocità media dal tracciato GPS ──────────────────────────
-  const rideStats = React.useMemo(() => {
-    const track = trackRef.current || [];
-    if (track.length < 2) return { km: 0, velMedia: 0 };
-    let km = 0;
-    for (let i = 1; i < track.length; i++) {
-      const R = 6371;
-      const dLat = (track[i].lat - track[i-1].lat) * Math.PI / 180;
-      const dLng = (track[i].lng - track[i-1].lng) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(track[i-1].lat*Math.PI/180) * Math.cos(track[i].lat*Math.PI/180) * Math.sin(dLng/2)**2;
-      km += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-    const oreEffettive = (seconds - pauseSeconds) / 3600;
-    const velMedia = oreEffettive > 0 ? km / oreEffettive : 0;
-    return { km: Math.max(0, km), velMedia: Math.max(0, velMedia) };
-  }, [seconds]); // ricalcola ogni secondo (seconds cambia)
-  // ──────────────────────────────────────────────────────────────────────────
   const handleParkPhoto=(e)=>{ 
     const file=e.target.files[0]; 
     if(!file) return;
@@ -1558,30 +1369,6 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   };
   const handleEndConfirm=async()=>{
     if(!parkPhoto){alert("📸");return;}
-    // Usa parkingStatus già calcolato ogni 3s — stesso sistema del banner
-    // Evita discrepanze tra il banner e il check al momento del click
-    const zoneCheck = { ok: inParking !== false };
-    if (!zoneCheck.ok) {
-      // Avvisa della penale ma lascia procedere — è l'utente che sceglie
-      const proceed = window.confirm(
-        "⚠️ Non sei in una zona di parcheggio autorizzata.\n\n" +
-        "Ci riserviamo di addebitare €35 per parcheggio fuori zona.\n\n" +
-        "Vuoi terminare comunque?"
-      );
-      if (!proceed) return;
-      // Segna sulla corsa che è fuori zona — per eventuale addebito manuale
-      if (rideId) {
-        try {
-          await waitFB();
-          const {doc, updateDoc} = window.firebaseFunctions;
-          await updateDoc(doc(window.firebaseDb, "rides", rideId), {
-            parkingViolation: true,
-            parkingViolationFee: 35,
-            parkingViolationAt: new Date().toISOString()
-          });
-        } catch(e) { console.error("Errore flag violazione:", e); }
-      }
-    }
     setUploading(true);
     try {
       await waitFB();
@@ -1589,55 +1376,14 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       const sRef=ref(window.firebaseStorage,`parcheggi/${bike.id}_${Date.now()}`);
       await uploadBytes(sRef,parkPhoto);
       const parkPhotoURL=await getDownloadURL(sRef);
-      if(rideId) await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,parkPhotoURL,track:trackRef.current,kmPercorsi:parseFloat(rideStats.km.toFixed(2)),velMediaKmh:parseFloat(rideStats.velMedia.toFixed(1))});
+      if(rideId) await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,parkPhotoURL,track:trackRef.current});
     } catch(e){console.error(e);}
-    setUploading(false);
-    // Libera la bici subito — doppia sicurezza oltre a handleEndRide
-    try {
-      await waitFB();
-      const {doc,setDoc}=window.firebaseFunctions;
-      await setDoc(doc(window.firebaseDb,'bikesStatus',bike.id),
-        {inUse:false,userId:null,updatedAt:new Date().toISOString()},{merge:true});
-    } catch(e){ console.error('Errore liberazione bici:', e); }
-    onEnd(seconds,totalCost,bike.id);
+    setUploading(false); onEnd(seconds,totalCost,bike.id);
   };
   const rideMapRef = React.useRef(null);
   const rideMapInstance = React.useRef(null);
   const rideUserMarker = React.useRef(null);
   const rideZonesDrawn = React.useRef(false);
-  // Stato zona parcheggio — si ricalcola ogni 3s e ad ogni cambio posizione
-  const [parkingStatus, setParkingStatus] = React.useState({inParking:null,nearest:null,dist:null});
-  const inParking = parkingStatus.inParking;
-  const nearestParking = parkingStatus.nearest;
-  const distToParking = parkingStatus.dist;
-  const isOwner = user?.email && (user.email.includes('pedalagilla') || user.email.includes('marco'));
-
-  React.useEffect(() => {
-    const compute = () => {
-      // Usa sempre le zone più aggiornate da window._clientZones
-      const zones = (window._clientZones && window._clientZones.length > 0)
-        ? window._clientZones : DEFAULT_ZONES;
-      const sostaZones = zones.filter(z => z.type === 'sosta' && z.center);
-      if (!userPos || sostaZones.length === 0) {
-        setParkingStatus({inParking:null,nearest:null,dist:null});
-        return;
-      }
-      let nearest = null, minDist = Infinity;
-      for (const z of sostaZones) {
-        const d = haversineDist(userPos.lat, userPos.lng, z.center.lat, z.center.lng);
-        if (d < minDist) { minDist = d; nearest = z; }
-      }
-      setParkingStatus({
-        inParking: minDist <= (nearest.radius || 300),
-        nearest,
-        dist: Math.round(minDist)
-      });
-    };
-    compute();
-    // Ricalcola ogni 3 secondi per aggiornamento continuo
-    const interval = setInterval(compute, 3000);
-    return () => clearInterval(interval);
-  }, [userPos]); // si resetta ad ogni nuova posizione GPS
 
   // Inizializza mappa durante la corsa
   React.useEffect(()=>{
@@ -1655,9 +1401,8 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       rideMapInstance.current = map;
       // Disegna zone parcheggio — riprova ogni 300ms finché non sono disponibili
       const drawParkingZones = (attempt=0) => {
-        const zones = (window._clientZones && window._clientZones.length > 0) 
-          ? window._clientZones : DEFAULT_ZONES;
-        if (zones.length === 0 && attempt < 5) { 
+        const zones = window._clientZones || [];
+        if (zones.length === 0 && attempt < 20) { 
           setTimeout(()=>drawParkingZones(attempt+1), 300); 
           return; 
         }
@@ -1727,50 +1472,8 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
               <span style={{color:C.deepBlue,fontWeight:700,...ds}}>{v}</span>
             </div>
           ))}
-          {rideStats.km > 0 && (
-            <div style={{borderTop:`1px solid ${C.skyBlue}20`,paddingTop:10,marginTop:6}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <div style={{background:`${C.blueGreen}10`,borderRadius:12,padding:"10px 0",textAlign:"center"}}>
-                  <p style={{color:"#888",fontSize:10,...ds,margin:"0 0 2px",letterSpacing:1}}>DISTANZA</p>
-                  <p style={{color:C.blueGreen,fontSize:24,fontWeight:700,margin:0,...ds}}>{rideStats.km.toFixed(2)}</p>
-                  <p style={{color:"#aaa",fontSize:10,...ds,margin:0}}>km</p>
-                </div>
-                <div style={{background:`${C.blueGreen}10`,borderRadius:12,padding:"10px 0",textAlign:"center"}}>
-                  <p style={{color:"#888",fontSize:10,...ds,margin:"0 0 2px",letterSpacing:1}}>VEL. MEDIA</p>
-                  <p style={{color:C.blueGreen,fontSize:24,fontWeight:700,margin:0,...ds}}>{rideStats.velMedia.toFixed(1)}</p>
-                  <p style={{color:"#aaa",fontSize:10,...ds,margin:0}}>km/h</p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-        {/* Banner zona parcheggio */}
-        {inParking===false&&(
-          <div style={{background:"#fff3cd",border:"1.5px solid #FFB703",borderRadius:14,padding:"12px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:24}}>⚠️</span>
-            <div>
-              <p style={{color:"#7a5c00",fontSize:13,fontWeight:700,margin:0,...ds}}>Non sei in zona parcheggio</p>
-              <p style={{color:"#997a00",fontSize:12,margin:"3px 0 0",...ds}}>Terminando qui ci riserviamo di addebitare €35</p>
-              {nearestParking&&<p style={{color:"#b38600",fontSize:11,margin:"3px 0 0",...ds}}>🅿️ Più vicino: {nearestParking.name} · {distToParking}m</p>}
-            </div>
-          </div>
-        )}
-        {inParking===true&&(
-          <div style={{background:`${C.blueGreen}15`,border:`1.5px solid ${C.blueGreen}`,borderRadius:14,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:20}}>✅</span>
-            <p style={{color:C.blueGreen,fontSize:13,fontWeight:700,margin:0,...ds}}>Sei in zona parcheggio — puoi terminare</p>
-          </div>
-        )}
-        {inParking===null&&(
-          <div style={{background:"#f0f0f0",border:"1.5px solid #ccc",borderRadius:14,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:18}}>📡</span>
-            <p style={{color:"#999",fontSize:12,margin:0,...ds}}>Rilevamento posizione...</p>
-          </div>
-        )}
-        <button
-          onClick={handleEndConfirm}
-          disabled={!parkPhoto||uploading}
-          style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
+        <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading} style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
           {uploading?t('saving'):t('confirmEnd')}
         </button>
         <button onClick={()=>setShowEndFlow(false)} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('backToRide')}</button>
@@ -1791,40 +1494,8 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         <div style={{textAlign:"right"}}>
           <p style={{color:C.skyBlue,fontSize:9,margin:0,...ds}}>Totale</p>
           <p style={{color:C.sunYellow,fontSize:22,fontWeight:700,margin:0,...ds}}>€{totalCost.toFixed(2)}</p>
-          {isGiornata&&(()=>{
-            const now=new Date();
-            const midnight=new Date(now); midnight.setHours(23,59,0,0);
-            const msLeft=midnight-now;
-            const hLeft=Math.floor(msLeft/3600000);
-            const mLeft=Math.floor((msLeft%3600000)/60000);
-            const isUrgent=msLeft<60*60*1000; // meno di 1 ora
-            return <p style={{color:isUrgent?"#FF4444":C.skyBlue,fontSize:9,margin:"2px 0 0",...ds,fontWeight:isUrgent?700:400}}>
-              ⏰ {hLeft}h {mLeft}m a mezzanotte
-            </p>;
-          })()}
-          {rideStats.km > 0 && (
-            <div style={{display:"flex",gap:10,marginTop:4,justifyContent:"flex-end"}}>
-              <div style={{textAlign:"center"}}>
-                <p style={{color:"rgba(255,255,255,0.5)",fontSize:8,margin:0,...ds,letterSpacing:1}}>KM</p>
-                <p style={{color:C.white,fontSize:16,fontWeight:700,margin:0,...ds}}>{rideStats.km.toFixed(1)}</p>
-              </div>
-              <div style={{textAlign:"center"}}>
-                <p style={{color:"rgba(255,255,255,0.5)",fontSize:8,margin:0,...ds,letterSpacing:1}}>KM/H</p>
-                <p style={{color:C.white,fontSize:16,fontWeight:700,margin:0,...ds}}>{rideStats.velMedia.toFixed(1)}</p>
-              </div>
-            </div>
-          )}
         </div>
         {paused&&<div style={{background:C.sunYellow,borderRadius:8,padding:"3px 10px"}}><p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,margin:0}}>PAUSA</p></div>}
-        {autoPauseBanner&&(
-          <div style={{position:"absolute",top:70,left:12,right:12,background:"rgba(2,48,71,0.95)",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,zIndex:10,boxShadow:"0 4px 16px rgba(0,0,0,0.3)"}}>
-            <span style={{fontSize:20}}>⏸️</span>
-            <div>
-              <p style={{color:C.sunYellow,fontSize:12,fontWeight:700,margin:0,...ds}}>Bici in auto-pausa</p>
-              <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,margin:"2px 0 0",...ds}}>Ferma da 15 min — premi Riprendi quando sei pronto</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* MAPPA */}
@@ -1847,25 +1518,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             🏁 {t('endRide')}
           </button>
         </div>
-        {/* Banner parcheggio in tempo reale */}
-        {inParking===true&&(
-          <div style={{margin:"8px 0 0",background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}50`,borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:16}}>✅</span>
-            <span style={{color:C.blueGreen,fontSize:12,fontWeight:700,...ds}}>Sei in zona parcheggio</span>
-            {nearestParking&&<span style={{color:C.blueGreen,fontSize:11,...ds}}>— {nearestParking.name}</span>}
-          </div>
-        )}
-        {inParking===false&&(
-          <div style={{margin:"8px 0 0",background:"#fff8e8",border:"1px solid #FFB70360",borderRadius:10,padding:"7px 12px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:16}}>🅿️</span>
-            <div>
-              <span style={{color:"#7a5c00",fontSize:12,fontWeight:700,...ds}}>Fuori zona · </span>
-              {nearestParking&&<span style={{color:"#997a00",fontSize:11,...ds}}>{nearestParking.name} {distToParking}m</span>}
-            </div>
-          </div>
-        )}
-
-        <div style={{display:"flex",justifyContent:"center",gap:20,marginTop:6}}>
+        <div style={{display:"flex",justifyContent:"center",gap:20}}>
           {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
             <p key={k} style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{k}: <span style={{color:C.deepBlue,fontWeight:600}}>{v}</span></p>
           ))}
@@ -1890,8 +1543,7 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
   const [parkPreview, setParkPreview] = React.useState(null);
   const [uploading, setUploading] = React.useState(false);
   const trackRefs = React.useRef({});
-  const isGiornata = plan === "giornata" || plan === "settimana";
-  const tariffaFissa = plan==="settimana" ? TARIFFA_SETTIMANALE : TARIFFA_GIORNATA;
+  const isGiornata = plan === "giornata";
 
   React.useEffect(() => { bikes.forEach(b => { if (!trackRefs.current[b.id]) trackRefs.current[b.id] = []; }); }, []);
   React.useEffect(() => { if (globalPaused||showEndFlow) return; const i=setInterval(()=>setSeconds(s=>s+1),1000); return()=>clearInterval(i); },[globalPaused,showEndFlow]);
@@ -1915,10 +1567,10 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 
   const mins=Math.floor(seconds/60), secs=seconds%60;
   const pauseMins=Math.floor(pauseSeconds/60);
-  const costPerBike=isGiornata?tariffaFissa:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
+  const costPerBike=isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
   const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
   const activeBikes=bikes.filter(b=>!completedBikes.includes(b.id));
-  const totalCost=(isGiornata?tariffaFissa:Math.min(costPerBike+pauseCost, TARIFFA_GIORNATA))*activeBikes.length;
+  const totalCost=Math.min((costPerBike+pauseCost), TARIFFA_GIORNATA)*activeBikes.length;
 
   const handleParkPhoto=(e)=>{ 
     const file=e.target.files[0]; 
@@ -2640,8 +2292,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     load();
   },[user?.uid]);
 
-  // Bici disponibili = non in uso e non in manutenzione (letto da bikesStatus)
-  const bikes = allBikes.filter(b => !activeBikeIds.includes(b.id));
+  // Bici disponibili = non in corsa da altri utenti
+  const bikes = allBikes.filter(b => b.status==="Disponibile" && !activeBikeIds.includes(b.id));
 
   React.useEffect(()=>{ if (!navigator.geolocation) return; navigator.geolocation.watchPosition(pos=>{ setUserPos({lat:pos.coords.latitude,lng:pos.coords.longitude}); window._userPosition={lat:pos.coords.latitude,lng:pos.coords.longitude}; },()=>{},{enableHighAccuracy:true}); 
     // Salva posizione apertura app per heatmap
@@ -2664,15 +2316,14 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         await waitFB(); 
         const {doc,getDoc}=window.firebaseFunctions; 
         const snap=await getDoc(doc(window.firebaseDb,"config","zones")); 
-        const zones = snap.exists() && (snap.data().zones||[]).length>0 ? snap.data().zones : DEFAULT_ZONES;
+        const zones = snap.exists() ? (snap.data().zones||[]) : DEFAULT_ZONES;
         setClientZones(zones); 
-        window._clientZones = zones;
+        window._clientZones = zones; // Disponibile subito per RideTimer
       } catch(e){ 
         setClientZones(DEFAULT_ZONES); 
         window._clientZones = DEFAULT_ZONES;
       } 
     };
-    window._clientZones = DEFAULT_ZONES;
     load();
   },[]);
 
@@ -2683,8 +2334,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       const {collection, onSnapshot} = window.firebaseFunctions;
       onSnapshot(collection(window.firebaseDb, "bikesStatus"), snap => {
         const active = snap.docs
-          .filter(d => d.data().inUse === true || d.data().inManutenzione === true)
-          .map(d => d.id); // include bici in uso E in manutenzione
+          .filter(d => d.data().inUse === true)
+          .map(d => d.id); // id è bikeId tipo PA-027
         setActiveBikeIds(active);
       });
     };
@@ -2693,68 +2344,6 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   // Recupera corsa attiva al login
   React.useEffect(()=>{
-    // ── Gestione ritorno da Stripe Checkout ──────────────────────────────────
-    const urlParams = new URLSearchParams(window.location.search);
-    const checkoutSuccess = urlParams.get('checkout_success');
-    const checkoutCancelled = urlParams.get('checkout_cancelled');
-
-    if (checkoutCancelled) {
-      window.history.replaceState({}, '', '/');
-      setRestoringRide(false);
-      return;
-    }
-
-    if (checkoutSuccess) {
-      window.history.replaceState({}, '', '/');
-      // Funzione async per gestire il ritorno dal checkout
-      const handleCheckoutReturn = async () => {
-        const pending = sessionStorage.getItem('pendingCheckout');
-        if (!pending) { setRestoringRide(false); return; }
-        try {
-          const { sessionId, bikeIds, plan, amount } = JSON.parse(pending);
-          sessionStorage.removeItem('pendingCheckout');
-          const res = await fetch('https://web-production-eafa5.up.railway.app/checkout-status', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ sessionId })
-          });
-          const data = await res.json();
-          if (data.paid) {
-            await waitFB();
-            const {collection,addDoc} = window.firebaseFunctions;
-            const bks = bikeIds.map(id => {
-              const found = initBikes.find(b => b.id === id);
-              return found || {id, zone:'', battery:80, status:'Disponibile', lat:43.15, lng:12.08};
-            });
-            const rideIds = [];
-            for (const bike of bks) {
-              const rideDoc = await addDoc(collection(window.firebaseDb,'rides'), {
-                bikeId: bike.id, userId: user.uid||'',
-                userName: `${user.nome||''} ${user.cognome||''}`.trim()||'Cliente',
-                userEmail: user.email||'', zone: bike.zone, plan,
-                status: 'In corso', startTime: new Date().toISOString(),
-                track: [], cost: 0, groupSize: bks.length,
-                paymentIntentId: data.paymentIntentId||null,
-                sessionId,
-              });
-              rideIds.push({bikeId: bike.id, rideId: rideDoc.id});
-              await sendBikeCommand(bike.id, 'unlock');
-              await sendBikeCommand(bike.id, 'gps_high');
-              await setBikeInUse(bike.id, true);
-            }
-            setCurrentRideIds(rideIds);
-            setConfirmed(bks);
-            setPlan(plan);
-            setRiding(true);
-          }
-        } catch(e) { console.error('Errore verifica checkout:', e); }
-        setRestoringRide(false);
-      };
-      handleCheckoutReturn();
-      return;
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
     const restore = async () => {
       console.log("🔄 Restore avviato, user.uid:", user?.uid);
       try {
@@ -2765,7 +2354,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         const allActiveRides = ridesSnap.docs
           .filter(d => {
             const data = d.data();
-            return data.status === "In corso" && data.userId === user.uid;
+            const isRecent = data.startTime && (Date.now() - new Date(data.startTime).getTime()) < 24 * 60 * 60 * 1000;
+            return data.status === "In corso" && data.userId === user.uid && isRecent;
           })
           .map(d => ({id: d.id, ...d.data()}));
         // Deduplica per bikeId — tieni la più recente
@@ -2839,7 +2429,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   React.useEffect(() => {
     const bikeId=getUrlBike();
-    if(bikeId){ const bike=bikes.find(b=>b.id===bikeId); if(bike){setSelectedBike(bike);setSelectedBikes([bike]);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`); window.history.replaceState({},"","/"); }
+    if(bikeId){ if(user?.type==="admin"){window.location.href="/admin";return;} const bike=bikes.find(b=>b.id===bikeId); if(bike){setSelectedBike(bike);setSelectedBikes([bike]);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`); window.history.replaceState({},"","/"); }
   },[]);
 
   const handleBikeClick=(bike)=>{ setSelectedBike(bike); setSelectedBikes([bike]); setShowPlan(true); };
@@ -2876,17 +2466,16 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   // Calcola importo effettivo in base al promo
   const nBikes = selectedBikes.length || 1;
   const getEffectiveAmount = () => {
-    const base = plan==="settimana" ? TARIFFA_SETTIMANALE*nBikes : plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
-    if (!promoApplied) return base;
-    if (promoApplied.type === "dipendente" || promoApplied.type === "famiglia" || promoApplied.type === "struttura" || (promoApplied.type === "hotel" && promoApplied.hotelOption === "bonifico")) return 0;
+    if (!promoApplied) return plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
+    if (promoApplied.type === "dipendente" || promoApplied.type === "famiglia") return 0;
     if (promoApplied.type === "hotel") {
       if (promoApplied.hotelOption === "scontata") return 16 * nBikes;
       if (promoApplied.hotelOption === "cashback") return 18.90 * nBikes;
     }
-    return base;
+    return plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
   };
   const payAmount = getEffectiveAmount();
-  const isFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia"||promoApplied.type==="struttura"||(promoApplied.type==="hotel"&&promoApplied.hotelOption==="bonifico"));
+  const isFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia");
 
   const handlePaySuccess=async(paymentMethodId)=>{
     setShowPayment(false); setShowPlan(false);
@@ -2907,10 +2496,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           promoCode: promoApplied?.code||null,
           promoType: promoApplied?.type||null,
           hotelName: promoApplied?.hotelName||null,
-          hotelOption: promoApplied?.hotelOption||null,
           hotelCashback,
           isFree: isFree||false,
-          paymentMethodId: paymentMethodId||null,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
         console.log(`✅ Ride creata: ${rideDoc.id} per ${bike.id}, status: In corso`);
@@ -2961,7 +2548,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       await setDoc(doc(window.firebaseDb, 'bikesStatus', bikeId), {
         inUse, userId: inUse ? (user.uid||"") : null, updatedAt: new Date().toISOString()
       }, {merge: true});
-    } catch(e) { console.error('Errore setBikeInUse:', e); }
+      console.log(`✅ setBikeInUse: ${bikeId} → inUse=${inUse}`);
+    } catch(e) { console.error('❌ Errore setBikeInUse:', e.code, e.message); }
   };
 
   const handleFreeStart = async () => {
@@ -3170,7 +2758,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>{t('payment')}</p>
                   <div style={{width:30}}/>
                 </div>
-                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="settimana"?t('planWeek')||"Settimana":plan==="giornata"?t('planDay'):t('planMinutes')} user={user} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
+                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="giornata"?t('planDay'):t('planMinutes')} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
               </>
             ):(
               <>
@@ -3212,57 +2800,24 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   )}
 
                   {/* Selezione piano */}
-                  {[
-                    {id:"minuti", icon:"⏱️", label:t('planMinutes')||"Al minuto",
-                     price:`€${SBLOCCO.toFixed(2)}`, unit:"sblocco",
-                     details:[`€${TARIFFA_MIN}/min in corsa`,`€${TARIFFA_PAUSA}/min in pausa`],
-                     tag:null},
-                    {id:"giornata", icon:"☀️", label:t('planDay')||"Giornata intera",
-                     price:`€${(TARIFFA_GIORNATA*nBikes).toFixed(2)}`, unit:"tutto il giorno",
-                     details:["Sblocco incluso","Pausa gratuita"],
-                     tag:"PIÙ USATA"},
-                    {id:"settimana", icon:"🗓️", label:t('planWeek')||"Settimana",
-                     price:`€${(TARIFFA_SETTIMANALE*nBikes).toFixed(2)}`, unit:"7 giorni",
-                     details:["Uso illimitato","Pausa gratuita"],
-                     tag:"CONVENIENTE"},
-                  ].map(p=>(
-                    <div key={p.id} onClick={()=>setPlan(p.id)}
-                      style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"12px 14px",marginBottom:8,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,position:"relative",overflow:"hidden"}}>
-                      {p.tag&&<div style={{position:"absolute",top:0,right:0,background:plan===p.id?C.blueGreen:C.sunYellow,padding:"2px 10px",borderRadius:"0 12px 0 10px"}}><span style={{color:plan===p.id?C.white:C.deepBlue,fontSize:9,...ds,fontWeight:700}}>{p.tag}</span></div>}
-                      <div style={{display:"flex",alignItems:"center",gap:12}}>
-                        <span style={{fontSize:26}}>{p.icon}</span>
-                        <div style={{flex:1}}>
-                          <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:4}}>
-                            <p style={{color:plan===p.id?C.white:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{p.label}</p>
-                            <p style={{color:plan===p.id?C.sunYellow:C.blueGreen,fontWeight:700,fontSize:16,margin:0,...ds}}>{p.price}</p>
-                            <p style={{color:plan===p.id?"rgba(255,255,255,0.6)":"#aaa",fontSize:10,margin:0,...ds}}>{p.unit}</p>
-                          </div>
-                          <div style={{display:"flex",gap:10}}>
-                            {p.details.map(d=>(
-                              <span key={d} style={{color:plan===p.id?"rgba(255,255,255,0.75)":"#888",fontSize:10,...ds}}>• {d}</span>
-                            ))}
-                          </div>
-                        </div>
-                        {plan===p.id&&<div style={{width:22,height:22,borderRadius:11,background:C.blueGreen,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:13,flexShrink:0}}>✓</div>}
+                  {[{id:"minuti",label:t('planMinutes'),icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)}×${nBikes} + €${TARIFFA_MIN}/min`},{id:"giornata",label:t('planDay'),icon:"☀️",desc:`€${(TARIFFA_GIORNATA*nBikes).toFixed(2)} — ${t('free')}`}].map(p=>(
+                    <div key={p.id} onClick={()=>setPlan(p.id)} style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"14px 16px",marginBottom:10,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14}}>
+                      <div style={{fontSize:28}}>{p.icon}</div>
+                      <div style={{flex:1}}>
+                        <p style={{color:plan===p.id?C.white:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{p.label}</p>
+                        <p style={{color:plan===p.id?C.skyBlue:"#aaa",fontSize:11,margin:"2px 0 0",...ds}}>{p.desc}</p>
                       </div>
+                      {plan===p.id&&<div style={{width:22,height:22,borderRadius:11,background:C.blueGreen,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:13}}>✓</div>}
                     </div>
                   ))}
 
-                  {/* Distanza a piedi — usa posizione aggiornata da Firebase */}
+                  {/* Distanza a piedi (solo per bici singola) */}
                   {userPos&&selectedBike&&selectedBikes.length===1&&(()=>{
-                    // Cerca la bici aggiornata in allBikes (con posizione reale da Firebase)
-                    const liveBike = allBikes.find(b=>b.id===selectedBike.id) || selectedBike;
-                    const bikeLat = liveBike.lat;
-                    const bikeLng = liveBike.lng;
-                    // Calcola solo se le coordinate sono valide e non di default
-                    if (!bikeLat || !bikeLng || (bikeLat===43.0950&&bikeLng===12.0650)) return null;
                     const R=6371000;
-                    const dLat=(bikeLat-userPos.lat)*Math.PI/180;
-                    const dLng=(bikeLng-userPos.lng)*Math.PI/180;
-                    const a=Math.sin(dLat/2)**2+Math.cos(userPos.lat*Math.PI/180)*Math.cos(bikeLat*Math.PI/180)*Math.sin(dLng/2)**2;
+                    const dLat=(selectedBike.lat-userPos.lat)*Math.PI/180;
+                    const dLng=(selectedBike.lng-userPos.lng)*Math.PI/180;
+                    const a=Math.sin(dLat/2)**2+Math.cos(userPos.lat*Math.PI/180)*Math.cos(selectedBike.lat*Math.PI/180)*Math.sin(dLng/2)**2;
                     const d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-                    // Nascondi se distanza > 50km (probabilmente coordinate sbagliate)
-                    if (d > 50000) return null;
                     const mins=Math.round(d/80);
                     const distText=d<1000?`${Math.round(d)}m · ~${mins} min`:`${(d/1000).toFixed(1)}km · ~${mins} min`;
                     return(
@@ -3307,7 +2862,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                         <div>
                           <p style={{color:isFree?C.blueGreen:"#1565C0",fontSize:13,fontWeight:700,margin:"0 0 2px",...ds}}>
-                            {isFree ? ((promoApplied.type==="hotel"&&promoApplied.hotelOption==="bonifico") ? "🏨 Convenzione hotel" : "🎉 "+t('promoFreeRide')) : promoApplied.type==="hotel" ? "🏨 Tariffa hotel convenzionata" : "🏨 "+t('promoHotelDiscount')}
+                            {isFree ? "🎉 "+t('promoFreeRide') : promoApplied.type==="hotel" && promoApplied.hotelOption==="scontata" ? "🏨 "+t('promoHotelDiscount') : "🏨 "+t('promoHotelCashback')}
                           </p>
                           <p style={{color:"#555",fontSize:11,...ds,margin:0}}>
                             🎟️ {promoApplied.code}
@@ -3317,10 +2872,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                             <p style={{color:"#1565C0",fontSize:12,...ds,margin:"4px 0 0",fontWeight:600}}>€16/giornata × {nBikes} = €{payAmount.toFixed(2)}</p>
                           )}
                           {promoApplied.type==="hotel" && promoApplied.hotelOption==="cashback" && (
-                            <p style={{color:"#1565C0",fontSize:12,...ds,margin:"4px 0 0",fontWeight:600}}>€18,90/giornata · pausa gratuita</p>
-                          )}
-                          {promoApplied.type==="hotel" && promoApplied.hotelOption==="bonifico" && (
-                            <p style={{color:"#2E7D32",fontSize:12,...ds,margin:"4px 0 0",fontWeight:600}}>✅ Incluso nella tua struttura</p>
+                            <p style={{color:"#1565C0",fontSize:12,...ds,margin:"4px 0 0",fontWeight:600}}>€18,90 · €3 rimborso all'hotel</p>
                           )}
                         </div>
                         <button onClick={removePromo} style={{background:"none",border:"none",color:"#aaa",fontSize:18,cursor:"pointer",padding:"0 4px"}}>✕</button>
@@ -3331,7 +2883,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   {/* BOTTONE CONTINUA / PARTI GRATIS */}
                   {isFree ? (
                     <button onClick={handleFreeStart} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},#027a4e)`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:4}}>
-                      {(promoApplied?.type==="struttura"||(promoApplied?.type==="hotel"&&promoApplied?.hotelOption==="bonifico"))?"🏨 Attiva noleggio convenzionato":"🎉 "+t('promoStartFree')}
+                      🎉 {t('promoStartFree')}
                     </button>
                   ) : (
                     <button onClick={()=>setShowPayment(true)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginTop:4}}>
@@ -3458,10 +3010,6 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                 <a href="https://wa.me/393495240422" style={{display:"block",background:"#25D366",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>{t('whatsappMarco')}</a>
               </div>
             </div>
-
-            {/* ── Sezione sviluppatore ── */}
-            <DeveloperCard C={C} ds={ds}/>
-
           </div>
         )}
 
