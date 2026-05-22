@@ -1007,9 +1007,26 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
     if (!cardEl.current) { setError("Carta non caricata, riprova"); return; }
     setLoading(true); setError(null);
     try {
-      const {paymentMethod,error:e} = await stripeInstance.createPaymentMethod({type:"card",card:cardEl.current,billing_details:{name:nome}});
+      const {paymentMethod, error:e} = await stripeInstance.createPaymentMethod({
+        type:"card", card:cardEl.current, billing_details:{name:nome}
+      });
       if (e) { setError(e.message); setLoading(false); return; }
-      setTimeout(()=>{ setLoading(false); onSuccess(paymentMethod.id); },1500);
+      
+      // Chiama backend Railway per processare il pagamento
+      const resp = await fetch('https://pedalagilla-iot-server.up.railway.app/create-payment-intent', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          amount, paymentMethodId: paymentMethod.id,
+          bikeId: Array.isArray(bike) ? bike.map(b=>b.id).join(',') : bike.id,
+          plan, userId: window._currentUserId||'', userName: nome
+        })
+      });
+      const data = await resp.json();
+      if (!data.success) { setError(data.error || t('errPayment')); setLoading(false); return; }
+      
+      setLoading(false);
+      onSuccess(paymentMethod.id);
     } catch(e) { setError(t('errPayment')); setLoading(false); }
   };
   const bikeIds = Array.isArray(bike) ? bike.map(b=>b.id).join(', ') : bike.id;
