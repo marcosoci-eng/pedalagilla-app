@@ -1013,7 +1013,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
       if (e) { setError(e.message); setLoading(false); return; }
       
       // Chiama backend Railway per processare il pagamento
-      const resp = await fetch('https://web-production-eafa5.up.railway.app/create-payment-intent', {
+      const resp = await fetch('/API/charge', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
