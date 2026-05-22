@@ -791,8 +791,13 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
       if (entry) {
         entry.marker.setPosition({ lat: bike.lat, lng: bike.lng });
         const color = bike.isMTB?"#FB8500":bike.battery>=80?"#219EBC":bike.battery>=50?"#FFB703":"#FB8500";
-        entry.marker.setIcon({ path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: color, fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 });
-        entry.marker.setLabel({ text: bike.isMTB?"🏔️":`${bike.battery}%`, color: "#ffffff", fontSize: bike.isMTB?"14px":"10px", fontWeight: "bold" });
+        const inRideColor = bike.inRide ? "#FF4444" : color;
+        const inRideScale = bike.inRide ? 20 : 16;
+        const inRideLabel = bike.inRide ? "🚴" : bike.isMTB?"🏔️":`${bike.battery}%`;
+        const inRideStroke = bike.inRide ? "#FFB703" : "#ffffff";
+        entry.marker.setIcon({ path: window.google.maps.SymbolPath.CIRCLE, scale: inRideScale, fillColor: inRideColor, fillOpacity: 1, strokeColor: inRideStroke, strokeWeight: bike.inRide?3:2 });
+        entry.marker.setLabel({ text: inRideLabel, color: "#ffffff", fontSize: bike.inRide?"16px":bike.isMTB?"14px":"10px", fontWeight: "bold" });
+        if (bike.inRide) entry.marker.setZIndex(999);
         entry.bike = bike;
       } else if (mapInstanceRef.current) {
         // Nuova bici — aggiungi marker
@@ -801,7 +806,8 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
         const marker = new window.google.maps.Marker({
           position: { lat: bike.lat, lng: bike.lng }, map: mapInstanceRef.current, title: bike.id,
           label: { text: bike.isMTB?"🏔️":`${bike.battery}%`, color: "#ffffff", fontSize: bike.isMTB?"14px":"10px", fontWeight: "bold" },
-          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: color, fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 }
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: bike.inRide?20:16, fillColor: bike.inRide?"#FF4444":color, fillOpacity: 1, strokeColor: bike.inRide?"#FFB703":"#ffffff", strokeWeight: bike.inRide?3:2 },
+          zIndex: bike.inRide ? 999 : 1
         });
         markersRef.current.push({ marker, iw, bike });
         marker.addListener("click", () => {
@@ -1597,36 +1603,46 @@ function AdminApp({ user, onLogout, t }) {
       onSnapshot(collection(window.firebaseDb,"mtbBikers"), snap=>{
         window._adminMTBBikes = snap.docs.map(d=>({id:d.id,...d.data()})).filter(b=>b.lat&&b.lng);
       });
-      // Carica stati manutenzione UNA VOLTA al mount
-      let bikeStatuses = {};
-      try {
-        const statusSnap = await getDocs(collection(window.firebaseDb, "bikesStatus"));
-        statusSnap.docs.forEach(d => { bikeStatuses[d.id] = d.data(); });
-      } catch(e) { console.error("Errore stati bici:", e); }
+      // Cache locale aggiornata da entrambi gli snapshot
+      let cachedBikesData = {};    // da collection 'bikes' (IoT)
+      let cachedStatuses = {};     // da collection 'bikesStatus' (manutenzione/inUse)
 
-      onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
+      const rebuildBikes = () => {
         const positions = {};
         const updatedBikes = [...initBikes];
-        snap.docs.forEach(d => {
-          const data = d.data();
-          positions[d.id] = data;
-          const normalizedId = 'PA-' + d.id.replace('PED','').padStart(3,'0');
+        Object.entries(cachedBikesData).forEach(([pedId, data]) => {
+          positions[pedId] = data;
+          const normalizedId = 'PA-' + pedId.replace('PED','').padStart(3,'0');
           const idx = updatedBikes.findIndex(b => b.id === normalizedId);
           if (idx >= 0) {
-            const st = bikeStatuses[normalizedId];
+            const st = cachedStatuses[normalizedId] || {};
             updatedBikes[idx] = {
               ...updatedBikes[idx],
               battery: data.batteryPercent || data.battery || updatedBikes[idx].battery,
               lat: data.lat || updatedBikes[idx].lat,
               lng: data.lng || updatedBikes[idx].lng,
               online: data.online || false,
-              // Stato manutenzione solo se esplicitamente true in Firestore
-              status: (st && st.inManutenzione === true) ? "Manutenzione" : "Disponibile",
+              inUse: st.inUse || false,
+              // Stato: manutenzione se inManutenzione=true, in corsa se inUse=true, altrimenti disponibile
+              status: (st.inManutenzione === true) ? "Manutenzione" : "Disponibile",
             };
           }
         });
         setBikes(updatedBikes);
         setBikesRealtime(positions);
+      };
+
+      // Listener bikesStatus — si aggiorna subito quando cambi manutenzione
+      onSnapshot(collection(window.firebaseDb, "bikesStatus"), snap => {
+        cachedStatuses = {};
+        snap.docs.forEach(d => { cachedStatuses[d.id] = d.data(); });
+        rebuildBikes();
+      });
+
+      // Listener bikes (IoT) — posizione, batteria, online
+      onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
+        snap.docs.forEach(d => { cachedBikesData[d.id] = d.data(); });
+        rebuildBikes();
       });
       // Rides listener
       onSnapshot(collection(window.firebaseDb,"rides"),snap=>{ setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; })); });
@@ -1955,9 +1971,11 @@ function AdminApp({ user, onLogout, t }) {
                 ...mapBikes.map(b=>{
                   const pedId = b.id.replace('PA-','PED');
                   const rt = bikesRealtime[pedId];
-                  return rt?.lat ? {...b, lat:rt.lat, lng:rt.lng, battery:rt.batteryPercent||b.battery} : b;
+                  const isInRide = rides.some(r=>r.bike===b.id&&r.status==="In corso");
+                  return rt?.lat
+                    ? {...b, lat:rt.lat, lng:rt.lng, battery:rt.batteryPercent||b.battery, inRide:isInRide}
+                    : {...b, inRide:isInRide};
                 }),
-                ...initBikes.filter(()=>false), // placeholder
                 ...(window._adminMTBBikes||[]).map(b=>({...b, isMTB:true, battery:100}))
               ]} onBikeClick={b=>openBikeDetail(b)} height={300}/>
             </div>
@@ -2053,7 +2071,34 @@ function AdminApp({ user, onLogout, t }) {
                 <p style={{fontSize:13,...ds}}>Nessuna bici con questi filtri</p>
               </div>
             )}
-            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
+            {filteredBikes.map(bike=>{
+              const isInRide = bike.inUse || rides.some(r=>r.bike===bike.id&&r.status==="In corso");
+              const borderColor = isInRide?"#FF4444":getStatusColor(bike.status);
+              return(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${borderColor}`}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{position:"relative"}}>
+                    <div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div>
+                    {isInRide&&<div style={{position:"absolute",top:-3,right:-3,width:14,height:14,borderRadius:7,background:"#FF4444",border:"2px solid white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"white"}}>●</div>}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        {isInRide&&<span style={{background:"#FF444415",border:"1px solid #FF444440",borderRadius:20,padding:"1px 7px",fontSize:10,...ds,fontWeight:700,color:"#FF4444"}}>🚴 corsa</span>}
+                        <span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}%</span>
+                      </div>
+                    </div>
+                    <div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div>
+                    <div style={{display:"flex",justifyContent:"space-between"}}>
+                      <span style={{color:isInRide?"#FF4444":getStatusColor(bike.status),fontSize:11,...ds}}>● {isInRide?"In corsa":bike.status}</span>
+                      <span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span>
+                    </div>
+                    {bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}
+                  </div>
+                  <span style={{color:C.blueGreen,fontSize:18}}>›</span>
+                </div>
+              </div>);
+            })}
             {/* MTB Muscolari */}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"16px 0 8px",...ds,opacity:0.5}}>🏔️ MTB Muscolari</p>
             {(window._adminMTBBikes||[]).length===0&&<p style={{color:"#aaa",fontSize:12,...ds,textAlign:"center",padding:10}}>Nessuna MTB — vai nel tab MTB per gestirle</p>}
