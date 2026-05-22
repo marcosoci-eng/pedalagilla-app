@@ -1022,7 +1022,9 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
           plan, userId: window._currentUserId||'', userName: nome
         })
       });
+      console.log('💳 Stripe response status:', resp.status);
       const data = await resp.json();
+      console.log('💳 Stripe response:', data);
       if (!data.success) { setError(data.error || t('errPayment')); setLoading(false); return; }
       
       setLoading(false);
