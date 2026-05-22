@@ -79,7 +79,7 @@ const TRANSLATIONS = {
     scanTitle: "Scansiona il QR della bici", scanDesc: "Inquadra il QR code sul telaio della bici",
     scanManual: "Oppure inserisci il codice:", scanPh: "Es: PA-021", scanClose: "✕",
     planMinutes: "Al minuto", planDay: "Giornata intera", planWeek: "Settimana",
-    planMinutesDesc: "€1.00 sblocco + €0.19/min · pausa €0.08/min", planDayDesc: "sblocco incluso · pausa gratuita", planWeekDesc: "7 giorni illimitati · pausa gratuita",
+    planMinutesDesc: "€1.00 sblocco + €0.19/min · pausa €0.08/min", planDayDesc: "sblocco incluso · pausa gratuita · valida fino alle 23:59", planWeekDesc: "7 giorni illimitati · pausa gratuita",
     continueBtn: "💳 Continua", walkDistance: "dalla tua posizione attuale",
     rideInProgress: "CORSA IN CORSO", ridePause: "PAUSA", totalCost: "Costo totale",
     unlock: "🔓 Sblocco", ridePerMin: "⏱️ Corsa", pausePerMin: "⏸️ Pausa", zone: "📍 Zona",
@@ -149,7 +149,7 @@ const TRANSLATIONS = {
     scanTitle: "Scan the bike QR code", scanDesc: "Point the camera at the QR code on the bike frame",
     scanManual: "Or enter the code:", scanPh: "E.g.: PA-021", scanClose: "✕",
     planMinutes: "Per minute", planDay: "Full day", planWeek: "Week pass",
-    planMinutesDesc: "€1.00 unlock + €0.19/min · pause €0.08/min", planDayDesc: "unlock included · free pause", planWeekDesc: "7 days unlimited · free pause",
+    planMinutesDesc: "€1.00 unlock + €0.19/min · pause €0.08/min", planDayDesc: "unlock included · free pause · valid until 23:59", planWeekDesc: "7 days unlimited · free pause",
     continueBtn: "💳 Continue", walkDistance: "from your current location",
     rideInProgress: "RIDE IN PROGRESS", ridePause: "PAUSE", totalCost: "Total cost",
     unlock: "🔓 Unlock", ridePerMin: "⏱️ Ride", pausePerMin: "⏸️ Pause", zone: "📍 Zone",
@@ -566,7 +566,7 @@ Per utilizzare il servizio è necessario: avere almeno 18 anni; fornire document
 
 Art. 3 — Tariffe
 • Al minuto: €1,00 sblocco + €0,19/minuto + €0,08/minuto in pausa
-• Giornaliera: €19,90 con pausa gratuita. Prezzi IVA inclusa.
+• Giornaliera: €19,90 con pausa gratuita, valida fino alle 23:59 del giorno di noleggio. Prezzi IVA inclusa.
 
 Art. 4 — Zona operativa e parcheggio
 Le biciclette devono essere usate nella zona operativa. Al termine parcheggiare in zona sosta (cerchi blu) e fotografare.
@@ -1470,6 +1470,57 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const totalCost=isGiornata?tariffaFissa:Math.min(rideCost+pauseCost, TARIFFA_GIORNATA);
   const cappedAtMax = !isGiornata && totalCost >= TARIFFA_GIORNATA;
 
+  // ── Scadenza giornata a mezzanotte ────────────────────────────────────────
+  React.useEffect(() => {
+    if (!isGiornata) return;
+    // Calcola ms fino a mezzanotte
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(23, 59, 0, 0); // 23:59:00
+    const msToMidnight = midnight.getTime() - now.getTime();
+    if (msToMidnight <= 0) return; // già passata mezzanotte
+
+    // Avvisa 15 minuti prima
+    const warningMs = msToMidnight - 15 * 60 * 1000;
+    let warningTimer;
+    if (warningMs > 0) {
+      warningTimer = setTimeout(() => {
+        alert("⏰ Attenzione — la tua corsa giornaliera scade alle 23:59!\n\nParcheggia la bici entro mezzanotte.");
+      }, warningMs);
+    }
+
+    // Termina automaticamente la corsa a mezzanotte
+    const endTimer = setTimeout(async () => {
+      console.log("🌙 Scadenza giornata — termine automatico corsa");
+      // Segna la corsa come scaduta su Firestore
+      if (rideId) {
+        try {
+          await waitFB();
+          const {doc, updateDoc} = window.firebaseFunctions;
+          await updateDoc(doc(window.firebaseDb, "rides", rideId), {
+            status: "Completata",
+            endTime: new Date().toISOString(),
+            duration: seconds,
+            cost: totalCost,
+            expiredAtMidnight: true,
+          });
+        } catch(e) { console.error("Errore scadenza:", e); }
+      }
+      // Blocca la bici e libera
+      await sendBikeCommand?.(bike.id, 'lock');
+      await setBikeInUse?.(bike.id, false);
+      // Mostra messaggio e torna alla mappa
+      alert("🌙 La tua corsa giornaliera è scaduta a mezzanotte.\n\nLa bici è stata bloccata. Buona serata!");
+      onEnd(seconds, totalCost, bike.id);
+    }, msToMidnight);
+
+    return () => {
+      clearTimeout(warningTimer);
+      clearTimeout(endTimer);
+    };
+  }, [isGiornata, rideId]);
+  // ─────────────────────────────────────────────────────────────────────────
+
   // ── Calcolo km e velocità media dal tracciato GPS ──────────────────────────
   const rideStats = React.useMemo(() => {
     const track = trackRef.current || [];
@@ -1740,6 +1791,17 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         <div style={{textAlign:"right"}}>
           <p style={{color:C.skyBlue,fontSize:9,margin:0,...ds}}>Totale</p>
           <p style={{color:C.sunYellow,fontSize:22,fontWeight:700,margin:0,...ds}}>€{totalCost.toFixed(2)}</p>
+          {isGiornata&&(()=>{
+            const now=new Date();
+            const midnight=new Date(now); midnight.setHours(23,59,0,0);
+            const msLeft=midnight-now;
+            const hLeft=Math.floor(msLeft/3600000);
+            const mLeft=Math.floor((msLeft%3600000)/60000);
+            const isUrgent=msLeft<60*60*1000; // meno di 1 ora
+            return <p style={{color:isUrgent?"#FF4444":C.skyBlue,fontSize:9,margin:"2px 0 0",...ds,fontWeight:isUrgent?700:400}}>
+              ⏰ {hLeft}h {mLeft}m a mezzanotte
+            </p>;
+          })()}
           {rideStats.km > 0 && (
             <div style={{display:"flex",gap:10,marginTop:4,justifyContent:"flex-end"}}>
               <div style={{textAlign:"center"}}>
