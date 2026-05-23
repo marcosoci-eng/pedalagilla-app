@@ -1012,8 +1012,8 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
       });
       if (e) { setError(e.message); setLoading(false); return; }
       
-      // Chiama backend Railway per processare il pagamento
-      const resp = await fetch('/API/charge', {
+      // Chiama Vercel Serverless Function per processare il pagamento
+      const resp = await fetch('/api/charge', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
