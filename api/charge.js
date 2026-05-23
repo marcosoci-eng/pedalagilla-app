@@ -8,19 +8,20 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
   try {
-    const { amount, paymentMethodId } = req.body;
+    const { amount, paymentMethodId, bikeId, plan, userId, userName } = req.body;
     if (!amount || !paymentMethodId) return res.status(400).json({ error: 'Parametri mancanti' });
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
+      amount: Math.round(amount * 100), // in centesimi
       currency: 'eur',
       payment_method: paymentMethodId,
       confirm: true,
       automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+      metadata: { bikeId: bikeId || '', plan: plan || '', userId: userId || '', userName: userName || '' },
     });
 
     res.json({ success: true, paymentIntentId: paymentIntent.id });
-  } catch(e) {
+  } catch (e) {
     console.error('Stripe error:', e.message);
     res.status(400).json({ error: e.message });
   }
