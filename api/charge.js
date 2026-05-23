@@ -1,5 +1,3 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -7,22 +5,53 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
+  const key = process.env.STRIPE_SECRET_KEY;
+  
+  // Debug: logga se la chiave è presente
+  console.log('STRIPE_SECRET_KEY present:', !!key, 'starts with:', key ? key.substring(0, 10) : 'MISSING');
+
+  if (!key) {
+    return res.status(500).json({ error: 'STRIPE_SECRET_KEY non configurata sul server' });
+  }
+
   try {
     const { amount, paymentMethodId, bikeId, plan, userId, userName } = req.body;
-    if (!amount || !paymentMethodId) return res.status(400).json({ error: 'Parametri mancanti' });
+    if (!amount || !paymentMethodId) {
+      return res.status(400).json({ error: 'Parametri mancanti' });
+    }
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // in centesimi
+    const params = new URLSearchParams({
+      amount: String(Math.round(amount * 100)),
       currency: 'eur',
       payment_method: paymentMethodId,
-      confirm: true,
-      automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
-      metadata: { bikeId: bikeId || '', plan: plan || '', userId: userId || '', userName: userName || '' },
+      confirm: 'true',
+      'automatic_payment_methods[enabled]': 'true',
+      'automatic_payment_methods[allow_redirects]': 'never',
+      'metadata[bikeId]': bikeId || '',
+      'metadata[plan]': plan || '',
+      'metadata[userId]': userId || '',
+      'metadata[userName]': userName || '',
     });
 
-    res.json({ success: true, paymentIntentId: paymentIntent.id });
+    const response = await fetch('https://api.stripe.com/v1/payment_intents', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Stripe API error:', data.error?.message);
+      return res.status(400).json({ error: data.error?.message || 'Errore Stripe' });
+    }
+
+    res.json({ success: true, paymentIntentId: data.id });
   } catch (e) {
-    console.error('Stripe error:', e.message);
-    res.status(400).json({ error: e.message });
+    console.error('Fetch error:', e.message);
+    res.status(500).json({ error: e.message });
   }
 };
