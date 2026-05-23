@@ -5,20 +5,12 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const key = process.env.STRIPE_SECRET_KEY;
-  
-  // Debug: logga se la chiave è presente
-  console.log('STRIPE_SECRET_KEY present:', !!key, 'starts with:', key ? key.substring(0, 10) : 'MISSING');
-
-  if (!key) {
-    return res.status(500).json({ error: 'STRIPE_SECRET_KEY non configurata sul server' });
-  }
+  // TEMPORANEO: chiave hardcodata per debug - rimuovere dopo il test
+  const key = process.env.STRIPE_SECRET_KEY || 'INSERISCI_QUI_sk_live_...';
 
   try {
     const { amount, paymentMethodId, bikeId, plan, userId, userName } = req.body;
-    if (!amount || !paymentMethodId) {
-      return res.status(400).json({ error: 'Parametri mancanti' });
-    }
+    if (!amount || !paymentMethodId) return res.status(400).json({ error: 'Parametri mancanti' });
 
     const params = new URLSearchParams({
       amount: String(Math.round(amount * 100)),
@@ -43,15 +35,9 @@ module.exports = async (req, res) => {
     });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Stripe API error:', data.error?.message);
-      return res.status(400).json({ error: data.error?.message || 'Errore Stripe' });
-    }
-
+    if (!response.ok) return res.status(400).json({ error: data.error?.message || 'Errore Stripe' });
     res.json({ success: true, paymentIntentId: data.id });
   } catch (e) {
-    console.error('Fetch error:', e.message);
     res.status(500).json({ error: e.message });
   }
 };
