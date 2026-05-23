@@ -4,7 +4,11 @@
     {"src": "/admin.html", "dest": "/admin.html"}
   ],
   "functions": {
-    "API/charge.js": {
+    "api/charge.js": {
+      "memory": 128,
+      "maxDuration": 10
+    },
+    "api/pre-auth.js": {
       "memory": 128,
       "maxDuration": 10
     }
