@@ -994,13 +994,14 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
   const nBikes = Array.isArray(bike) ? bike.length : 1;
   const preAuth = nBikes * 10;
   React.useEffect(() => {
-    if (cardEl.current) return;
+    const elements = stripeInstance.elements();
     const tryMount = () => {
       if (!cardRef.current) { setTimeout(tryMount, 200); return; }
-      const card = stripeElements.create("card",{style:{base:{fontSize:"16px",color:"#023047",fontFamily:"'DM Sans',sans-serif","::placeholder":{color:"#aaa"}}},hidePostalCode:true});
+      const card = elements.create("card",{style:{base:{fontSize:"16px",color:"#023047",fontFamily:"'DM Sans',sans-serif","::placeholder":{color:"#aaa"}}},hidePostalCode:true});
       card.mount(cardRef.current); cardEl.current = card;
     };
     setTimeout(tryMount, 100);
+    return () => { if (cardEl.current) { cardEl.current.destroy(); cardEl.current = null; } };
   }, []);
   const handlePay = async () => {
     if (!nome.trim()) { setError(t('errName')); return; }
