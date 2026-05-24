@@ -1030,7 +1030,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
       if (!data.success) { setError(data.error || t('errPayment')); setLoading(false); return; }
       
       setLoading(false);
-      onSuccess(paymentMethod.id);
+      onSuccess(paymentMethod.id, data.paymentIntentId);
     } catch(e) { setError(t('errPayment')); setLoading(false); }
   };
   const bikeIds = Array.isArray(bike) ? bike.map(b=>b.id).join(', ') : bike.id;
@@ -2529,7 +2529,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const payAmount = getEffectiveAmount();
   const isFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia");
 
-  const handlePaySuccess=async(paymentMethodId)=>{
+  const handlePaySuccess=async(paymentMethodId, paymentIntentId)=>{
     setShowPayment(false); setShowPlan(false);
     console.log("💳 handlePaySuccess chiamato");
     try {
@@ -2550,6 +2550,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           hotelName: promoApplied?.hotelName||null,
           hotelCashback,
           isFree: isFree||false,
+          paymentIntentId: paymentIntentId||null,
+          paymentMethodId: paymentMethodId||null,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
         console.log(`✅ Ride creata: ${rideDoc.id} per ${bike.id}, status: In corso`);
