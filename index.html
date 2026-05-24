@@ -657,6 +657,7 @@ const SBLOCCO = 1.00;
 const TARIFFA_MIN = 0.19;
 const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
+const TARIFFA_SETTIMANALE = 99.00;
 const TARIFFA_MTB_ADULTO = 15.00;
 const TARIFFA_MTB_BAMBINO = 10.00;
 const QR_BASE_URL = "https://www.pedalagilla.it/?bike=";
@@ -1320,6 +1321,9 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const [parkPreview, setParkPreview] = React.useState(null);
   const [uploading, setUploading] = React.useState(false);
   const trackRef = React.useRef([]);
+  const [currentSpeed, setCurrentSpeed] = React.useState(0);
+  const [totalDistKm, setTotalDistKm] = React.useState(0);
+  const lastPosRef = React.useRef(null);
   const isGiornata = plan==="giornata";
   React.useEffect(() => {
     const i = setInterval(() => {
@@ -1361,14 +1365,30 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   };
   React.useEffect(() => {
     if (!navigator.geolocation||showEndFlow) return;
-    const saveGPS = () => { navigator.geolocation.getCurrentPosition(async pos=>{ const point={lat:pos.coords.latitude,lng:pos.coords.longitude,t:Date.now()}; trackRef.current.push(point); if (rideId) { try { await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current}); } catch(e){} } },()=>{},{enableHighAccuracy:true}); };
+    const haversine = (a,b) => {
+      const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lng-a.lng)*Math.PI/180;
+      const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+    };
+    const saveGPS = () => { navigator.geolocation.getCurrentPosition(async pos=>{
+      const point={lat:pos.coords.latitude,lng:pos.coords.longitude,t:Date.now()};
+      if (pos.coords.speed != null) setCurrentSpeed(Math.round(pos.coords.speed*3.6*10)/10);
+      if (lastPosRef.current) {
+        const d = haversine(lastPosRef.current, point);
+        if (d < 0.5) setTotalDistKm(prev => Math.round((prev+d)*100)/100);
+      }
+      lastPosRef.current = point;
+      trackRef.current.push(point);
+      if (rideId) { try { await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"rides",rideId),{track:trackRef.current}); } catch(e){} }
+    },()=>{},{enableHighAccuracy:true}); };
     saveGPS(); const i=setInterval(saveGPS,30000); return()=>clearInterval(i);
   },[showEndFlow]);
   const mins=Math.floor(seconds/60), secs=seconds%60, pauseMins=Math.floor(pauseSeconds/60);
-  const rideCost=isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
-  const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
-  const totalCost=Math.min(rideCost+pauseCost, TARIFFA_GIORNATA);
-  const cappedAtMax = !isGiornata && totalCost >= TARIFFA_GIORNATA;
+  const isSettimanale = plan==="settimanale";
+  const rideCost=isGiornata||isSettimanale?(isSettimanale?TARIFFA_SETTIMANALE:TARIFFA_GIORNATA):Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
+  const pauseCost=isGiornata||isSettimanale?0:(pauseSeconds/60)*TARIFFA_PAUSA;
+  const totalCost=Math.min(rideCost+pauseCost, isSettimanale?TARIFFA_SETTIMANALE:TARIFFA_GIORNATA);
+  const cappedAtMax = !isGiornata && !isSettimanale && totalCost >= TARIFFA_GIORNATA;
   const handleParkPhoto=(e)=>{ 
     const file=e.target.files[0]; 
     if(!file) return;
@@ -2497,13 +2517,14 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   // Calcola importo effettivo in base al promo
   const nBikes = selectedBikes.length || 1;
   const getEffectiveAmount = () => {
-    if (!promoApplied) return plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
+    const base = plan==="settimanale" ? TARIFFA_SETTIMANALE*nBikes : plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
+    if (!promoApplied) return base;
     if (promoApplied.type === "dipendente" || promoApplied.type === "famiglia") return 0;
     if (promoApplied.type === "hotel") {
       if (promoApplied.hotelOption === "scontata") return 16 * nBikes;
       if (promoApplied.hotelOption === "cashback") return 18.90 * nBikes;
     }
-    return plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
+    return plan==="settimanale" ? TARIFFA_SETTIMANALE*nBikes : plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
   };
   const payAmount = getEffectiveAmount();
   const isFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia");
@@ -2789,7 +2810,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>{t('payment')}</p>
                   <div style={{width:30}}/>
                 </div>
-                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="giornata"?t('planDay'):t('planMinutes')} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
+                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="settimanale"?"Settimanale":plan==="giornata"?t('planDay'):t('planMinutes')} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
               </>
             ):(
               <>
@@ -2833,7 +2854,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   {/* Selezione piano con badge */}
                   {[
                     {id:"minuti",label:t('planMinutes'),icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)}×${nBikes} sblocco + €${TARIFFA_MIN}/min`,badge:"🔥 Più usata",badgeColor:C.warmOrange},
-                    {id:"giornata",label:t('planDay'),icon:"☀️",desc:`€${(TARIFFA_GIORNATA*nBikes).toFixed(2)} tutto il giorno · pausa gratis`,badge:"💰 Più economica",badgeColor:C.blueGreen}
+                    {id:"giornata",label:t('planDay'),icon:"☀️",desc:`€${(TARIFFA_GIORNATA*nBikes).toFixed(2)} tutto il giorno · pausa gratis`,badge:"💰 Economica",badgeColor:C.blueGreen},
+                    {id:"settimanale",label:"Settimanale",icon:"📅",desc:`€${(TARIFFA_SETTIMANALE*nBikes).toFixed(2)} · 7 giorni · pausa gratis`,badge:"⭐ Più conveniente",badgeColor:"#7B2D8B"}
                   ].map(p=>(
                     <div key={p.id} onClick={()=>setPlan(p.id)} style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"14px 16px",marginBottom:10,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14,position:"relative"}}>
                       <div style={{position:"absolute",top:-10,right:12,background:p.badgeColor,borderRadius:20,padding:"2px 10px"}}><p style={{color:C.white,fontSize:10,...ds,fontWeight:700,margin:0}}>{p.badge}</p></div>
