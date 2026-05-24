@@ -1521,8 +1521,19 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       {/* MAPPA */}
       <div style={{flex:1,position:"relative",minHeight:0}}>
         <div ref={rideMapRef} style={{width:"100%",height:"100%"}}/>
-        <div style={{position:"absolute",top:8,left:8,background:"rgba(2,48,71,0.85)",borderRadius:10,padding:"4px 10px"}}>
+        <div style={{position:"absolute",top:8,left:8,background:"rgba(2,48,71,0.85)",borderRadius:10,padding:"4px 10px"}}> 
           <p style={{color:C.white,fontSize:11,...ds,margin:0,fontWeight:600}}>📍 {bike.zone}</p>
+        </div>
+        {/* Speed + Distance overlay */}
+        <div style={{position:"absolute",bottom:8,left:8,display:"flex",gap:6}}>
+          <div style={{background:"rgba(2,48,71,0.88)",borderRadius:10,padding:"5px 10px",textAlign:"center"}}>
+            <p style={{color:C.skyBlue,fontSize:8,...ds,margin:0,letterSpacing:1}}>VELOCITÀ</p>
+            <p style={{color:C.white,fontSize:16,fontWeight:700,margin:0,...ds}}>{currentSpeed.toFixed(1)} <span style={{fontSize:9}}>km/h</span></p>
+          </div>
+          <div style={{background:"rgba(2,48,71,0.88)",borderRadius:10,padding:"5px 10px",textAlign:"center"}}>
+            <p style={{color:C.skyBlue,fontSize:8,...ds,margin:0,letterSpacing:1}}>DISTANZA</p>
+            <p style={{color:C.white,fontSize:16,fontWeight:700,margin:0,...ds}}>{totalDistKm.toFixed(2)} <span style={{fontSize:9}}>km</span></p>
+          </div>
         </div>
         <button onClick={()=>{ if(rideMapInstance.current&&userPos) rideMapInstance.current.setCenter(userPos); }}
           style={{position:"absolute",top:8,right:8,background:"white",border:"none",borderRadius:10,padding:"6px 10px",fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.2)"}}>📍</button>
@@ -2819,9 +2830,13 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                     </div>
                   )}
 
-                  {/* Selezione piano */}
-                  {[{id:"minuti",label:t('planMinutes'),icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)}×${nBikes} + €${TARIFFA_MIN}/min`},{id:"giornata",label:t('planDay'),icon:"☀️",desc:`€${(TARIFFA_GIORNATA*nBikes).toFixed(2)} — ${t('free')}`}].map(p=>(
-                    <div key={p.id} onClick={()=>setPlan(p.id)} style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"14px 16px",marginBottom:10,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14}}>
+                  {/* Selezione piano con badge */}
+                  {[
+                    {id:"minuti",label:t('planMinutes'),icon:"⏱️",desc:`€${SBLOCCO.toFixed(2)}×${nBikes} sblocco + €${TARIFFA_MIN}/min`,badge:"🔥 Più usata",badgeColor:C.warmOrange},
+                    {id:"giornata",label:t('planDay'),icon:"☀️",desc:`€${(TARIFFA_GIORNATA*nBikes).toFixed(2)} tutto il giorno · pausa gratis`,badge:"💰 Più economica",badgeColor:C.blueGreen}
+                  ].map(p=>(
+                    <div key={p.id} onClick={()=>setPlan(p.id)} style={{background:plan===p.id?C.deepBlue:C.white,borderRadius:14,padding:"14px 16px",marginBottom:10,cursor:"pointer",border:`2px solid ${plan===p.id?C.deepBlue:C.skyBlue+"30"}`,display:"flex",alignItems:"center",gap:14,position:"relative"}}>
+                      <div style={{position:"absolute",top:-10,right:12,background:p.badgeColor,borderRadius:20,padding:"2px 10px"}}><p style={{color:C.white,fontSize:10,...ds,fontWeight:700,margin:0}}>{p.badge}</p></div>
                       <div style={{fontSize:28}}>{p.icon}</div>
                       <div style={{flex:1}}>
                         <p style={{color:plan===p.id?C.white:C.deepBlue,fontWeight:700,fontSize:15,margin:0,fontFamily:"Lora"}}>{p.label}</p>
