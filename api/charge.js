@@ -5,8 +5,8 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  // TEMPORANEO: chiave hardcodata per debug - rimuovere dopo il test
-  const key = process.env.STRIPE_SECRET_KEY || 'INSERISCI_QUI_sk_live_...';
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return res.status(500).json({ error: 'STRIPE_SECRET_KEY non configurata sul server' });
 
   try {
     const { amount, paymentMethodId, bikeId, plan, userId, userName } = req.body;
