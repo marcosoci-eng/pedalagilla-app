@@ -1555,10 +1555,6 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
           <input id="parkInput" type="file" accept="image/*" capture="environment" onChange={handleParkPhoto} style={{display:"none"}} />
         </div>
         <div style={{background:C.white,borderRadius:14,padding:14,marginBottom:16,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
-          {false&&(
-              )}
-            </div>
-          )}
           {[[t('ridePerMin'),`${mins}min ${secs}sec`],[t('pausePerMin'),`${pauseMins}min · ${isGiornata?t('free'):`€${pauseCost.toFixed(2)}`}`],[`💶 ${t('totalCost')}`,`€${totalCost.toFixed(2)}`]].map(([k,v])=>(
             <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
               <span style={{color:"#888",fontSize:13,...ds}}>{k}</span>
