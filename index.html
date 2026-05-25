@@ -2668,6 +2668,14 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   };
 
   const setBikeInUse = async (bikeId, inUse) => {
+    // Aggiorna anche lo status della bici su Firestore bikes collection
+    if (!inUse) {
+      const pedId = 'PED' + bikeId.replace('PA-','').padStart(3,'0');
+      try {
+        const {doc, setDoc} = window.firebaseFunctions;
+        await setDoc(doc(window.firebaseDb,'bikes',pedId),{status:'Disponibile',updatedAt:new Date().toISOString()},{merge:true});
+      } catch(e){ console.error('Errore aggiornamento status bici:', e); }
+    }
     try {
       await waitFB();
       const {doc, setDoc} = window.firebaseFunctions;
