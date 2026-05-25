@@ -3054,9 +3054,9 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                 </div>
               </div>
               {/* Filtri tipo bici */}
-              <div style={{display:"flex",gap:6}}>
+              <div style={{display:"flex",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
                 {[["tutte","🚲+🏔️","Tutte"],["ebike","⚡","E-Bike"],["mtb","🏔️","MTB"]].map(([id,icon,label])=>(
-                  <button key={id} onClick={()=>setBikeFilter(id)}
+                  <button key={id} onClick={()=>setBikeFilter(id)} style={{flexShrink:0,background:bikeFilter===id?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.15)",border:"none",borderRadius:20,padding:"4px 12px",color:bikeFilter===id?C.deepBlue:C.white,fontSize:11,...ds,fontWeight:bikeFilter===id?700:400,cursor:"pointer"}}>{icon} {label}</button>
                     style={{background:bikeFilter===id?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.15)",border:"none",borderRadius:20,padding:"4px 12px",color:bikeFilter===id?C.deepBlue:C.white,fontSize:11,...ds,fontWeight:bikeFilter===id?700:400,cursor:"pointer"}}>
                     {icon} {label}
                   </button>
