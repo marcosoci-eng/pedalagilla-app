@@ -2076,10 +2076,10 @@ function AdminApp({ user, onLogout, t }) {
                   const pedId='PED'+paId.replace('PA-','');
                   const docRef=doc(window.firebaseDb,'bikes',pedId);
                   // setDoc con merge:true — non sovrascrive dati esistenti
-                  await setDoc(docRef,{id:paId,status:'Disponibile',battery:0,zone:ZONES[paId]||'Castiglione',lat:43.12,lng:12.05,online:false},{{merge:true}});
+                  await setDoc(docRef,{id:paId,status:'Disponibile',battery:0,zone:ZONES[paId]||'Castiglione',lat:43.12,lng:12.05,online:false},{merge:true});
                   created++;
                 }
-                alert(`✅ ${{created}} bici inizializzate su Firestore`);
+                alert(`✅ ${created} bici inizializzate su Firestore`);
               } catch(e){{ alert('Errore: '+e.message); }}
             }} style={{{{width:"100%",background:`linear-gradient(90deg,${{C.blueGreen}},${{C.deepBlue}})`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:14}}}}>
               🚀 Inizializza tutte le 40 bici su Firestore
