@@ -654,6 +654,22 @@ const ds = { fontFamily:"'DM Sans', sans-serif" };
 const MARCO_TEL = "+393495240422";
 const MARCO_WA = "393495240422";
 const SBLOCCO = 1.00;
+
+// Calcola distanza totale da un track GPS
+function calcTrackKm(track) {
+  if (!track || track.length < 2) return 0;
+  let tot = 0;
+  for (let i = 1; i < track.length; i++) {
+    const a = track[i-1], b = track[i];
+    const R = 6371;
+    const dLat = (b.lat - a.lat) * Math.PI / 180;
+    const dLon = (b.lng - a.lng) * Math.PI / 180;
+    const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+    const d = R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+    if (d < 1) tot += d; // filtra salti GPS > 1km
+  }
+  return Math.round(tot * 100) / 100;
+}
 const TARIFFA_MIN = 0.19;
 const TARIFFA_PAUSA = 0.08;
 const TARIFFA_GIORNATA = 19.90;
@@ -1851,11 +1867,7 @@ function AdminApp({ user, onLogout, t }) {
               {[...rides].filter(r=>r.status==="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p><p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>💶 €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min</p><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button></div>))}
             </>}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"12px 0 8px",...ds,opacity:0.5}}>Completate</p>
-            {[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 8px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>{ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}
-                      <span style={{background:ride.isFree?`${C.blueGreen}20`:`#E3F2FD`,border:`1px solid ${ride.isFree?C.blueGreen:"#2196F3"}`,borderRadius:8,padding:"5px 10px",color:ride.isFree?C.blueGreen:"#1565C0",fontSize:11,...ds,fontWeight:600}}>
-                        {ride.isFree?"🎁 Gratuita":"💳 Stripe"}
-                      </span>
-                    </div></div>))}
+            {[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>{(()=>{ const km=calcTrackKm(ride.track); const durMin=ride.duration?ride.duration/60:0; const avg=km>0&&durMin>0?Math.round(km/durMin*60*10)/10:0; return km>0?(<p style={{color:C.blueGreen,fontSize:11,...ds,margin:"0 0 6px",fontWeight:600}}>🛣️ {km} km{avg>0?` · ⚡ avg ${avg} km/h`:""}</p>):null; })()}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>{ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}<span style={{background:ride.isFree?`${C.blueGreen}20`:`#E3F2FD`,border:`1px solid ${ride.isFree?C.blueGreen:"#2196F3"}`,borderRadius:8,padding:"5px 10px",color:ride.isFree?C.blueGreen:"#1565C0",fontSize:11,...ds,fontWeight:600}}>{ride.isFree?"🎁 Gratuita":"💳 Stripe"}</span></div></div>))}
           </div>}
 
           {tab==="utenti"&&<div className="slide" style={{padding:"16px 18px 0"}}>
