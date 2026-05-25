@@ -2080,8 +2080,8 @@ function AdminApp({ user, onLogout, t }) {
                   created++;
                 }
                 alert(`✅ ${created} bici inizializzate su Firestore`);
-              } catch(e){{ alert('Errore: '+e.message); }}
-            }} style={{{{width:"100%",background:`linear-gradient(90deg,${{C.blueGreen}},${{C.deepBlue}})`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:14}}}}>
+              } catch(e){ alert('Errore: '+e.message); }
+            }} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:14}}>
               🚀 Inizializza tutte le 40 bici su Firestore
             </button>
             {(()=>{
