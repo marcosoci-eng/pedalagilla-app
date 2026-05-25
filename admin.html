@@ -1532,8 +1532,8 @@ function AdminApp({ user, onLogout, t }) {
   const today=new Date().toLocaleDateString("it-IT");
   const todayRides=rides.filter(r=>r.date===today);
   const monthRides=rides;
-  const todayIncassi=todayRides.filter(r=>r.status==="Completata").reduce((a,r)=>a+(r.cost||0),0);
-  const monthIncassi=monthRides.filter(r=>r.status==="Completata").reduce((a,r)=>a+(r.cost||0),0);
+  const todayIncassi=todayRides.filter(r=>r.status==="Completata"&&!r.isFree).reduce((a,r)=>a+(r.cost||0),0);
+  const monthIncassi=monthRides.filter(r=>r.status==="Completata"&&!r.isFree).reduce((a,r)=>a+(r.cost||0),0);
   const available=bikes.filter(b=>b.status==="Disponibile").length;
   const maint=bikes.filter(b=>b.status==="Manutenzione").length;
   const low=bikes.filter(b=>b.battery<50).length;
