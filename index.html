@@ -1076,6 +1076,7 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
 }
 
 function AuthScreen({ onLogin, lang, setLang, t }) {
+  const [showDev, setShowDev] = React.useState(false);
   const [mode, setMode] = React.useState("login");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -1202,13 +1203,19 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               </button>
             ))}
           </div>
-          {/* Banner sviluppatore */}
-          <div style={{background:"rgba(255,255,255,0.08)",borderRadius:12,padding:"10px 14px",marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <p style={{color:"rgba(255,255,255,0.75)",fontSize:11,fontFamily:"'DM Sans',sans-serif",margin:0}}>🛠️ App su misura per il tuo business?</p>
-            <div style={{display:"flex",gap:6}}>
-              <a href="https://wa.me/393495240422?text=Ciao%20Marco,%20ho%20visto%20PedalAgilla%20e%20vorrei%20un%27app%20simile" target="_blank" style={{background:"#25D366",borderRadius:8,padding:"4px 9px",color:"#fff",fontSize:10,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none"}}>💬 WA</a>
-              <a href="mailto:marco.soci@gmail.com?subject=App%20su%20misura" style={{background:"rgba(255,255,255,0.2)",borderRadius:8,padding:"4px 9px",color:"#fff",fontSize:10,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none"}}>✉️ Email</a>
-            </div>
+          {/* Bottone sviluppatore */}
+          <div style={{marginTop:12,textAlign:"center"}}>
+            <button onClick={()=>setShowDev(s=>!s)} style={{background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"6px 18px",color:"rgba(255,255,255,0.8)",fontSize:11,fontFamily:"'DM Sans',sans-serif",cursor:"pointer"}}>👨‍💻 Sviluppatore</button>
+            {showDev&&(
+              <div style={{marginTop:10,background:"rgba(255,255,255,0.1)",borderRadius:12,padding:"12px 16px",textAlign:"left"}}>
+                <p style={{color:"#fff",fontSize:13,fontFamily:"'DM Sans',sans-serif",margin:"0 0 8px",fontWeight:600}}>Ti serve un'app simile?</p>
+                <p style={{color:"rgba(255,255,255,0.75)",fontSize:12,fontFamily:"'DM Sans',sans-serif",margin:"0 0 12px"}}>Contatta Soci Marco</p>
+                <div style={{display:"flex",gap:8}}>
+                  <a href="https://wa.me/393495240422?text=Ciao%20Marco,%20ho%20visto%20PedalAgilla%20e%20vorrei%20un%27app%20simile" target="_blank" style={{flex:1,display:"block",background:"#25D366",borderRadius:10,padding:"9px 8px",color:"#fff",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none",textAlign:"center"}}>💬 WhatsApp</a>
+                  <a href="mailto:marco.soci@gmail.com?subject=App%20su%20misura%20-%20PedalAgilla" style={{flex:1,display:"block",background:"rgba(255,255,255,0.2)",borderRadius:10,padding:"9px 8px",color:"#fff",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none",textAlign:"center"}}>✉️ Email</a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div style={{padding:"18px 20px",maxHeight:"72vh",overflowY:"auto"}}>
@@ -1461,7 +1468,14 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
     setUploading(true);
     try {
       await waitFB();
-      const {ref,uploadBytes,getDownloadURL,doc,updateDoc}=window.firebaseFunctions;
+      const {ref,uploadBytes,getDownloadURL,doc,updateDoc,addDoc,collection}=window.firebaseFunctions;
+      // Invia subito lock e gps_normal alla bici, prima dell'upload foto
+      const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0');
+      try {
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date(Date.now()+100).toISOString()});
+        console.log('🔒 Comandi lock+gps_normal inviati a',pedId);
+      } catch(e){ console.error('Errore comandi fine corsa:', e); }
       const sRef=ref(window.firebaseStorage,`parcheggi/${bike.id}_${Date.now()}`);
       await uploadBytes(sRef,parkPhoto);
       const parkPhotoURL=await getDownloadURL(sRef);
@@ -3029,14 +3043,6 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                     <span style={{color:C.white,fontSize:11,...ds,fontWeight:600}}>{bikes.length} 🚲 · {mtbBikesMap.length} 🏔️</span>
                   </div>
                   <button onClick={onLogout} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:10,padding:"6px 12px",color:C.white,fontSize:11,...ds,cursor:"pointer"}}>{t('logout')}</button>
-                </div>
-              </div>
-              {/* Banner portfolio/contatto sviluppatore */}
-              <div style={{background:"rgba(255,255,255,0.12)",borderRadius:10,padding:"6px 12px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <p style={{color:"rgba(255,255,255,0.85)",fontSize:10,...ds,margin:0}}>🛠️ App su misura per il tuo business?</p>
-                <div style={{display:"flex",gap:6}}>
-                  <a href="https://wa.me/393495240422?text=Ciao%20Marco,%20ho%20visto%20PedalAgilla%20e%20vorrei%20un%27app%20simile" target="_blank" style={{background:"#25D366",borderRadius:8,padding:"3px 8px",color:"#fff",fontSize:10,...ds,fontWeight:600,textDecoration:"none"}}>💬 WhatsApp</a>
-                  <a href="mailto:marco.soci@gmail.com?subject=App%20su%20misura%20-%20PedalAgilla&body=Ciao%20Marco,%20ho%20visto%20la%20tua%20app%20PedalAgilla%20e%20vorrei%20discutere%20un%20progetto%20simile." style={{background:"rgba(255,255,255,0.2)",borderRadius:8,padding:"3px 8px",color:"#fff",fontSize:10,...ds,fontWeight:600,textDecoration:"none"}}>✉️ Email</a>
                 </div>
               </div>
               {/* Filtri tipo bici */}
