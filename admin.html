@@ -2248,6 +2248,7 @@ function AdminLogin({ onLogin }) {
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [showPass, setShowPass] = React.useState(false);
   const C2 = { deepBlue:"#023047", skyBlue:"#8ECAE6", blueGreen:"#219EBC", white:"#ffffff", bgLight:"#F5F9FB" };
   const ds2 = {fontFamily:"'DM Sans',sans-serif"};
 
@@ -2281,8 +2282,13 @@ function AdminLogin({ onLogin }) {
         <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="admin@pedalagilla.com"
           style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C2.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C2.deepBlue,marginBottom:12}}/>
         <p style={{color:C2.deepBlue,fontSize:12,fontWeight:600,margin:"0 0 4px",...ds2}}>🔑 Password</p>
-        <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="••••••••"
-          style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C2.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C2.deepBlue,marginBottom:12}}/>
+        <div style={{position:"relative",marginBottom:12}}>
+          <input value={password} onChange={e=>setPassword(e.target.value)} type={showPass?"text":"password"} placeholder="••••••••"
+            style={{width:"100%",padding:"11px 44px 11px 14px",borderRadius:10,border:`1.5px solid ${C2.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C2.deepBlue}}/>
+          <button onClick={()=>setShowPass(s=>!s)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,color:C2.deepBlue,opacity:0.6}}>
+            {showPass?"🙈":"👁️"}
+          </button>
+        </div>
         {error && <p style={{color:"#FB8500",fontSize:12,margin:"0 0 10px",...ds2}}>⚠️ {error}</p>}
         <button onClick={handleLogin} disabled={loading}
           style={{width:"100%",background:`linear-gradient(90deg,#219EBC,#023047)`,border:"none",borderRadius:14,padding:15,color:C2.white,fontSize:15,...ds2,fontWeight:700,cursor:"pointer"}}>
