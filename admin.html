@@ -1755,11 +1755,11 @@ function AdminApp({ user, onLogout, t }) {
                 if(!window.confirm('Cancellare TUTTI i comandi in coda per '+selBike.id+'? Fai questo se la bici non risponde ai comandi.')) return;
                 try {
                   await waitFB();
-                  const {collection,getDocs,deleteDoc,doc}=window.firebaseFunctions;
+                  const {collection,getDocs,doc,setDoc}=window.firebaseFunctions;
                   const pedId='PED'+selBike.id.replace('PA-','').padStart(3,'0');
                   const cmdsSnap=await getDocs(collection(window.firebaseDb,'bikes',pedId,'commands'));
                   let count=0;
-                  for(const d of cmdsSnap.docs){ await deleteDoc(doc(window.firebaseDb,'bikes',pedId,'commands',d.id)); count++; }
+                  for(const d of cmdsSnap.docs){ await d.ref.delete(); count++; }
                   alert('✅ Eliminati '+count+' comandi da '+pedId+'. Ora manda un nuovo unlock.');
                 } catch(e){ alert('Errore: '+e.message); }
               }} style={{width:'100%',background:'#ffeaea',border:'1.5px solid #ffaaaa',borderRadius:12,padding:11,color:'#c0392b',fontSize:13,...ds,fontWeight:700,cursor:'pointer',marginBottom:10}}>
