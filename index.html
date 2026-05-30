@@ -2414,7 +2414,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
             return {
               id: normalizedId,
               battery: data.batteryPercent || data.battery || existing?.battery || 50,
-              status: data.locked === false ? "Disponibile" : (existing?.status || "Disponibile"),
+              status: data.status === "Manutenzione" ? "Manutenzione" : (data.locked === false ? "Disponibile" : (data.status || existing?.status || "Disponibile")),
               odometer: existing?.odometer || 0,
               zone: existing?.zone || "Castiglione",
               model: existing?.model || "City Comfort",
