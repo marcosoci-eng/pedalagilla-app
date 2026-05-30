@@ -122,7 +122,7 @@ const TRANSLATIONS = {
     promoExpired: "Codice scaduto",
     promoFreeRide: "Corsa gratuita applicata!",
     promoHotelDiscount: "Tariffa hotel €16/giornata",
-    promoHotelCashback: "Tariffa hotel con rimborso",
+    promoHotelCashback: "Tariffa convenzionata hotel",
     promoStartFree: "Parti gratis!",
   },
   en: {
@@ -193,7 +193,7 @@ const TRANSLATIONS = {
     promoExpired: "Code expired",
     promoFreeRide: "Free ride applied!",
     promoHotelDiscount: "Hotel rate €16/day",
-    promoHotelCashback: "Hotel rate with cashback",
+    promoHotelCashback: "Hotel partner rate",
     promoStartFree: "Start for free!",
   },
   de: {
@@ -264,7 +264,7 @@ const TRANSLATIONS = {
     promoExpired: "Code abgelaufen",
     promoFreeRide: "Kostenlose Fahrt!",
     promoHotelDiscount: "Hotelpreis €16/Tag",
-    promoHotelCashback: "Hotelpreis mit Cashback",
+    promoHotelCashback: "Hotel-Partnertarif",
     promoStartFree: "Kostenlos starten!",
   },
   fr: {
@@ -335,7 +335,7 @@ const TRANSLATIONS = {
     promoExpired: "Code expiré",
     promoFreeRide: "Trajet gratuit !",
     promoHotelDiscount: "Tarif hôtel €16/jour",
-    promoHotelCashback: "Tarif hôtel avec remboursement",
+    promoHotelCashback: "Tarif hôtel partenaire",
     promoStartFree: "Partir gratuitement !",
   },
   es: {
@@ -406,7 +406,7 @@ const TRANSLATIONS = {
     promoExpired: "Código caducado",
     promoFreeRide: "¡Viaje gratis!",
     promoHotelDiscount: "Tarifa hotel €16/día",
-    promoHotelCashback: "Tarifa hotel con reembolso",
+    promoHotelCashback: "Tarifa hotel asociado",
     promoStartFree: "¡Empezar gratis!",
   },
   nl: {
@@ -477,7 +477,7 @@ const TRANSLATIONS = {
     promoExpired: "Code verlopen",
     promoFreeRide: "Gratis rit!",
     promoHotelDiscount: "Hoteltarief €16/dag",
-    promoHotelCashback: "Hoteltarief met cashback",
+    promoHotelCashback: "Hotelpartnertarief",
     promoStartFree: "Gratis starten!",
   },
   cs: {
@@ -548,7 +548,7 @@ const TRANSLATIONS = {
     promoExpired: "Kód vypršel",
     promoFreeRide: "Jízda zdarma!",
     promoHotelDiscount: "Hotelová sazba €16/den",
-    promoHotelCashback: "Hotelová sazba s cashbackem",
+    promoHotelCashback: "Partnerská hotelová sazba",
     promoStartFree: "Začít zdarma!",
   }
 };
@@ -1265,7 +1265,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             <button onClick={handleLogin} disabled={loading} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
               {loading?t('loginLoading'):t('loginBtn')}
             </button>
-            <a href="/admin" style={{display:"block",width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer",textAlign:"center",textDecoration:"none"}}>
+            <a href="/admin" style={{display:"block",width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer",textAlign:"center",textDecoration:"none",marginTop:32}}>
               {t('adminAccess')}
             </a>
           </>}
@@ -1347,7 +1347,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos }) {
+function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos, availableBikes=[] }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
@@ -1370,6 +1370,9 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const geoStateRef = React.useRef('in');      // 'in' | 'out' rispetto all'area operativa
   const geoLockedRef = React.useRef(false);     // true se abbiamo bloccato l'assistenza per uscita
   const lastWatchPosRef = React.useRef(null);   // per stimare la velocità nel watcher
+  // Batteria reale della bici (aggiornata in tempo reale da Firestore)
+  const [liveBattery, setLiveBattery] = React.useState(typeof bike.battery==='number'?bike.battery:null);
+  const [lowBattDismissed, setLowBattDismissed] = React.useState(false);
   const isGiornata = plan==="giornata";
   React.useEffect(() => {
     const i = setInterval(() => {
@@ -1516,8 +1519,37 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
     }, ()=>{}, {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
     return ()=>navigator.geolocation.clearWatch(wid);
   },[]);
+  // Batteria della bici in tempo reale (per suggerire il cambio quando scende verso il 25%)
+  React.useEffect(()=>{
+    let unsub=null;
+    (async()=>{
+      try {
+        await waitFB();
+        const {doc,onSnapshot}=window.firebaseFunctions;
+        const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0');
+        unsub=onSnapshot(doc(window.firebaseDb,"bikes",pedId),snap=>{
+          const d=snap.data();
+          if(!d) return;
+          const b = typeof d.batteryPercent==='number' ? d.batteryPercent : (typeof d.battery==='number'?d.battery:null);
+          if(b!=null) setLiveBattery(b);
+        });
+      } catch(e){ console.error('Errore listener batteria:', e); }
+    })();
+    return ()=>{ if(unsub) unsub(); };
+  },[]);
   const mins=Math.floor(seconds/60), secs=seconds%60, pauseMins=Math.floor(pauseSeconds/60);
   const isSettimanale = plan==="settimanale";
+  // Suggerimento cambio bici quando la batteria scende verso il 25%
+  const lowBattery = liveBattery!=null && liveBattery<=25;
+  const nearestSwapBike = React.useMemo(()=>{
+    if (!lowBattery || !userPos || !availableBikes || availableBikes.length===0) return null;
+    const hav=(a,b)=>{const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLon=(b.lng-a.lng)*Math.PI/180,x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));};
+    const candidates=availableBikes.filter(b=>b.id!==bike.id && b.lat && b.lng && (b.battery==null||b.battery>40));
+    if (candidates.length===0) return null;
+    let best=null,bestD=Infinity;
+    candidates.forEach(b=>{const d=hav(userPos,{lat:b.lat,lng:b.lng}); if(d<bestD){bestD=d;best={...b,distKm:d};}});
+    return best;
+  },[lowBattery,userPos,availableBikes,bike.id]);
   // Conto alla rovescia a mezzanotte (sia giornata che minuti)
   const midnightCountdown = React.useMemo(() => {
     const midnight = new Date(); midnight.setHours(24,0,0,0);
@@ -1645,6 +1677,22 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
           setTimeout(()=>drawParkingZones(attempt+1), 300); 
           return; 
         }
+        // Area operativa (contorno verde, riempimento leggero) — il confine entro cui restare
+        zones.filter(z=>z.type==="operativa").forEach(zone=>{
+          if (zone.shape==="circle" && zone.center) {
+            new window.google.maps.Circle({
+              map, center: zone.center, radius: zone.radius||25000,
+              fillColor:"#00C853", fillOpacity:0.05,
+              strokeColor:"#00C853", strokeWeight:2.5, clickable:false, zIndex:1
+            });
+          } else if (Array.isArray(zone.path) && zone.path.length>0) {
+            new window.google.maps.Polygon({
+              map, paths: zone.path,
+              fillColor:"#00C853", fillOpacity:0.05,
+              strokeColor:"#00C853", strokeWeight:2.5, clickable:false, zIndex:1
+            });
+          }
+        });
         zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
           new window.google.maps.Circle({
             map, center: zone.center,
@@ -1744,6 +1792,19 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             🌙 {isGiornata||isSettimanale?"SCADE A MEZZANOTTE":cappedAtMax?"GRATUITO FINO A MEZZANOTTE":"SI AZZERA A MEZZANOTTE"}
           </p>
           <p style={{color:"#fff",fontSize:14,...ds,fontWeight:700,margin:0,fontFamily:"monospace"}}>{midnightCountdown}</p>
+        </div>
+      )}
+      {/* AVVISO BATTERIA BASSA — suggerisce cambio bici */}
+      {lowBattery&&!lowBattDismissed&&(
+        <div style={{background:"#E65100",padding:"8px 16px",display:"flex",alignItems:"flex-start",gap:8,flexShrink:0}}>
+          <span style={{fontSize:16,marginTop:1}}>🔋</span>
+          <div style={{flex:1}}>
+            <p style={{color:"#fff",fontSize:11.5,...ds,fontWeight:700,margin:0,lineHeight:1.3}}>
+              Batteria bassa: {liveBattery}%. Conviene cambiare e-bike per non restare a piedi.
+              {nearestSwapBike && ` La più vicina è ${nearestSwapBike.id}${nearestSwapBike.zone?` (${nearestSwapBike.zone})`:""} a ~${nearestSwapBike.distKm<1?Math.round(nearestSwapBike.distKm*1000)+" m":nearestSwapBike.distKm.toFixed(1)+" km"}.`}
+            </p>
+          </div>
+          <button onClick={()=>setLowBattDismissed(true)} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:6,color:"#fff",fontSize:14,...ds,fontWeight:700,cursor:"pointer",padding:"0 8px",flexShrink:0,lineHeight:"22px"}}>✕</button>
         </div>
       )}
       {/* AVVISO FUORI AREA DI FUNZIONAMENTO */}
@@ -2975,7 +3036,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t} userPos={userPos}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t} userPos={userPos} availableBikes={bikes}/>
             :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t}/>
         )}
 
