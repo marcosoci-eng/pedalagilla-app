@@ -1579,15 +1579,14 @@ function AdminApp({ user, onLogout, t }) {
   const maint=bikes.filter(b=>b.status==="Manutenzione").length;
   const low=bikes.filter(b=>b.battery<50).length;
   const avg=Math.round(bikes.reduce((a,b)=>a+b.battery,0)/bikes.length);
+  const [bikesRealtime, setBikesRealtime] = React.useState({});
   const filteredBikesBase=filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>Number(b.battery)<50);
   // Filtro batteria: mostra solo bici con carica <= soglia. Esclude le bici "mai viste" (nessun dato reale).
-  const isKnownBike=(b)=>{ const pedId='PED'+b.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; return !!(rt&&rt.lastSeen); };
+  const isKnownBike=(b)=>{ const pedId='PED'+b.id.replace('PA-','').padStart(3,'0'); const rt=(bikesRealtime||{})[pedId]; return !!(rt&&rt.lastSeen); };
   const filteredBikes=battSlider<100?filteredBikesBase.filter(b=>isKnownBike(b)&&Number(b.battery)<=battSlider):filteredBikesBase;
   const mapBikesBase=mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
-  const mapBikes=mapBattSlider<100?mapBikesBase.filter(b=>{const pedId='PED'+b.id.replace('PA-','').padStart(3,'0');const rt=bikesRealtime[pedId];return rt&&rt.lastSeen&&Number(b.battery)<=mapBattSlider;}):mapBikesBase;
+  const mapBikes=mapBattSlider<100?mapBikesBase.filter(b=>{const pedId='PED'+b.id.replace('PA-','').padStart(3,'0');const rt=(bikesRealtime||{})[pedId];return rt&&rt.lastSeen&&Number(b.battery)<=mapBattSlider;}):mapBikesBase;
   const visibleZones=savedZones.filter(z=>zoneFilters[z.type]);
-
-  const [bikesRealtime, setBikesRealtime] = React.useState({});
 
   // Aggiorna lista bici admin da Firebase real-time
   React.useEffect(()=>{
@@ -2088,9 +2087,9 @@ function AdminApp({ user, onLogout, t }) {
                 try { 
                   await waitFB(); 
                   const {doc,setDoc}=window.firebaseFunctions; 
-                  // Usa le zone dal ref (include modifiche manuali) o savedZones
-                  const zonesToSave = window._zoneEditorRef?.current || savedZones;
-                  setSavedZones(zonesToSave);
+                  // Salva SEMPRE la lista completa savedZones (lo stato React aggiornato),
+                  // NON il ref dell'editor che e' filtrato e si congela al montaggio.
+                  const zonesToSave = savedZones;
                   await setDoc(doc(window.firebaseDb,"config","zones"),{zones:zonesToSave,updatedAt:new Date().toISOString()}); 
                   alert("✅ Zone salvate! ("+ zonesToSave.length +" zone)"); 
                 } catch(e){ alert("Errore: "+e.message); } 
