@@ -2097,6 +2097,17 @@ function AdminApp({ user, onLogout, t }) {
                   alert("✅ Zone salvate! ("+ zonesToSave.length +" zone)"); 
                 } catch(e){ alert("Errore: "+e.message); } 
               }} style={{width:"100%",background:`linear-gradient(90deg,${C.sunYellow},${C.warmOrange})`,border:"none",borderRadius:12,padding:"12px",color:C.deepBlue,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>💾 Salva zone su Firebase</button>
+              <button onClick={async()=>{
+                if(!window.confirm("Vuoi ELIMINARE tutte le zone salvate e ripartire da zero?\n\nDovrai ridisegnare l'area di funzionamento e le aree di sosta.")) return;
+                try {
+                  await waitFB();
+                  const {doc,setDoc}=window.firebaseFunctions;
+                  zonesDirtyRef.current=true;
+                  setSavedZones([]);
+                  await setDoc(doc(window.firebaseDb,"config","zones"),{zones:[],updatedAt:new Date().toISOString()});
+                  alert("✅ Tutte le zone sono state eliminate. Ora disegna le tue zone da zero.");
+                } catch(e){ alert("Errore: "+e.message); }
+              }} style={{width:"100%",background:"none",border:`1.5px solid #E5393580`,borderRadius:12,padding:"10px",color:"#E53935",fontSize:12,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>🗑️ Azzera tutte le zone (riparti da zero)</button>
             </div>
             <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><ZoneMapEditor zones={visibleZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName} onZoneSaved={(zone)=>{zonesDirtyRef.current=true;setSavedZones(prev=> zone.type==="operativa" ? [...prev.filter(z=>z.type!=="operativa"), zone] : [...prev,zone]);setDrawingActive(false);setZoneName("");}} onZoneUpdated={(idx,updated)=>{zonesDirtyRef.current=true;setSavedZones(prev=>prev.map((z,i)=>i===idx?updated:z));}}/></div>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone ({savedZones.length})</p>
