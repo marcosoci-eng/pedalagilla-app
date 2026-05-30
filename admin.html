@@ -19,7 +19,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc, onSnapshot, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
   const firebaseConfig = {
     apiKey: "AIzaSyA_iALG1PiWQBT2xsQiRuKNd3pR7ZE-f5w",
@@ -35,7 +35,7 @@
   window.firebaseStorage = getStorage(app);
   window.firebaseFunctions = {
     createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification,
-    doc, setDoc, getDoc, collection, getDocs, addDoc, onSnapshot, updateDoc, query, orderBy,
+    doc, setDoc, getDoc, collection, getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, query, orderBy,
     ref, uploadBytes, getDownloadURL
   };
   window.firebaseReady = true;
@@ -1541,6 +1541,11 @@ function AdminApp({ user, onLogout, t }) {
   const [editChecks, setEditChecks] = React.useState({});
   const [showBikeDetail, setShowBikeDetail] = React.useState(false);
   const [incassiPeriod, setIncassiPeriod] = React.useState("oggi");
+  // Estrazione bonifici hotel: intervallo di date personalizzato + pagamenti registrati
+  const _today = new Date();
+  const [statsFrom, setStatsFrom] = React.useState(new Date(_today.getFullYear(),_today.getMonth(),1).toISOString().slice(0,10));
+  const [statsTo, setStatsTo] = React.useState(_today.toISOString().slice(0,10));
+  const [hotelPayments, setHotelPayments] = React.useState([]);
   const [fbUsers, setFbUsers] = React.useState([]);
   const [usersPage, setUsersPage] = React.useState(0);
   const [userSearch, setUserSearch] = React.useState("");
@@ -1627,6 +1632,7 @@ function AdminApp({ user, onLogout, t }) {
       });
       // Rides listener
       onSnapshot(collection(window.firebaseDb,"rides"),snap=>{ setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; })); });
+      onSnapshot(collection(window.firebaseDb,"hotelPayments"),snap=>{ setHotelPayments(snap.docs.map(d=>({id:d.id,...d.data()}))); });
     };
     load();
   },[]);
@@ -1977,12 +1983,18 @@ function AdminApp({ user, onLogout, t }) {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
               {[["💶",(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)+"€","Incassi",C.sunYellow],["🏁",(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata").length,"Completate",C.blueGreen],["🚴",rides.filter(r=>r.status==="In corso").length,"In corso",C.warmOrange]].map(([icon,val,label,color])=>(<div key={label} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:18,marginBottom:4}}>{icon}</div><div style={{color,fontSize:18,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div></div>))}
             </div>
+            {(()=>{ const pr=(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata"&&(r.hotelCashback||0)>0); const tot=pr.reduce((a,r)=>a+(r.hotelCashback||0),0); return tot>0?(
+              <div style={{background:`linear-gradient(135deg,#6A1B9A,#4A148C)`,borderRadius:14,padding:"12px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 2px",letterSpacing:1}}>🏨 RIMBORSO ALBERGATORI ({incassiPeriod==="oggi"?"oggi":"mese"})</p><p style={{color:"#fff",fontSize:11,...ds,margin:0,opacity:0.85}}>{pr.length} corse con cashback</p></div>
+                <p style={{color:"#FFD54F",fontSize:22,fontWeight:700,margin:0,...ds}}>€{tot.toFixed(2)}</p>
+              </div>
+            ):null; })()}
             {rides.filter(r=>r.status==="In corso").length>0&&<>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>🔴 In corso</p>
               {[...rides].filter(r=>r.status==="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p><p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>💶 €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min</p><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button></div>))}
             </>}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"12px 0 8px",...ds,opacity:0.5}}>Completate</p>
-            {[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>{(()=>{ const km=calcTrackKm(ride.track); const durMin=ride.duration?ride.duration/60:0; const avg=km>0&&durMin>0?Math.round(km/durMin*60*10)/10:0; return km>0?(<p style={{color:C.blueGreen,fontSize:11,...ds,margin:"0 0 6px",fontWeight:600}}>🛣️ {km} km{avg>0?` · ⚡ avg ${avg} km/h`:""}</p>):null; })()}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>{ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}<span style={{background:ride.isFree?`${C.blueGreen}20`:`#E3F2FD`,border:`1px solid ${ride.isFree?C.blueGreen:"#2196F3"}`,borderRadius:8,padding:"5px 10px",color:ride.isFree?C.blueGreen:"#1565C0",fontSize:11,...ds,fontWeight:600}}>{ride.isFree?"🎁 Gratuita":"💳 Stripe"}</span></div></div>))}
+            {[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>{(()=>{ const km=calcTrackKm(ride.track); const durMin=ride.duration?ride.duration/60:0; const avg=km>0&&durMin>0?Math.round(km/durMin*60*10)/10:0; return km>0?(<p style={{color:C.blueGreen,fontSize:11,...ds,margin:"0 0 6px",fontWeight:600}}>🛣️ {km} km{avg>0?` · ⚡ avg ${avg} km/h`:""}</p>):null; })()}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>{ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}<span style={{background:ride.isFree?`${C.blueGreen}20`:`#E3F2FD`,border:`1px solid ${ride.isFree?C.blueGreen:"#2196F3"}`,borderRadius:8,padding:"5px 10px",color:ride.isFree?C.blueGreen:"#1565C0",fontSize:11,...ds,fontWeight:600}}>{ride.isFree?"🎁 Gratuita":"💳 Stripe"}</span>{ride.promoCode&&<span style={{background:"#F3E5F5",border:"1px solid #9C27B0",borderRadius:8,padding:"5px 10px",color:"#6A1B9A",fontSize:11,...ds,fontWeight:600}}>{ride.promoType==="hotel"?`🏨 ${ride.hotelName||ride.promoCode}${(ride.hotelCashback||0)>0?` · rimborso €${(ride.hotelCashback||0).toFixed(2)}`:""}`:`🎟️ ${ride.promoCode}`}</span>}</div></div>))}
           </div>}
 
           {tab==="utenti"&&<div className="slide" style={{padding:"16px 18px 0"}}>
@@ -2229,6 +2241,85 @@ function AdminApp({ user, onLogout, t }) {
           )}
 
           {tab==="stats"&&<div className="slide" style={{padding:"16px 18px 0"}}>
+            {(()=>{
+              const fromT = statsFrom ? new Date(statsFrom+"T00:00:00").getTime() : 0;
+              const toT = statsTo ? new Date(statsTo+"T23:59:59").getTime() : Date.now();
+              const inRange = (iso) => { if(!iso) return false; const t=new Date(iso).getTime(); return t>=fromT && t<=toT; };
+              const agg={};
+              rides.filter(r=>r.status==="Completata"&&r.promoType==="hotel"&&(r.hotelName||r.promoCode)&&inRange(r.startTime)).forEach(r=>{
+                const key=r.hotelName||r.promoCode;
+                if(!agg[key]) agg[key]={rides:0,cashback:0,code:r.promoCode||"—"};
+                agg[key].rides++; agg[key].cashback+=(r.hotelCashback||0);
+              });
+              const list=Object.entries(agg).sort((a,b)=>b[1].cashback-a[1].cashback);
+              const totBonifici=list.reduce((a,[,v])=>a+v.cashback,0);
+              const registraBonifico = async (hotel,code,amount,rideCount) => {
+                if(!window.confirm(`Registrare il bonifico di €${amount.toFixed(2)} a "${hotel}" per il periodo ${statsFrom} → ${statsTo}?`)) return;
+                try {
+                  await waitFB();
+                  const {collection,addDoc}=window.firebaseFunctions;
+                  await addDoc(collection(window.firebaseDb,"hotelPayments"),{hotel,code,amount,rides:rideCount,from:statsFrom,to:statsTo,paidAt:new Date().toISOString()});
+                  alert("✅ Bonifico registrato nello storico.");
+                } catch(e){ alert("Errore: "+e.message); }
+              };
+              return (
+                <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
+                  <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 2px",fontFamily:"Lora"}}>🏨 Bonifici da emettere agli alberghi</p>
+                  <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 12px"}}>Rimborso €3/corsa per struttura (corse completate nel periodo scelto)</p>
+                  {/* Selettore date */}
+                  <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+                    <div style={{flex:1,minWidth:120}}>
+                      <label style={{color:"#888",fontSize:10,...ds,display:"block",marginBottom:3}}>Dal</label>
+                      <input type="date" value={statsFrom} onChange={e=>setStatsFrom(e.target.value)} style={{width:"100%",padding:"8px 10px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white}}/>
+                    </div>
+                    <div style={{flex:1,minWidth:120}}>
+                      <label style={{color:"#888",fontSize:10,...ds,display:"block",marginBottom:3}}>Al</label>
+                      <input type="date" value={statsTo} onChange={e=>setStatsTo(e.target.value)} style={{width:"100%",padding:"8px 10px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white}}/>
+                    </div>
+                  </div>
+                  {/* Scorciatoie periodo */}
+                  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+                    {[["Questo mese",()=>{const d=new Date();setStatsFrom(new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10));setStatsTo(new Date().toISOString().slice(0,10));}],
+                      ["Mese scorso",()=>{const d=new Date();setStatsFrom(new Date(d.getFullYear(),d.getMonth()-1,1).toISOString().slice(0,10));setStatsTo(new Date(d.getFullYear(),d.getMonth(),0).toISOString().slice(0,10));}],
+                      ["Trimestre",()=>{const d=new Date();setStatsFrom(new Date(d.getFullYear(),d.getMonth()-3,1).toISOString().slice(0,10));setStatsTo(new Date().toISOString().slice(0,10));}],
+                      ["Anno",()=>{const d=new Date();setStatsFrom(new Date(d.getFullYear(),0,1).toISOString().slice(0,10));setStatsTo(new Date().toISOString().slice(0,10));}]].map(([lbl,fn])=>(
+                      <button key={lbl} onClick={fn} style={{background:`${C.deepBlue}10`,border:`1px solid ${C.deepBlue}25`,borderRadius:16,padding:"5px 11px",color:C.deepBlue,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>{lbl}</button>
+                    ))}
+                  </div>
+                  {list.length===0?(
+                    <p style={{color:"#aaa",fontSize:12,...ds,margin:0}}>Nessuna corsa con cashback hotel in questo periodo.</p>
+                  ):(<>
+                    {list.map(([hotel,v])=>(
+                      <div key={hotel} style={{padding:"10px 0",borderBottom:`1px solid ${C.skyBlue}20`}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <div><p style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:700,margin:"0 0 2px"}}>{hotel}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:0}}>{v.code} · {v.rides} corse</p></div>
+                          <p style={{color:"#6A1B9A",fontSize:16,fontWeight:700,margin:0,...ds}}>€{v.cashback.toFixed(2)}</p>
+                        </div>
+                        <button onClick={()=>registraBonifico(hotel,v.code,v.cashback,v.rides)} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}40`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>✓ Registra bonifico pagato</button>
+                      </div>
+                    ))}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,paddingTop:10,borderTop:`2px solid ${C.deepBlue}20`}}>
+                      <p style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:700,margin:0}}>TOTALE PERIODO</p>
+                      <p style={{color:"#6A1B9A",fontSize:20,fontWeight:700,margin:0,...ds}}>€{totBonifici.toFixed(2)}</p>
+                    </div>
+                  </>)}
+                </div>
+              );
+            })()}
+            {/* Storico bonifici pagati */}
+            <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
+              <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>📒 Bonifici già pagati</p>
+              {hotelPayments.length===0?(
+                <p style={{color:"#aaa",fontSize:12,...ds,margin:0}}>Nessun bonifico registrato. Usa "Registra bonifico pagato" qui sopra dopo aver effettuato un pagamento.</p>
+              ):(
+                [...hotelPayments].sort((a,b)=>new Date(b.paidAt||0)-new Date(a.paidAt||0)).map(p=>(
+                  <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${C.skyBlue}20`}}>
+                    <div><p style={{color:C.deepBlue,fontSize:12.5,...ds,fontWeight:700,margin:"0 0 2px"}}>{p.hotel} · €{(p.amount||0).toFixed(2)}</p><p style={{color:"#aaa",fontSize:10.5,...ds,margin:0}}>periodo {p.from} → {p.to} · pagato il {p.paidAt?new Date(p.paidAt).toLocaleDateString("it-IT"):"—"}</p></div>
+                    <button onClick={async()=>{ if(!window.confirm("Eliminare questo pagamento dallo storico? (in caso di errore)")) return; try{ await waitFB(); const {doc,deleteDoc}=window.firebaseFunctions; await deleteDoc(doc(window.firebaseDb,"hotelPayments",p.id)); }catch(e){ alert("Errore: "+e.message); } }} style={{background:"none",border:"none",color:"#E53935",fontSize:16,cursor:"pointer",padding:"0 4px",flexShrink:0}}>🗑️</button>
+                  </div>
+                ))
+              )}
+            </div>
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
               <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 4px",fontFamily:"Lora"}}>🌍 Da dove aprono l'app</p>
               <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 10px"}}>Posizioni GPS al momento dell'apertura</p>
