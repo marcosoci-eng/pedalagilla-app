@@ -986,7 +986,7 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
-function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=false }) {
+function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hidePreAuth=false }) {
   const cardRef = React.useRef(null);
   const cardEl = React.useRef(null);
   const [loading, setLoading] = React.useState(false);
@@ -1014,32 +1014,50 @@ function PaymentForm({ amount, bike, plan, onSuccess, onCancel, t, hidePreAuth=f
       });
       if (e) { setError(e.message); setLoading(false); return; }
       
-      // Chiama backend Railway per processare il pagamento
-      const resp = await fetch('https://web-production-eafa5.up.railway.app/create-payment-intent', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          amount, paymentMethodId: paymentMethod.id,
-          bikeId: Array.isArray(bike) ? bike.map(b=>b.id).join(',') : bike.id,
-          plan, userId: window._currentUserId||'', userName: nome
-        })
-      });
+      // Tariffa al minuto: PRE-AUTORIZZA (hold) l'importo massimo giornaliero (19.90/bici).
+      // L'addebito reale avviene a fine corsa con la cattura. Giornata/Settimanale: addebito immediato.
+      const isPerMinute = planId === 'minuti';
+      let resp, data, isPreAuth = false;
+      if (isPerMinute) {
+        const holdAmount = 19.90 * nBikes;
+        resp = await fetch('https://web-production-eafa5.up.railway.app/create-pre-auth', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            paymentMethodId: paymentMethod.id, amount: holdAmount,
+            bikeIds: Array.isArray(bike) ? bike.map(b=>b.id) : [bike.id]
+          })
+        });
+        isPreAuth = true;
+      } else {
+        resp = await fetch('https://web-production-eafa5.up.railway.app/create-payment-intent', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            amount, paymentMethodId: paymentMethod.id,
+            bikeId: Array.isArray(bike) ? bike.map(b=>b.id).join(',') : bike.id,
+            plan, userId: window._currentUserId||'', userName: nome
+          })
+        });
+      }
       console.log('💳 Stripe response status:', resp.status);
-      const data = await resp.json();
+      data = await resp.json();
       console.log('💳 Stripe response:', data);
       if (!data.success) { setError(data.error || t('errPayment')); setLoading(false); return; }
       
       setLoading(false);
-      onSuccess(paymentMethod.id, data.paymentIntentId);
+      // Passa anche isPreAuth: se true, l'importo va catturato a fine corsa
+      onSuccess(paymentMethod.id, data.paymentIntentId, isPreAuth);
     } catch(e) { setError(t('errPayment')); setLoading(false); }
   };
   const bikeIds = Array.isArray(bike) ? bike.map(b=>b.id).join(', ') : bike.id;
   return (
     <div style={{padding:"20px 18px"}}>
       <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:12,textAlign:"center"}}>
-        <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{t('total')}</p>
-        <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{amount.toFixed(2)}</p>
+        <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{planId==='minuti'?"PRE-AUTORIZZAZIONE":t('total')}</p>
+        <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{(planId==='minuti'?19.90*nBikes:amount).toFixed(2)}</p>
         <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,margin:0,...ds}}>{bikeIds} · {plan}</p>
+        {planId==='minuti'&&<p style={{color:"rgba(255,255,255,0.85)",fontSize:11,margin:"8px 0 0",...ds,lineHeight:"1.4"}}>💡 Blocchiamo €{(19.90*nBikes).toFixed(2)} sulla carta. A fine corsa paghi solo i minuti effettivi (€{SBLOCCO.toFixed(2)} sblocco + €{TARIFFA_MIN}/min, max €19.90/giorno). Il resto viene rilasciato.</p>}
       </div>
 
       {/* Box pre-autorizzazione */}
@@ -1479,7 +1497,25 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       const sRef=ref(window.firebaseStorage,`parcheggi/${bike.id}_${Date.now()}`);
       await uploadBytes(sRef,parkPhoto);
       const parkPhotoURL=await getDownloadURL(sRef);
-      if(rideId) await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,parkPhotoURL,track:trackRef.current});
+      // CATTURA PAGAMENTO: per la tariffa al minuto (pre-autorizzazione) cattura il costo reale
+      let captured = null;
+      if(rideId){
+        try {
+          const {getDoc}=window.firebaseFunctions;
+          const rideSnap=await getDoc(doc(window.firebaseDb,"rides",rideId));
+          const rideData=rideSnap.data()||{};
+          if(rideData.isPreAuth && rideData.paymentIntentId && !rideData.isFree){
+            const capResp=await fetch('https://web-production-eafa5.up.railway.app/capture-payment',{
+              method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({paymentIntentId:rideData.paymentIntentId, amount:totalCost})
+            });
+            const capData=await capResp.json();
+            captured = capData.success ? (capData.cancelled ? 0 : (capData.captured||totalCost)) : null;
+            console.log('💰 Cattura pagamento:', capData);
+          }
+        } catch(e){ console.error('Errore cattura pagamento:', e); }
+        await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,amountPaid:captured!==null?captured:totalCost,parkPhotoURL,track:trackRef.current});
+      }
     } catch(e){console.error(e);}
     setUploading(false); onEnd(seconds,totalCost,bike.id);
   };
@@ -1721,11 +1757,39 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
     try {
       await waitFB();
       const {ref,uploadBytes,getDownloadURL,doc,updateDoc}=window.firebaseFunctions;
+      // Blocca subito la bici che si sta terminando
+      const pedId='PED'+endingBike.id.replace('PA-','').padStart(3,'0');
+      const {addDoc,collection,getDoc}=window.firebaseFunctions;
+      try {
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date(Date.now()+100).toISOString()});
+      } catch(e){ console.error('Errore comandi fine corsa multi:', e); }
       const sRef=ref(window.firebaseStorage,`parcheggi/${endingBike.id}_${Date.now()}`);
       await uploadBytes(sRef,parkPhoto);
       const parkPhotoURL=await getDownloadURL(sRef);
       const rideEntry=rideIds.find(r=>r.bikeId===endingBike.id);
-      if(rideEntry) await updateDoc(doc(window.firebaseDb,"rides",rideEntry.rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:costPerBike+pauseCost,parkPhotoURL,track:trackRefs.current[endingBike.id]||[]});
+      const thisCost=Math.min(costPerBike+pauseCost, TARIFFA_GIORNATA);
+      if(rideEntry) await updateDoc(doc(window.firebaseDb,"rides",rideEntry.rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:thisCost,parkPhotoURL,track:trackRefs.current[endingBike.id]||[]});
+      // Se questa e' l'ULTIMA bici del gruppo, cattura la pre-autorizzazione combinata col totale reale
+      const isLastBike = activeBikes.length<=1;
+      if(isLastBike && rideEntry){
+        try {
+          const rideSnap=await getDoc(doc(window.firebaseDb,"rides",rideEntry.rideId));
+          const rd=rideSnap.data()||{};
+          if(rd.isPreAuth && rd.paymentIntentId && !rd.isFree){
+            // Somma i costi reali di tutte le corse del gruppo
+            let totaleGruppo=0;
+            for(const re of rideIds){
+              try { const s=await getDoc(doc(window.firebaseDb,"rides",re.rideId)); totaleGruppo+=(s.data()?.cost||0); } catch(e){}
+            }
+            const capResp=await fetch('https://web-production-eafa5.up.railway.app/capture-payment',{
+              method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({paymentIntentId:rd.paymentIntentId, amount:totaleGruppo})
+            });
+            console.log('💰 Cattura gruppo:', await capResp.json(), 'totale:', totaleGruppo);
+          }
+        } catch(e){ console.error('Errore cattura gruppo:', e); }
+      }
     } catch(e){console.error(e);}
     setUploading(false);
     setShowEndFlow(false);
@@ -2152,7 +2216,7 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
   if(showPayment) return(
     <div style={{padding:"16px 18px 0"}}>
       <button onClick={()=>setShowPayment(false)} style={{background:"none",border:"none",color:C.blueGreen,fontSize:14,...ds,fontWeight:600,cursor:"pointer",marginBottom:14}}>← Torna</button>
-      <PaymentForm amount={amount} bike={selectedMTB} plan={tariffa==="adulto"?"MTB Adulto":"MTB Bambino"} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t} hidePreAuth={true}/>
+      <PaymentForm amount={amount} bike={selectedMTB} plan={tariffa==="adulto"?"MTB Adulto":"MTB Bambino"} planId="mtb" onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t} hidePreAuth={true}/>
     </div>
   );
 
@@ -2601,7 +2665,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const payAmount = getEffectiveAmount();
   const isFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia");
 
-  const handlePaySuccess=async(paymentMethodId, paymentIntentId)=>{
+  const handlePaySuccess=async(paymentMethodId, paymentIntentId, isPreAuth=false)=>{
     setShowPayment(false); setShowPlan(false);
     console.log("💳 handlePaySuccess chiamato");
     try {
@@ -2624,6 +2688,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           isFree: isFree||false,
           paymentIntentId: paymentIntentId||null,
           paymentMethodId: paymentMethodId||null,
+          isPreAuth: isPreAuth||false,
+          amountPaid: isPreAuth ? 0 : (payAmount||0),
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
         console.log(`✅ Ride creata: ${rideDoc.id} per ${bike.id}, status: In corso`);
@@ -2892,7 +2958,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>{t('payment')}</p>
                   <div style={{width:30}}/>
                 </div>
-                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="settimanale"?"Settimanale":plan==="giornata"?t('planDay'):t('planMinutes')} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
+                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="settimanale"?"Settimanale":plan==="giornata"?t('planDay'):t('planMinutes')} planId={plan} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
               </>
             ):(
               <>
