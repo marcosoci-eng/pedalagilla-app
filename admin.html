@@ -1541,6 +1541,8 @@ function AdminApp({ user, onLogout, t }) {
   const [editChecks, setEditChecks] = React.useState({});
   const [showBikeDetail, setShowBikeDetail] = React.useState(false);
   const [incassiPeriod, setIncassiPeriod] = React.useState("oggi");
+  const [ridesPage, setRidesPage] = React.useState(0);
+  const RIDES_PER_PAGE = 15;
   // Estrazione bonifici hotel: intervallo di date personalizzato + pagamenti registrati
   const _today = new Date();
   const [statsFrom, setStatsFrom] = React.useState(new Date(_today.getFullYear(),_today.getMonth(),1).toISOString().slice(0,10));
@@ -1696,12 +1698,45 @@ function AdminApp({ user, onLogout, t }) {
       if(!data.length){alert("Nessun utente");return;} 
       const ws=XLSX.utils.json_to_sheet(data); 
       const wb=XLSX.utils.book_new(); 
-      XLSX.utils.book_append_sheet(wb,"Utenti",ws); 
+      XLSX.utils.book_append_sheet(wb,ws,"Utenti"); 
       const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
       const blob=new Blob([wbout],{type:"application/octet-stream"});
       const url=URL.createObjectURL(blob);
       const a=document.createElement("a");
       a.href=url; a.download="utenti_pedalagilla.xlsx"; a.click();
+      URL.revokeObjectURL(url);
+    } catch(e) { alert("Errore Excel: "+e.message); console.error(e); }
+  };
+
+  const exportExcelRides=(ridesToExport,nomeFile)=>{
+    try {
+      const data=ridesToExport.map(r=>({
+        "Data":r.startTime?new Date(r.startTime).toLocaleDateString("it-IT"):"",
+        "Ora":r.startTime?new Date(r.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"",
+        "Bici":String(r.bike||r.bikeId||""),
+        "Cliente":String(r.user||r.userName||""),
+        "Email":String(r.userEmail||""),
+        "Zona":String(r.zone||""),
+        "Piano":String(r.plan||""),
+        "Durata (min)":Math.floor((r.duration||0)/60),
+        "Km":calcTrackKm(r.track)||0,
+        "Costo €":Number((r.cost||0).toFixed(2)),
+        "Pagato €":Number((r.amountPaid!=null?r.amountPaid:r.cost||0).toFixed(2)),
+        "Stato":String(r.status||""),
+        "Gratuita":r.isFree?"Si":"No",
+        "Promo":String(r.promoCode||""),
+        "Hotel":String(r.hotelName||""),
+        "Rimborso hotel €":Number((r.hotelCashback||0).toFixed(2)),
+      }));
+      if(!data.length){alert("Nessuna corsa nel periodo selezionato");return;}
+      const ws=XLSX.utils.json_to_sheet(data);
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,"Corse");
+      const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+      const blob=new Blob([wbout],{type:"application/octet-stream"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url; a.download=(nomeFile||"corse_pedalagilla")+".xlsx"; a.click();
       URL.revokeObjectURL(url);
     } catch(e) { alert("Errore Excel: "+e.message); console.error(e); }
   };
@@ -1889,7 +1924,7 @@ function AdminApp({ user, onLogout, t }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:0,fontFamily:"Lora"}}>💶 Incassi</p>
                 <div style={{display:"flex",gap:6}}>
-                  {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>setIncassiPeriod(v)} style={{background:incassiPeriod===v?C.deepBlue:"#f0f0f0",border:"none",borderRadius:8,padding:"4px 10px",color:incassiPeriod===v?C.white:"#888",fontSize:11,...ds,cursor:"pointer"}}>{l}</button>))}
+                  {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>{setIncassiPeriod(v);setRidesPage(0);}} style={{background:incassiPeriod===v?C.deepBlue:"#f0f0f0",border:"none",borderRadius:8,padding:"4px 10px",color:incassiPeriod===v?C.white:"#888",fontSize:11,...ds,cursor:"pointer"}}>{l}</button>))}
                 </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -1978,7 +2013,7 @@ function AdminApp({ user, onLogout, t }) {
 
           {tab==="corse"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"flex",gap:8,marginBottom:12}}>
-              {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>setIncassiPeriod(v)} style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>))}
+              {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>{setIncassiPeriod(v);setRidesPage(0);}} style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>))}
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
               {[["💶",(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)+"€","Incassi",C.sunYellow],["🏁",(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata").length,"Completate",C.blueGreen],["🚴",rides.filter(r=>r.status==="In corso").length,"In corso",C.warmOrange]].map(([icon,val,label,color])=>(<div key={label} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:18,marginBottom:4}}>{icon}</div><div style={{color,fontSize:18,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div></div>))}
@@ -1993,8 +2028,20 @@ function AdminApp({ user, onLogout, t }) {
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>🔴 In corso</p>
               {[...rides].filter(r=>r.status==="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p><p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>💶 €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min</p><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button></div>))}
             </>}
-            <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"12px 0 8px",...ds,opacity:0.5}}>Completate</p>
-            {[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>{(()=>{ const km=calcTrackKm(ride.track); const durMin=ride.duration?ride.duration/60:0; const avg=km>0&&durMin>0?Math.round(km/durMin*60*10)/10:0; return km>0?(<p style={{color:C.blueGreen,fontSize:11,...ds,margin:"0 0 6px",fontWeight:600}}>🛣️ {km} km{avg>0?` · ⚡ avg ${avg} km/h`:""}</p>):null; })()}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>{ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}<span style={{background:ride.isFree?`${C.blueGreen}20`:`#E3F2FD`,border:`1px solid ${ride.isFree?C.blueGreen:"#2196F3"}`,borderRadius:8,padding:"5px 10px",color:ride.isFree?C.blueGreen:"#1565C0",fontSize:11,...ds,fontWeight:600}}>{ride.isFree?"🎁 Gratuita":"💳 Stripe"}</span>{ride.promoCode&&<span style={{background:"#F3E5F5",border:"1px solid #9C27B0",borderRadius:8,padding:"5px 10px",color:"#6A1B9A",fontSize:11,...ds,fontWeight:600}}>{ride.promoType==="hotel"?`🏨 ${ride.hotelName||ride.promoCode}${(ride.hotelCashback||0)>0?` · rimborso €${(ride.hotelCashback||0).toFixed(2)}`:""}`:`🎟️ ${ride.promoCode}`}</span>}</div></div>))}
+            {(()=>{ const completed=[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)); const totalPages=Math.ceil(completed.length/RIDES_PER_PAGE)||1; const page=Math.min(ridesPage,totalPages-1); const pageRides=completed.slice(page*RIDES_PER_PAGE,(page+1)*RIDES_PER_PAGE); return (<>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"12px 0 8px"}}>
+              <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>Completate ({completed.length})</p>
+              <button onClick={()=>exportExcelRides(completed,"corse_"+incassiPeriod)} style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"6px 12px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📊 Excel</button>
+            </div>
+            {pageRides.map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.skyBlue}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><span style={{color:C.blueGreen,fontWeight:700,fontSize:13,...ds}}>€{(ride.cost||0).toFixed(2)}</span></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏱️ {Math.floor((ride.duration||0)/60)}min · {ride.date}</p>{(()=>{ const km=calcTrackKm(ride.track); const durMin=ride.duration?ride.duration/60:0; const avg=km>0&&durMin>0?Math.round(km/durMin*60*10)/10:0; return km>0?(<p style={{color:C.blueGreen,fontSize:11,...ds,margin:"0 0 6px",fontWeight:600}}>🛣️ {km} km{avg>0?` · ⚡ avg ${avg} km/h`:""}</p>):null; })()}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Percorso</button>{ride.parkPhotoURL&&<button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.sunYellow}15`,border:`1px solid ${C.sunYellow}40`,borderRadius:8,padding:"5px 12px",color:"#b38600",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📸 Foto</button>}<span style={{background:ride.isFree?`${C.blueGreen}20`:`#E3F2FD`,border:`1px solid ${ride.isFree?C.blueGreen:"#2196F3"}`,borderRadius:8,padding:"5px 10px",color:ride.isFree?C.blueGreen:"#1565C0",fontSize:11,...ds,fontWeight:600}}>{ride.isFree?"🎁 Gratuita":"💳 Stripe"}</span>{ride.promoCode&&<span style={{background:"#F3E5F5",border:"1px solid #9C27B0",borderRadius:8,padding:"5px 10px",color:"#6A1B9A",fontSize:11,...ds,fontWeight:600}}>{ride.promoType==="hotel"?`🏨 ${ride.hotelName||ride.promoCode}${(ride.hotelCashback||0)>0?` · rimborso €${(ride.hotelCashback||0).toFixed(2)}`:""}`:`🎟️ ${ride.promoCode}`}</span>}</div></div>))}
+            {totalPages>1&&(
+              <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,margin:"10px 0 20px"}}>
+                <button onClick={()=>setRidesPage(Math.max(0,page-1))} disabled={page<=0} style={{background:page<=0?"#eee":C.deepBlue,border:"none",borderRadius:10,padding:"7px 14px",color:page<=0?"#bbb":C.white,fontSize:13,...ds,fontWeight:700,cursor:page<=0?"default":"pointer"}}>‹ Prec</button>
+                <span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600}}>Pagina {page+1} di {totalPages}</span>
+                <button onClick={()=>setRidesPage(Math.min(totalPages-1,page+1))} disabled={page>=totalPages-1} style={{background:page>=totalPages-1?"#eee":C.deepBlue,border:"none",borderRadius:10,padding:"7px 14px",color:page>=totalPages-1?"#bbb":C.white,fontSize:13,...ds,fontWeight:700,cursor:page>=totalPages-1?"default":"pointer"}}>Succ ›</button>
+              </div>
+            )}
+            </>); })()}
           </div>}
 
           {tab==="utenti"&&<div className="slide" style={{padding:"16px 18px 0"}}>
