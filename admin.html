@@ -1539,6 +1539,7 @@ function AdminApp({ user, onLogout, t }) {
   const [filter, setFilter] = React.useState("Tutti");
   const [mapFilter, setMapFilter] = React.useState("Tutti");
   const [battSlider, setBattSlider] = React.useState(100);
+  const [mapBattSlider, setMapBattSlider] = React.useState(100);
   const [editNote, setEditNote] = React.useState("");
   const [editChecks, setEditChecks] = React.useState({});
   const [showBikeDetail, setShowBikeDetail] = React.useState(false);
@@ -1578,9 +1579,12 @@ function AdminApp({ user, onLogout, t }) {
   const maint=bikes.filter(b=>b.status==="Manutenzione").length;
   const low=bikes.filter(b=>b.battery<50).length;
   const avg=Math.round(bikes.reduce((a,b)=>a+b.battery,0)/bikes.length);
-  const filteredBikesBase=filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>b.battery<50);
-  const filteredBikes=battSlider<100?filteredBikesBase.filter(b=>b.battery<=battSlider):filteredBikesBase;
-  const mapBikes=mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
+  const filteredBikesBase=filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>Number(b.battery)<50);
+  // Filtro batteria: mostra solo bici con carica <= soglia. Esclude le bici "mai viste" (nessun dato reale).
+  const isKnownBike=(b)=>{ const pedId='PED'+b.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; return !!(rt&&rt.lastSeen); };
+  const filteredBikes=battSlider<100?filteredBikesBase.filter(b=>isKnownBike(b)&&Number(b.battery)<=battSlider):filteredBikesBase;
+  const mapBikesBase=mapFilter==="Tutti"?bikes:mapFilter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):bikes.filter(b=>b.status==="Manutenzione");
+  const mapBikes=mapBattSlider<100?mapBikesBase.filter(b=>{const pedId='PED'+b.id.replace('PA-','').padStart(3,'0');const rt=bikesRealtime[pedId];return rt&&rt.lastSeen&&Number(b.battery)<=mapBattSlider;}):mapBikesBase;
   const visibleZones=savedZones.filter(z=>zoneFilters[z.type]);
 
   const [bikesRealtime, setBikesRealtime] = React.useState({});
@@ -1632,7 +1636,17 @@ function AdminApp({ user, onLogout, t }) {
   React.useEffect(()=>{if(tab==="utenti")loadUsers();},[tab]);
   const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
   const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
-  const toggleStatus=(bikeId)=>{setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:b.status==="Disponibile"?"Manutenzione":"Disponibile"}:b));};
+  const toggleStatus=async(bikeId)=>{
+    const bk=bikes.find(b=>b.id===bikeId);
+    const newStatus=bk&&bk.status==="Disponibile"?"Manutenzione":"Disponibile";
+    setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,status:newStatus}:b));
+    try {
+      await waitFB();
+      const {doc,setDoc}=window.firebaseFunctions;
+      const pedId='PED'+bikeId.replace('PA-','').padStart(3,'0');
+      await setDoc(doc(window.firebaseDb,"bikes",pedId),{status:newStatus,updatedAt:new Date().toISOString()},{merge:true});
+    } catch(e){ console.error('Errore salvataggio status:',e); }
+  };
   const forceEndRide=async(ride)=>{ 
     const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); 
     if(importoStr===null) return; 
@@ -1886,6 +1900,15 @@ function AdminApp({ user, onLogout, t }) {
             <div style={{display:"flex",gap:8,marginBottom:10}}>
               {["Tutti","Disponibile","Manutenzione"].map(f=>(<button key={f} className="btn" onClick={()=>setMapFilter(f)} style={{background:mapFilter===f?C.deepBlue:C.white,border:`1.5px solid ${mapFilter===f?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"5px 14px",color:mapFilter===f?C.white:C.deepBlue,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",...ds,fontWeight:500}}>{f}</button>))}
             </div>
+            {/* Slider filtro batteria mappa */}
+            <div style={{background:C.white,borderRadius:14,padding:"10px 14px",marginBottom:10,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600}}>⚡ Batteria ≤</span>
+                <span style={{color:getBattColor(mapBattSlider),fontSize:14,...ds,fontWeight:700}}>{mapBattSlider<100?`${mapBattSlider}%`:"Tutte"}</span>
+              </div>
+              <input type="range" min={0} max={100} step={5} value={mapBattSlider} onChange={e=>setMapBattSlider(Number(e.target.value))} style={{width:"100%",accentColor:getBattColor(mapBattSlider),cursor:"pointer"}}/>
+              {mapBattSlider<100&&<p style={{color:getBattColor(mapBattSlider),fontSize:10,...ds,margin:"4px 0 0",fontWeight:600}}>{mapBikes.length} bici da ricaricare sulla mappa</p>}
+            </div>
             {Object.keys(bikesRealtime).length>0&&(
               <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}30`,borderRadius:12,padding:"8px 14px",marginBottom:10}}>
                 <p style={{color:C.blueGreen,fontSize:12,fontWeight:600,margin:0,...ds}}>📡 {Object.keys(bikesRealtime).filter(k=>bikesRealtime[k].online).length} bici online in tempo reale</p>
@@ -1937,7 +1960,7 @@ function AdminApp({ user, onLogout, t }) {
                 style={{width:"100%",accentColor:getBattColor(battSlider),cursor:"pointer"}}/>
               <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
                 <span style={{color:"#bbb",fontSize:9,...ds}}>0%</span>
-                <span style={{color:battSlider<100?getBattColor(battSlider):"#bbb",fontSize:10,...ds,fontWeight:600}}>{battSlider<100?`${filteredBikes.length} bici trovate`:"Tutte le bici"}</span>
+                <span style={{color:battSlider<100?getBattColor(battSlider):"#bbb",fontSize:10,...ds,fontWeight:600}}>{battSlider<100?`${filteredBikes.length} bici da ricaricare`:"Tutte le bici"}</span>
                 <span style={{color:"#bbb",fontSize:9,...ds}}>100%</span>
               </div>
             </div>
@@ -2215,7 +2238,7 @@ function AdminApp({ user, onLogout, t }) {
 
         <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(245,249,251,0.97)",borderTop:`1px solid ${C.skyBlue}50`,display:"flex",padding:"8px 0 16px",zIndex:20}}>
           {[["dashboard","⊞","Home"],["mappa","🗺️","Mappa"],["bici","🚲","Bici"],["corse","🏁","Corse"],["utenti","👥","Utenti"],["zone","🗺️","Zone"],["qr","🔲","QR"],["promo","🎟️","Promo"],["mtb","🚵","MTB"],["feedback","⭐","Feedback"],["stats","📊","Stats"],["migrazione","🔄","IoT"]].map(([tid,icon,label])=>(
-            <button key={tid} className="btn" onClick={()=>setTab(tid)} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <button key={tid} className="btn" onClick={()=>{setTab(tid);setShowBikeDetail(false);setSelBike(null);}} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <span style={{fontSize:16}}>{icon}</span>
               <span style={{color:tab===tid?C.blueGreen:"#bbb",fontSize:8,...ds,fontWeight:tab===tid?600:400}}>{label}</span>
               {tab===tid&&<div style={{width:14,height:3,borderRadius:2,background:C.blueGreen}}/>}
