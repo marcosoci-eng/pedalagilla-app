@@ -951,29 +951,23 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
       if (zone.shape==="circle" && zone.center) {
         shape = new window.google.maps.Circle({ map:mapTarget, center:zone.center, radius:zone.radius||200, fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2, draggable:true, editable:true });
         center = {lat:zone.center.lat, lng:zone.center.lng};
-        shape.addListener("center_changed", ()=>{
-          isEditingRef.current = true;
-          const nc = shape.getCenter();
-          zonesRef.current = zonesRef.current.map((z,i)=>i===idx?{...z,center:{lat:nc.lat(),lng:nc.lng()}}:z);
-          setTimeout(()=>{ isEditingRef.current = false; }, 500);
-        });
-        shape.addListener("radius_changed", ()=>{
-          isEditingRef.current = true;
-          zonesRef.current = zonesRef.current.map((z,i)=>i===idx?{...z,radius:shape.getRadius()}:z);
-          setTimeout(()=>{ isEditingRef.current = false; }, 500);
-        });
+        const zid = zone.id;
+        const writeLive = ()=>{ if(!zid) return; window._zoneLive = window._zoneLive||{}; const cc=shape.getCenter(); window._zoneLive[zid] = {center:{lat:cc.lat(),lng:cc.lng()}, radius:shape.getRadius()}; };
+        shape.addListener("center_changed", writeLive);
+        shape.addListener("radius_changed", writeLive);
+        shape.addListener("dragend", writeLive);
       } else if (zone.path && zone.path.length>0) {
         shape = new window.google.maps.Polygon({ map:mapTarget, paths:zone.path, fillColor:zone.color, fillOpacity:0.2, strokeColor:zone.color, strokeWeight:2, draggable:true, editable:true });
         const bounds = new window.google.maps.LatLngBounds();
         zone.path.forEach(p=>bounds.extend(p));
         const c = bounds.getCenter();
         center = {lat:c.lat(), lng:c.lng()};
-        shape.getPath().addListener("set_at", ()=>{
-          isEditingRef.current = true;
-          const newPath = shape.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
-          zonesRef.current = zonesRef.current.map((z,i)=>i===idx?{...z,path:newPath}:z);
-          setTimeout(()=>{ isEditingRef.current = false; }, 500);
-        });
+        const zid = zone.id;
+        const writePoly = ()=>{ if(!zid) return; window._zoneLive = window._zoneLive||{}; window._zoneLive[zid] = {path: shape.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}))}; };
+        shape.getPath().addListener("set_at", writePoly);
+        shape.getPath().addListener("insert_at", writePoly);
+        shape.getPath().addListener("remove_at", writePoly);
+        shape.addListener("dragend", writePoly);
       }
       if (shape) shapesRef.current[idx] = shape;
       if (center) {
@@ -994,8 +988,11 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
     if (!mapInstanceRef.current || !window.google) return;
     if (isEditingRef.current) return; // non ridisegnare durante edit
     if (zones.length !== zonesRef.current.length) {
-      zonesRef.current = zones;
-      drawZones(zones);
+      // Mantiene le posizioni gia' trascinate (live) quando si ridisegna per un aggiunta/eliminazione
+      const live = window._zoneLive || {};
+      const merged = zones.map(z => (z.id && live[z.id]) ? {...z, ...live[z.id]} : z);
+      zonesRef.current = merged;
+      drawZones(merged);
     }
   }, [zones.length]);
 
@@ -1562,7 +1559,7 @@ function AdminApp({ user, onLogout, t }) {
   const [zoneFilters, setZoneFilters] = React.useState({operativa:true,sosta:true,lenta:true,fuori:true});
 
   React.useEffect(()=>{
-    const loadZones=async()=>{ try { await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const snap=await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()) setSavedZones(snap.data().zones||DEFAULT_ZONES); } catch(e){} setZonesLoaded(true); };
+    const loadZones=async()=>{ try { await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const snap=await getDoc(doc(window.firebaseDb,"config","zones")); if(snap.exists()){ const zs=(snap.data().zones||DEFAULT_ZONES).map(z=>z.id?z:{...z,id:'z'+Math.random().toString(36).slice(2,9)}); setSavedZones(zs); } } catch(e){} setZonesLoaded(true); };
     loadZones();
   },[]);
   React.useEffect(()=>{
@@ -2090,10 +2087,13 @@ function AdminApp({ user, onLogout, t }) {
                 try { 
                   await waitFB(); 
                   const {doc,setDoc}=window.firebaseFunctions; 
-                  // Salva SEMPRE la lista completa savedZones (lo stato React aggiornato),
-                  // NON il ref dell'editor che e' filtrato e si congela al montaggio.
-                  const zonesToSave = savedZones;
+                  // Fonde le posizioni trascinate/ridimensionate (live) nelle zone, abbinate per id
+                  const live = window._zoneLive || {};
+                  const zonesToSave = savedZones.map(z => (z.id && live[z.id]) ? {...z, ...live[z.id]} : z);
+                  setSavedZones(zonesToSave);
+                  zonesDirtyRef.current=true;
                   await setDoc(doc(window.firebaseDb,"config","zones"),{zones:zonesToSave,updatedAt:new Date().toISOString()}); 
+                  window._zoneLive = {}; // pulisce dopo il salvataggio
                   alert("✅ Zone salvate! ("+ zonesToSave.length +" zone)"); 
                 } catch(e){ alert("Errore: "+e.message); } 
               }} style={{width:"100%",background:`linear-gradient(90deg,${C.sunYellow},${C.warmOrange})`,border:"none",borderRadius:12,padding:"12px",color:C.deepBlue,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>💾 Salva zone su Firebase</button>
@@ -2109,7 +2109,7 @@ function AdminApp({ user, onLogout, t }) {
                 } catch(e){ alert("Errore: "+e.message); }
               }} style={{width:"100%",background:"none",border:`1.5px solid #E5393580`,borderRadius:12,padding:"10px",color:"#E53935",fontSize:12,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>🗑️ Azzera tutte le zone (riparti da zero)</button>
             </div>
-            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><ZoneMapEditor zones={visibleZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName} onZoneSaved={(zone)=>{zonesDirtyRef.current=true;setSavedZones(prev=> zone.type==="operativa" ? [...prev.filter(z=>z.type!=="operativa"), zone] : [...prev,zone]);setDrawingActive(false);setZoneName("");}} onZoneUpdated={(idx,updated)=>{zonesDirtyRef.current=true;setSavedZones(prev=>prev.map((z,i)=>i===idx?updated:z));}}/></div>
+            <div style={{height:320,borderRadius:16,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 20px rgba(2,48,71,0.15)"}}><ZoneMapEditor zones={visibleZones} zoneType={zoneType} drawingMode={drawingMode} drawingActive={drawingActive} zoneName={zoneName} onZoneSaved={(zone)=>{zonesDirtyRef.current=true;const zWithId={...zone,id:zone.id||('z'+Date.now()+Math.random().toString(36).slice(2,7))};setSavedZones(prev=> zWithId.type==="operativa" ? [...prev.filter(z=>z.type!=="operativa"), zWithId] : [...prev,zWithId]);setDrawingActive(false);setZoneName("");}} onZoneUpdated={(idx,updated)=>{zonesDirtyRef.current=true;setSavedZones(prev=>prev.map((z,i)=>i===idx?updated:z));}}/></div>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone ({savedZones.length})</p>
             <input placeholder="🔍 Cerca zona..." onChange={e=>{const v=e.target.value.toLowerCase(); const els=document.querySelectorAll('.zone-item'); els.forEach(el=>{el.style.display=el.dataset.name.toLowerCase().includes(v)?'block':'none';});}} style={{width:"100%",padding:"8px 12px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
             {savedZones.map((zone,i)=>(
