@@ -1696,7 +1696,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
           new window.google.maps.Circle({
             map, center: zone.center,
-            radius: Math.max(zone.radius||300, 200),
+            radius: zone.radius||300,
             fillColor:"#2196F3", fillOpacity:0.25,
             strokeColor:"#2196F3", strokeWeight:2.5, clickable:false
           });
