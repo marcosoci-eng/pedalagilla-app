@@ -2245,21 +2245,14 @@ function AdminApp({ user, onLogout, t }) {
             }} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:14}}>
               🚀 Inizializza tutte le 40 bici su Firestore
             </button>
-            <div style={{display:"flex",gap:8,marginBottom:14}}>
+            <div style={{marginBottom:14}}>
               <button onClick={async()=>{
-                if(!window.confirm("Impostare TUTTE le bici in modalità risparmio batteria (un report ogni 5 minuti)?\n\nDa usare quando le bici non vengono noleggiate (notte/bassa stagione). Lo sblocco potrebbe richiedere fino a qualche minuto.")) return;
-                try { await waitFB(); const {collection,addDoc}=window.firebaseFunctions; let n=0;
-                  for(let i=1;i<=40;i++){ const pedId='PED'+String(i).padStart(3,'0'); await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_standby',status:'pending',createdAt:new Date().toISOString()}); n++; }
-                  alert(`🔋 Modalità risparmio inviata a ${n} bici. Verrà applicata al prossimo collegamento di ciascuna bici.`);
-                } catch(e){ alert('Errore: '+e.message); }
-              }} style={{flex:1,background:`linear-gradient(90deg,#43A047,#1B5E20)`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔋 Risparmio batteria</button>
-              <button onClick={async()=>{
-                if(!window.confirm("Riportare TUTTE le bici alla frequenza normale (report ogni 30 secondi)?\n\nDa usare negli orari di noleggio per sblocchi rapidi.")) return;
+                if(!window.confirm("Riportare TUTTE le bici alla frequenza normale (report ogni 30 secondi)?")) return;
                 try { await waitFB(); const {collection,addDoc}=window.firebaseFunctions; let n=0;
                   for(let i=1;i<=40;i++){ const pedId='PED'+String(i).padStart(3,'0'); await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date().toISOString()}); n++; }
-                  alert(`📡 Frequenza normale inviata a ${n} bici.`);
+                  alert(`📡 Frequenza normale (30s) inviata a ${n} bici.`);
                 } catch(e){ alert('Errore: '+e.message); }
-              }} style={{flex:1,background:`linear-gradient(90deg,${C.skyBlue},${C.deepBlue})`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>📡 Frequenza normale</button>
+              }} style={{width:"100%",background:`linear-gradient(90deg,${C.skyBlue},${C.deepBlue})`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>📡 Frequenza normale (30s) tutte le bici</button>
             </div>
             {(()=>{
               const allIds=["PED001","PED002","PED003","PED004","PED005","PED006","PED007","PED008","PED009","PED010","PED011","PED012","PED013","PED014","PED015","PED016","PED017","PED018","PED019","PED020","PED021","PED022","PED023","PED024","PED025","PED026","PED027","PED028","PED029","PED030","PED031","PED032","PED033","PED034","PED035","PED036","PED037","PED038","PED039","PED040"];
