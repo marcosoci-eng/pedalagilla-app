@@ -1583,16 +1583,15 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const pauseCost = isGiornata||isSettimanale ? 0 : 0; // incluso in calcMinutiCost
   const totalCost = isFree ? 0 : rideCost;
   const cappedAtMax = !isGiornata && !isSettimanale && (() => {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const secsToday = Math.max(0, Math.floor((Date.now() - todayStart) / 1000));
-    const pauseSecsToday = Math.min(pauseSeconds, secsToday);
-    const rideSecsToday = Math.max(0, secsToday - pauseSecsToday);
+    // È "gratuito fino a mezzanotte" solo quando il costo reale ha raggiunto il tetto giornaliero (€19.90)
+    const activeSecs = Math.max(0, seconds - pauseSeconds);
     const startMs = Date.now() - seconds * 1000;
-    const startDate = new Date(startMs); startDate.setHours(0,0,0,0);
-    const daysPassed = Math.floor((today - startDate) / 86400000);
-    const sbloccoToday = daysPassed === 0 ? SBLOCCO : 0;
-    return (sbloccoToday + (rideSecsToday/60)*TARIFFA_MIN + (pauseSecsToday/60)*TARIFFA_PAUSA) >= TARIFFA_GIORNATA;
+    const startDay = new Date(startMs); startDay.setHours(0,0,0,0);
+    const todayDay = new Date(); todayDay.setHours(0,0,0,0);
+    const daysPassed = Math.max(0, Math.round((todayDay - startDay) / 86400000));
+    const costoBase = SBLOCCO + (activeSecs/60)*TARIFFA_MIN + (pauseSeconds/60)*TARIFFA_PAUSA;
+    const cap = (daysPassed + 1) * TARIFFA_GIORNATA;
+    return costoBase >= cap;
   })();
   const handleParkPhoto=(e)=>{ 
     const file=e.target.files[0]; 
