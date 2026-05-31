@@ -1504,15 +1504,19 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
         const inside=operativa.some(z=>inZone(pt,z));
         setOutOfOperativa(!inside);
         if (!inside) {
-          // Appena esce: beep di avviso (una sola volta alla transizione)
-          if (geoStateRef.current!=='out') { geoStateRef.current='out'; sendBikeCmd('beep'); }
-          // Blocca l'assistenza SOLO se quasi fermo (sicurezza: mai a velocità sostenuta)
-          if (!geoLockedRef.current && (speedKmh==null || speedKmh < 6)) { geoLockedRef.current=true; sendBikeCmd('beep'); sendBikeCmd('lock'); }
+          // Appena esce dall'area: avviso sonoro + blocco assistenza immediato (una sola volta)
+          if (!geoLockedRef.current) {
+            geoStateRef.current='out';
+            geoLockedRef.current=true;
+            sendBikeCmd('beep');
+            sendBikeCmd('lock');
+          }
         } else {
-          // Rientrato nell'area: sblocca l'assistenza se l'avevamo bloccata
-          if (geoStateRef.current==='out') {
+          // Rientrato nell'area: sblocca subito l'assistenza se l'avevamo bloccata
+          if (geoLockedRef.current) {
             geoStateRef.current='in';
-            if (geoLockedRef.current) { geoLockedRef.current=false; sendBikeCmd('unlock'); }
+            geoLockedRef.current=false;
+            sendBikeCmd('unlock');
           }
         }
       }
@@ -2577,6 +2581,7 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
 function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [allBikes, setAllBikes] = React.useState(initBikes);
   const [activeBikeIds, setActiveBikeIds] = React.useState([]);
+  const [bikesLoaded, setBikesLoaded] = React.useState(false);
 
   // Carica bici real-time da Firebase (bikes collection)
   React.useEffect(()=>{
@@ -2585,7 +2590,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         await waitFB();
         const {collection, onSnapshot} = window.firebaseFunctions;
         onSnapshot(collection(window.firebaseDb, "bikes"), snap => {
-          if (snap.empty) return; // usa initBikes se non ci sono dati
+          if (snap.empty) { setBikesLoaded(true); return; } // usa initBikes se non ci sono dati
           const fbBikes = snap.docs.map(d => {
             const data = d.data();
             const pedId = d.id; // es. PED027
@@ -2610,6 +2615,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
             };
           });
           setAllBikes(fbBikes);
+          setBikesLoaded(true);
         });
       } catch(e) { console.error("Errore caricamento bici:", e); }
     };
@@ -2778,9 +2784,10 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           try{
             const url=new URL(code.data); const bikeId=url.searchParams.get("bike");
             if(bikeId){
-              const bike=bikes.find(b=>b.id===bikeId);
               clearInterval(qrIntervalRef.current); stream.getTracks().forEach(t=>t.stop()); setShowQRScanner(false);
-              if(!bike){alert(`Bici ${bikeId} non disponibile`);return;}
+              const res=resolveBikeForStart(bikeId);
+              if(!res.ok){alert(res.msg);return;}
+              const bike=res.bike;
               if(addingBike){
                 // Aggiunge al gruppo
                 if(selectedBikes.find(b=>b.id===bikeId)){alert(`Bici ${bikeId} già aggiunta`);return;}
@@ -2796,10 +2803,29 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     }).catch(()=>alert("Fotocamera non accessibile"));
   },[showQRScanner]);
 
+  const [pendingUrlBike, setPendingUrlBike] = React.useState(() => getUrlBike());
   React.useEffect(() => {
-    const bikeId=getUrlBike();
-    if(bikeId){ if(user?.type==="admin"){window.location.href="/admin";return;} const bike=bikes.find(b=>b.id===bikeId); if(bike){setSelectedBike(bike);setSelectedBikes([bike]);setShowPlan(true);} else alert(`Bici ${bikeId} non disponibile`); window.history.replaceState({},"","/"); }
-  },[]);
+    if(!pendingUrlBike) return;
+    if(user?.type==="admin"){ window.location.href="/admin"; return; }
+    // Aspetta che lo stato REALE delle bici sia arrivato da Firestore (evita di partire sui default)
+    if(!bikesLoaded) return;
+    const id=pendingUrlBike;
+    setPendingUrlBike(null);
+    window.history.replaceState({},"","/");
+    const res=resolveBikeForStart(id);
+    if(!res.ok){ alert(res.msg); return; }
+    setSelectedBike(res.bike); setSelectedBikes([res.bike]); setShowPlan(true);
+  },[pendingUrlBike, bikesLoaded, allBikes, activeBikeIds, user]);
+
+  // Verifica robusta prima di avviare una corsa: blocca manutenzione, già in uso, non disponibile
+  const resolveBikeForStart=(bikeId)=>{
+    const full=(allBikes||[]).find(b=>b.id===bikeId);
+    if(!full) return {ok:false,msg:`Bici ${bikeId} non trovata`};
+    if(full.status==="Manutenzione") return {ok:false,msg:`🔧 La bici ${bikeId} è in manutenzione e al momento non è disponibile.`};
+    if((activeBikeIds||[]).includes(bikeId)) return {ok:false,msg:`La bici ${bikeId} è già in uso da un altro utente.`};
+    if(full.status!=="Disponibile") return {ok:false,msg:`Bici ${bikeId} non disponibile`};
+    return {ok:true,bike:full};
+  };
 
   const handleBikeClick=(bike)=>{ setSelectedBike(bike); setSelectedBikes([bike]); setShowPlan(true); };
 
@@ -3012,16 +3038,18 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
               <input placeholder={t('scanPh')} style={{width:"100%",padding:"10px 14px",borderRadius:10,border:`2px solid ${C.blueGreen}`,fontSize:15,fontFamily:"'DM Sans'",color:C.deepBlue,textAlign:"center",textTransform:"uppercase"}}
                 onChange={e=>{
                   const val=e.target.value.toUpperCase().trim();
-                  const bike=bikes.find(b=>b.id===val);
-                  if(bike){
-                    setShowQRScanner(false);
-                    if(addingBike){
-                      if(selectedBikes.find(b=>b.id===val)){alert(`Bici ${val} già aggiunta`);return;}
-                      if(selectedBikes.length>=4){alert(t('maxBikes'));return;}
-                      setSelectedBikes(prev=>[...prev,bike]);
-                    } else {
-                      setSelectedBike(bike);setSelectedBikes([bike]);setShowPlan(true);
-                    }
+                  const exists=(allBikes||[]).some(b=>b.id===val);
+                  if(!exists) return; // ancora in digitazione o codice inesistente
+                  const res=resolveBikeForStart(val);
+                  if(!res.ok){ alert(res.msg); return; }
+                  const bike=res.bike;
+                  setShowQRScanner(false);
+                  if(addingBike){
+                    if(selectedBikes.find(b=>b.id===val)){alert(`Bici ${val} già aggiunta`);return;}
+                    if(selectedBikes.length>=4){alert(t('maxBikes'));return;}
+                    setSelectedBikes(prev=>[...prev,bike]);
+                  } else {
+                    setSelectedBike(bike);setSelectedBikes([bike]);setShowPlan(true);
                   }
                 }}/>
             </div>
