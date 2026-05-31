@@ -1614,12 +1614,12 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
     try {
       await waitFB();
       const {ref,uploadBytes,getDownloadURL,doc,updateDoc,addDoc,collection}=window.firebaseFunctions;
-      // Invia subito lock e gps_normal alla bici, prima dell'upload foto
+      // Invia subito lock e torna in RISPARMIO BATTERIA alla bici, prima dell'upload foto
       const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0');
       try {
         await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
-        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date(Date.now()+100).toISOString()});
-        console.log('🔒 Comandi lock+gps_normal inviati a',pedId);
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_standby',status:'pending',createdAt:new Date(Date.now()+100).toISOString()});
+        console.log('🔒 Comandi lock+gps_standby inviati a',pedId);
       } catch(e){ console.error('Errore comandi fine corsa:', e); }
       const sRef=ref(window.firebaseStorage,`parcheggi/${bike.id}_${Date.now()}`);
       await uploadBytes(sRef,parkPhoto);
@@ -1944,7 +1944,7 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t, isFree=false }) 
       const {addDoc,collection,getDoc}=window.firebaseFunctions;
       try {
         await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
-        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date(Date.now()+100).toISOString()});
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_standby',status:'pending',createdAt:new Date(Date.now()+100).toISOString()});
       } catch(e){ console.error('Errore comandi fine corsa multi:', e); }
       const sRef=ref(window.firebaseStorage,`parcheggi/${endingBike.id}_${Date.now()}`);
       await uploadBytes(sRef,parkPhoto);
@@ -2970,7 +2970,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   const handleEndRide=(secs,cost,bikeId)=>{
     sendBikeCommand(bikeId, 'lock');
-    sendBikeCommand(bikeId, 'gps_normal'); // Ripristina frequenza normale
+    sendBikeCommand(bikeId, 'gps_standby'); // Torna in risparmio batteria a fine corsa
     setBikeInUse(bikeId, false);
     setConfirmed(prev=>{
       const remaining=prev.filter(b=>b.id!==bikeId);
