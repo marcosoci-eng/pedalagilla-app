@@ -1741,6 +1741,36 @@ function AdminApp({ user, onLogout, t }) {
     } catch(e) { alert("Errore Excel: "+e.message); console.error(e); }
   };
 
+  const exportExcelBonifici=(list,from,to)=>{
+    try {
+      const data=list.map(([hotel,v])=>({"Struttura":String(hotel),"Codice promo":String(v.code||""),"Corse":v.rides,"Bonifico da emettere €":Number(v.cashback.toFixed(2))}));
+      if(!data.length){alert("Nessun bonifico da emettere nel periodo");return;}
+      data.push({"Struttura":"TOTALE","Codice promo":"","Corse":data.reduce((a,r)=>a+r["Corse"],0),"Bonifico da emettere €":Number(data.reduce((a,r)=>a+r["Bonifico da emettere €"],0).toFixed(2))});
+      const ws=XLSX.utils.json_to_sheet(data);
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,"Bonifici da emettere");
+      const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+      const blob=new Blob([wbout],{type:"application/octet-stream"});
+      const url=URL.createObjectURL(blob); const a=document.createElement("a");
+      a.href=url; a.download=`bonifici_da_emettere_${from}_${to}.xlsx`; a.click(); URL.revokeObjectURL(url);
+    } catch(e) { alert("Errore Excel: "+e.message); console.error(e); }
+  };
+
+  const exportExcelPagamenti=(payments)=>{
+    try {
+      const data=[...payments].sort((a,b)=>new Date(b.paidAt||0)-new Date(a.paidAt||0)).map(p=>({"Struttura":String(p.hotel||""),"Codice promo":String(p.code||""),"Corse":p.rides||0,"Importo €":Number((p.amount||0).toFixed(2)),"Periodo dal":String(p.from||""),"Periodo al":String(p.to||""),"Pagato il":p.paidAt?new Date(p.paidAt).toLocaleDateString("it-IT"):""}));
+      if(!data.length){alert("Nessun bonifico pagato registrato");return;}
+      data.push({"Struttura":"TOTALE","Codice promo":"","Corse":"","Importo €":Number(data.reduce((a,r)=>a+r["Importo €"],0).toFixed(2)),"Periodo dal":"","Periodo al":"","Pagato il":""});
+      const ws=XLSX.utils.json_to_sheet(data);
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,"Bonifici pagati");
+      const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+      const blob=new Blob([wbout],{type:"application/octet-stream"});
+      const url=URL.createObjectURL(blob); const a=document.createElement("a");
+      a.href=url; a.download="bonifici_pagati.xlsx"; a.click(); URL.revokeObjectURL(url);
+    } catch(e) { alert("Errore Excel: "+e.message); console.error(e); }
+  };
+
   return(
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <style>{css}</style>
@@ -2215,6 +2245,22 @@ function AdminApp({ user, onLogout, t }) {
             }} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:14}}>
               🚀 Inizializza tutte le 40 bici su Firestore
             </button>
+            <div style={{display:"flex",gap:8,marginBottom:14}}>
+              <button onClick={async()=>{
+                if(!window.confirm("Impostare TUTTE le bici in modalità risparmio batteria (un report ogni 5 minuti)?\n\nDa usare quando le bici non vengono noleggiate (notte/bassa stagione). Lo sblocco potrebbe richiedere fino a qualche minuto.")) return;
+                try { await waitFB(); const {collection,addDoc}=window.firebaseFunctions; let n=0;
+                  for(let i=1;i<=40;i++){ const pedId='PED'+String(i).padStart(3,'0'); await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_standby',status:'pending',createdAt:new Date().toISOString()}); n++; }
+                  alert(`🔋 Modalità risparmio inviata a ${n} bici. Verrà applicata al prossimo collegamento di ciascuna bici.`);
+                } catch(e){ alert('Errore: '+e.message); }
+              }} style={{flex:1,background:`linear-gradient(90deg,#43A047,#1B5E20)`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔋 Risparmio batteria</button>
+              <button onClick={async()=>{
+                if(!window.confirm("Riportare TUTTE le bici alla frequenza normale (report ogni 30 secondi)?\n\nDa usare negli orari di noleggio per sblocchi rapidi.")) return;
+                try { await waitFB(); const {collection,addDoc}=window.firebaseFunctions; let n=0;
+                  for(let i=1;i<=40;i++){ const pedId='PED'+String(i).padStart(3,'0'); await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date().toISOString()}); n++; }
+                  alert(`📡 Frequenza normale inviata a ${n} bici.`);
+                } catch(e){ alert('Errore: '+e.message); }
+              }} style={{flex:1,background:`linear-gradient(90deg,${C.skyBlue},${C.deepBlue})`,border:"none",borderRadius:12,padding:"11px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>📡 Frequenza normale</button>
+            </div>
             {(()=>{
               const allIds=["PED001","PED002","PED003","PED004","PED005","PED006","PED007","PED008","PED009","PED010","PED011","PED012","PED013","PED014","PED015","PED016","PED017","PED018","PED019","PED020","PED021","PED022","PED023","PED024","PED025","PED026","PED027","PED028","PED029","PED030","PED031","PED032","PED033","PED034","PED035","PED036","PED037","PED038","PED039","PED040"];
               const connected=allIds.filter(id=>{const rt=bikesRealtime[id];if(!rt?.lastSeen)return false;return Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000)<10;});
@@ -2311,7 +2357,10 @@ function AdminApp({ user, onLogout, t }) {
               };
               return (
                 <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-                  <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 2px",fontFamily:"Lora"}}>🏨 Bonifici da emettere agli alberghi</p>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:2}}>
+                    <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:0,fontFamily:"Lora"}}>🏨 Bonifici da emettere agli alberghi</p>
+                    {list.length>0&&<button onClick={()=>exportExcelBonifici(list,statsFrom,statsTo)} style={{background:C.blueGreen,border:"none",borderRadius:9,padding:"6px 11px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer",flexShrink:0}}>📊 Excel</button>}
+                  </div>
                   <p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 12px"}}>Rimborso €3/corsa per struttura (corse completate nel periodo scelto)</p>
                   {/* Selettore date */}
                   <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
@@ -2355,7 +2404,10 @@ function AdminApp({ user, onLogout, t }) {
             })()}
             {/* Storico bonifici pagati */}
             <div style={{background:C.white,borderRadius:14,padding:16,marginBottom:12,boxShadow:"0 2px 10px rgba(2,48,71,0.07)"}}>
-              <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:"0 0 12px",fontFamily:"Lora"}}>📒 Bonifici già pagati</p>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <p style={{color:C.deepBlue,fontSize:14,fontWeight:600,margin:0,fontFamily:"Lora"}}>📒 Bonifici già pagati</p>
+                {hotelPayments.length>0&&<button onClick={()=>exportExcelPagamenti(hotelPayments)} style={{background:C.blueGreen,border:"none",borderRadius:9,padding:"6px 11px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📊 Excel</button>}
+              </div>
               {hotelPayments.length===0?(
                 <p style={{color:"#aaa",fontSize:12,...ds,margin:0}}>Nessun bonifico registrato. Usa "Registra bonifico pagato" qui sopra dopo aver effettuato un pagamento.</p>
               ):(
