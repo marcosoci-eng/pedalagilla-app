@@ -1347,7 +1347,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos, availableBikes=[] }) {
+function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos, availableBikes=[], isFree=false }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
@@ -1562,27 +1562,22 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   // Il costo si azzera a mezzanotte e riparte, cap €19.90/giorno
   const calcMinutiCost = React.useMemo(() => {
     if (!(!isGiornata && !isSettimanale)) return 0;
-    // Calcola giorni trascorsi dalla mezzanotte di inizio corsa
+    // Tempo di pedalata effettivo (durata corsa meno le pause)
+    const activeSecs = Math.max(0, seconds - pauseSeconds);
+    // Giorni che la corsa ha attraversato (per il cap giornaliero con reset a mezzanotte)
     const startMs = Date.now() - seconds * 1000;
-    const startDate = new Date(startMs); startDate.setHours(0,0,0,0);
-    const today = new Date(); today.setHours(0,0,0,0);
-    const daysPassed = Math.floor((today - startDate) / 86400000);
-    // Costo dei giorni precedenti (tutti cappati a 19.90)
-    const prevDaysCost = daysPassed * TARIFFA_GIORNATA;
-    // Secondi della giornata corrente (da mezzanotte di oggi)
-    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const secsToday = Math.max(0, Math.floor((Date.now() - todayStart) / 1000));
-    const pauseSecsToday = Math.min(pauseSeconds, secsToday);
-    const rideSecsToday = Math.max(0, secsToday - pauseSecsToday);
-    // Sblocco solo al primo giorno
-    const sbloccoToday = daysPassed === 0 ? SBLOCCO : 0;
-    const todayCost = Math.min(sbloccoToday + (rideSecsToday/60)*TARIFFA_MIN + (pauseSecsToday/60)*TARIFFA_PAUSA, TARIFFA_GIORNATA);
-    return prevDaysCost + todayCost;
+    const startDay = new Date(startMs); startDay.setHours(0,0,0,0);
+    const todayDay = new Date(); todayDay.setHours(0,0,0,0);
+    const daysPassed = Math.max(0, Math.round((todayDay - startDay) / 86400000));
+    const costoBase = SBLOCCO + (activeSecs/60)*TARIFFA_MIN + (pauseSeconds/60)*TARIFFA_PAUSA;
+    // Cap: una giornata se la corsa è nello stesso giorno, altrimenti (giorni+1) giornate
+    const cap = (daysPassed + 1) * TARIFFA_GIORNATA;
+    return Math.min(costoBase, cap);
   }, [seconds, pauseSeconds, isGiornata, isSettimanale]);
 
   const rideCost = isGiornata ? TARIFFA_GIORNATA : isSettimanale ? TARIFFA_SETTIMANALE : calcMinutiCost;
   const pauseCost = isGiornata||isSettimanale ? 0 : 0; // incluso in calcMinutiCost
-  const totalCost = rideCost;
+  const totalCost = isFree ? 0 : rideCost;
   const cappedAtMax = !isGiornata && !isSettimanale && (() => {
     const today = new Date(); today.setHours(0,0,0,0);
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
@@ -1877,7 +1872,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
 // ═══════════════════════════════════════════════════════
 // MULTIRIDETIMER — più bici (NUOVO)
 // ═══════════════════════════════════════════════════════
-function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
+function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t, isFree=false }) {
   const [activeTab, setActiveTab] = React.useState(0);
   const [globalPaused, setGlobalPaused] = React.useState(false);
   const [seconds, setSeconds] = React.useState(0);
@@ -1913,8 +1908,8 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t }) {
 
   const mins=Math.floor(seconds/60), secs=seconds%60;
   const pauseMins=Math.floor(pauseSeconds/60);
-  const costPerBike=isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA);
-  const pauseCost=isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA;
+  const costPerBike=isFree?0:(isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA));
+  const pauseCost=isFree?0:(isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA);
   const activeBikes=bikes.filter(b=>!completedBikes.includes(b.id));
   const totalCost=Math.min((costPerBike+pauseCost), TARIFFA_GIORNATA)*activeBikes.length;
 
@@ -3036,8 +3031,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t} userPos={userPos} availableBikes={bikes}/>
-            :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree}/>
+            :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t} isFree={isFree}/>
         )}
 
         {/* Riepilogo fine corsa */}
@@ -3049,8 +3044,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
               <p style={{color:"#888",fontSize:13,...ds}}>{t('thankYou')}</p>
             </div>
             <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:20,padding:20,marginBottom:16,textAlign:"center"}}>
-              <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{t('totalPaid')}</p>
-              <p style={{color:C.sunYellow,fontSize:40,fontWeight:700,margin:0,...ds}}>€{rideSummary.cost.toFixed(2)}</p>
+              <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{rideSummary.cost>0?t('totalPaid'):"CORSA GRATUITA"}</p>
+              <p style={{color:C.sunYellow,fontSize:40,fontWeight:700,margin:0,...ds}}>{rideSummary.cost>0?`€${rideSummary.cost.toFixed(2)}`:"🎁 €0.00"}</p>
             </div>
             {(Array.isArray(rideSummary.bikes)?rideSummary.bikes:[rideSummary.bikes]).map(bike=>(
               <div key={bike.id} style={{display:"flex",justifyContent:"space-between",borderBottom:`1px solid ${C.skyBlue}20`,paddingBottom:10,marginBottom:10}}>
