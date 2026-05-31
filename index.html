@@ -1060,9 +1060,15 @@ function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hideP
   return (
     <div style={{padding:"20px 18px"}}>
       <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:12,textAlign:"center"}}>
-        <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{planId==='minuti'?"PRE-AUTORIZZAZIONE":t('total')}</p>
-        <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{(planId==='minuti'?19.90*nBikes:amount).toFixed(2)}</p>
-        <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,margin:0,...ds}}>{bikeIds} · {plan}</p>
+        {planId==='minuti' ? (<>
+          <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 6px",...ds,letterSpacing:2}}>{plan}</p>
+          <p style={{color:C.sunYellow,fontSize:26,fontWeight:700,margin:"0 0 6px",...ds}}>€{SBLOCCO.toFixed(2)} + €{TARIFFA_MIN}/{t('min')}</p>
+          <p style={{color:"rgba(255,255,255,0.7)",fontSize:11.5,margin:0,...ds,lineHeight:"1.4"}}>{bikeIds} · {t('planMinutesDesc')}</p>
+        </>) : (<>
+          <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 4px",...ds,letterSpacing:2}}>{t('total')}</p>
+          <p style={{color:C.sunYellow,fontSize:36,fontWeight:700,margin:"0 0 4px",...ds}}>€{amount.toFixed(2)}</p>
+          <p style={{color:"rgba(255,255,255,0.6)",fontSize:12,margin:0,...ds}}>{bikeIds} · {plan}</p>
+        </>)}
       </div>
 
       {/* Box pre-autorizzazione — solo tariffa al minuto */}
