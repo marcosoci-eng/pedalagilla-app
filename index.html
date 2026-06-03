@@ -1879,11 +1879,11 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             🏁 {t('endRide')}
           </button>
         </div>
-        <div style={{display:"flex",justifyContent:"center",gap:20}}>
-          {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),isGiornata?t('free'):`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
+        {!isGiornata && !isSettimanale && fixedCost==null && <div style={{display:"flex",justifyContent:"center",gap:20}}>
+          {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
             <p key={k} style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{k}: <span style={{color:C.deepBlue,fontWeight:600}}>{v}</span></p>
           ))}
-        </div>
+        </div>}
       </div>
     </div>
   );
