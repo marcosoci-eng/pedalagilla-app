@@ -1001,7 +1001,7 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
 }
-function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hidePreAuth=false }) {
+function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hidePreAuth=false, flatCharge=false }) {
   const cardRef = React.useRef(null);
   const cardEl = React.useRef(null);
   const [loading, setLoading] = React.useState(false);
@@ -1031,7 +1031,7 @@ function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hideP
       
       // Tariffa al minuto: PRE-AUTORIZZA (hold) l'importo massimo giornaliero (19.90/bici).
       // L'addebito reale avviene a fine corsa con la cattura. Giornata/Settimanale: addebito immediato.
-      const isPerMinute = planId === 'minuti';
+      const isPerMinute = planId === 'minuti' && !flatCharge;
       let resp, data, isPreAuth = false;
       if (isPerMinute) {
         const holdAmount = 19.90 * nBikes;
@@ -1069,7 +1069,7 @@ function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hideP
   return (
     <div style={{padding:"20px 18px"}}>
       <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:16,padding:16,marginBottom:12,textAlign:"center"}}>
-        {planId==='minuti' ? (<>
+        {planId==='minuti' && !flatCharge ? (<>
           <p style={{color:C.skyBlue,fontSize:11,margin:"0 0 6px",...ds,letterSpacing:2}}>{plan}</p>
           <p style={{color:C.sunYellow,fontSize:26,fontWeight:700,margin:"0 0 6px",...ds}}>€{SBLOCCO.toFixed(2)} + €{TARIFFA_MIN}/{t('min')}</p>
           <p style={{color:"rgba(255,255,255,0.7)",fontSize:11.5,margin:0,...ds,lineHeight:"1.4"}}>{bikeIds} · {t('planMinutesDesc')}</p>
@@ -1081,7 +1081,7 @@ function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hideP
       </div>
 
       {/* Box pre-autorizzazione — solo tariffa al minuto */}
-      {planId==='minuti'&&<div style={{background:"#FFF8E1",border:"2px solid #FFB703",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
+      {planId==='minuti' && !flatCharge && <div style={{background:"#FFF8E1",border:"2px solid #FFB703",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
         <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
           <span style={{fontSize:22,flexShrink:0}}>🔒</span>
           <div>
@@ -1364,7 +1364,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos, availableBikes=[], isFree=false }) {
+function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos, availableBikes=[], isFree=false, fixedCost=null }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
@@ -1596,10 +1596,10 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
     return Math.min(costoBase, cap);
   }, [seconds, pauseSeconds, isGiornata, isSettimanale]);
 
-  const rideCost = isGiornata ? TARIFFA_GIORNATA : isSettimanale ? TARIFFA_SETTIMANALE : calcMinutiCost;
+  const rideCost = fixedCost!=null ? fixedCost : (isGiornata ? TARIFFA_GIORNATA : isSettimanale ? TARIFFA_SETTIMANALE : calcMinutiCost);
   const pauseCost = isGiornata||isSettimanale ? 0 : 0; // incluso in calcMinutiCost
   const totalCost = isFree ? 0 : rideCost;
-  const cappedAtMax = !isGiornata && !isSettimanale && (() => {
+  const cappedAtMax = !isGiornata && !isSettimanale && fixedCost==null && (() => {
     // È "gratuito fino a mezzanotte" solo quando il costo reale ha raggiunto il tetto giornaliero (€19.90)
     const activeSecs = Math.max(0, seconds - pauseSeconds);
     const startMs = Date.now() - seconds * 1000;
@@ -1804,7 +1804,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       {midnightCountdown&&(
         <div style={{background:cappedAtMax&&!isGiornata&&!isSettimanale?C.blueGreen:C.warmOrange,padding:"5px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <p style={{color:"#fff",fontSize:10,...ds,fontWeight:700,margin:0,letterSpacing:1}}>
-            🌙 {isGiornata||isSettimanale?"SCADE A MEZZANOTTE":cappedAtMax?"GRATUITO FINO A MEZZANOTTE":"SI AZZERA A MEZZANOTTE"}
+            🌙 {isGiornata||isSettimanale||fixedCost!=null?"SCADE A MEZZANOTTE":cappedAtMax?"GRATUITO FINO A MEZZANOTTE":"SI AZZERA A MEZZANOTTE"}
           </p>
           <p style={{color:"#fff",fontSize:14,...ds,fontWeight:700,margin:0,fontFamily:"monospace"}}>{midnightCountdown}</p>
         </div>
@@ -1892,7 +1892,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
 // ═══════════════════════════════════════════════════════
 // MULTIRIDETIMER — più bici (NUOVO)
 // ═══════════════════════════════════════════════════════
-function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t, isFree=false }) {
+function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t, isFree=false, fixedCost=null }) {
   const [activeTab, setActiveTab] = React.useState(0);
   const [globalPaused, setGlobalPaused] = React.useState(false);
   const [seconds, setSeconds] = React.useState(0);
@@ -1928,7 +1928,7 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t, isFree=false }) 
 
   const mins=Math.floor(seconds/60), secs=seconds%60;
   const pauseMins=Math.floor(pauseSeconds/60);
-  const costPerBike=isFree?0:(isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA));
+  const costPerBike=isFree?0:(fixedCost!=null?fixedCost:(isGiornata?TARIFFA_GIORNATA:Math.min(SBLOCCO+(seconds/60)*TARIFFA_MIN, TARIFFA_GIORNATA)));
   const pauseCost=isFree?0:(isGiornata?0:(pauseSeconds/60)*TARIFFA_PAUSA);
   const activeBikes=bikes.filter(b=>!completedBikes.includes(b.id));
   const totalCost=Math.min((costPerBike+pauseCost), TARIFFA_GIORNATA)*activeBikes.length;
@@ -2887,6 +2887,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     return plan==="settimanale" ? TARIFFA_SETTIMANALE*nBikes : plan==="giornata" ? TARIFFA_GIORNATA*nBikes : SBLOCCO*nBikes;
   };
   const payAmount = getEffectiveAmount();
+  const hotelPerBike = promoApplied?.type==="hotel" ? (promoApplied.hotelOption==="cashback" ? 18.90 : promoApplied.hotelOption==="scontata" ? 16 : null) : null;
   const isFree = promoApplied && (promoApplied.type==="dipendente"||promoApplied.type==="famiglia");
 
   const handlePaySuccess=async(paymentMethodId, paymentIntentId, isPreAuth=false)=>{
@@ -3075,8 +3076,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree}/>
-            :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t} isFree={isFree}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike}/>
+            :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t} isFree={isFree} fixedCost={hotelPerBike}/>
         )}
 
         {/* Riepilogo fine corsa */}
@@ -3184,7 +3185,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   <p style={{color:C.white,fontSize:15,fontWeight:700,margin:0,fontFamily:"Lora"}}>{t('payment')}</p>
                   <div style={{width:30}}/>
                 </div>
-                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="settimanale"?"Settimanale":plan==="giornata"?t('planDay'):t('planMinutes')} planId={plan} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t}/>
+                <PaymentForm amount={payAmount} bike={selectedBikes.length>1?selectedBikes:selectedBike} plan={plan==="settimanale"?"Settimanale":plan==="giornata"?t('planDay'):t('planMinutes')} planId={plan} onSuccess={handlePaySuccess} onCancel={()=>setShowPayment(false)} t={t} flatCharge={promoApplied?.type==="hotel"}/>
               </>
             ):(
               <>
