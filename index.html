@@ -2616,7 +2616,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
             const existing = initBikes.find(b => b.id === normalizedId);
             return {
               id: normalizedId,
-              battery: data.batteryPercent || data.battery || existing?.battery || 50,
+              battery: data.batteryPercent ?? data.battery ?? existing?.battery ?? 50,
               status: data.status === "Manutenzione" ? "Manutenzione" : (data.locked === false ? "Disponibile" : (data.status || existing?.status || "Disponibile")),
               odometer: existing?.odometer || 0,
               zone: existing?.zone || "Castiglione",
