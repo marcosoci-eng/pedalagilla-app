@@ -837,7 +837,7 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
     if (!mapRef.current || mapInstanceRef.current) return;
     const tryInit = () => {
       if (!window.google) { setTimeout(tryInit, 200); return; }
-      const map = new window.google.maps.Map(mapRef.current, { center: window._userPosition || {lat:43.1500,lng:12.0800}, zoom: window._userPosition ? 14 : 11, mapTypeId: "roadmap", gestureHandling: "greedy", mapTypeControl: true, mapTypeControlOptions: { position: window.google.maps.ControlPosition.BOTTOM_LEFT }, fullscreenControl: true, fullscreenControlOptions: { position: window.google.maps.ControlPosition.BOTTOM_RIGHT }, styles: [{ featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },{ featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },{ featureType:"road", elementType:"geometry", stylers:[{color:"#ffffff"}] },{ featureType:"poi", stylers:[{visibility:"off"}] }] });
+      const map = new window.google.maps.Map(mapRef.current, { center: window._userPosition || {lat:43.1500,lng:12.0800}, zoom: window._userPosition ? 14 : 11, mapTypeId: "roadmap", gestureHandling: "greedy", mapTypeControl: false, fullscreenControl: false, styles: [{ featureType:"water", elementType:"geometry", stylers:[{color:"#8ECAE6"}] },{ featureType:"landscape", elementType:"geometry", stylers:[{color:"#e8f4f8"}] },{ featureType:"road", elementType:"geometry", stylers:[{color:"#ffffff"}] },{ featureType:"poi", stylers:[{visibility:"off"}] }] });
       mapInstanceRef.current = map;
       window._mapInstance = map; // per bottone centrami
       bikes.forEach(bike => {
