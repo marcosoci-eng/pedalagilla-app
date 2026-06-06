@@ -1687,13 +1687,13 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
       // Disegna zone parcheggio — riprova ogni 300ms finché non sono disponibili
       const drawParkingZones = (attempt=0) => {
         const zones = window._clientZones || [];
-        if (zones.length === 0 && attempt < 20) { 
+        if (zones.length === 0 && attempt < 40) { 
           setTimeout(()=>drawParkingZones(attempt+1), 300); 
           return; 
         }
         // Area operativa (contorno verde, riempimento leggero) — il confine entro cui restare
         zones.filter(z=>z.type==="operativa").forEach(zone=>{
-          if (zone.shape==="circle" && zone.center) {
+          if (zone.center) {
             new window.google.maps.Circle({
               map, center: zone.center, radius: zone.radius||25000,
               fillColor:"#00C853", fillOpacity:0.05,
@@ -1707,25 +1707,39 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             });
           }
         });
-        zones.filter(z=>z.type==="sosta"&&z.center).forEach(zone=>{
-          new window.google.maps.Circle({
-            map, center: zone.center,
-            radius: zone.radius||300,
-            fillColor:"#2196F3", fillOpacity:0.25,
-            strokeColor:"#2196F3", strokeWeight:2.5, clickable:false
-          });
-          new window.google.maps.Marker({
-            position: zone.center, map,
-            label:{text:"🅿️", fontSize:"20px"},
-            icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
-            clickable:false, zIndex:10
-          });
-          if(zone.name) new window.google.maps.Marker({
-            position: zone.center, map,
-            label:{text:zone.name,color:"#023047",fontSize:"11px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"},
-            icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
-            clickable:false, zIndex:9
-          });
+        zones.filter(z=>z.type==="sosta").forEach(zone=>{
+          let mark = zone.center;
+          if (zone.center) {
+            new window.google.maps.Circle({
+              map, center: zone.center,
+              radius: zone.radius||300,
+              fillColor:"#2196F3", fillOpacity:0.25,
+              strokeColor:"#2196F3", strokeWeight:2.5, clickable:false
+            });
+          } else if (Array.isArray(zone.path) && zone.path.length>0) {
+            new window.google.maps.Polygon({
+              map, paths: zone.path,
+              fillColor:"#2196F3", fillOpacity:0.25,
+              strokeColor:"#2196F3", strokeWeight:2.5, clickable:false
+            });
+            const b = new window.google.maps.LatLngBounds();
+            zone.path.forEach(p=>b.extend(p));
+            const c = b.getCenter(); mark = {lat:c.lat(), lng:c.lng()};
+          }
+          if (mark) {
+            new window.google.maps.Marker({
+              position: mark, map,
+              label:{text:"🅿️", fontSize:"20px"},
+              icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+              clickable:false, zIndex:10
+            });
+            if(zone.name) new window.google.maps.Marker({
+              position: mark, map,
+              label:{text:zone.name,color:"#023047",fontSize:"11px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"},
+              icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+              clickable:false, zIndex:9
+            });
+          }
         });
         rideZonesDrawn.current = true;
       };
