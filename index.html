@@ -56,6 +56,7 @@ input:focus, textarea:focus { outline: none; border-color: #219EBC !important; }
 const TRANSLATIONS = {
   it: {
     appSubtitle: "E-BIKE SHARING · Lago Trasimeno",
+    coverageMsg: "Noleggio e-bike su tutto il Lago Trasimeno",
     login: "Accedi", register: "Registrati",
     email: "📧 Email", password: "🔑 Password",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
@@ -127,6 +128,7 @@ const TRANSLATIONS = {
   },
   en: {
     appSubtitle: "E-BIKE SHARING · Lake Trasimeno",
+    coverageMsg: "E-bike rental all around Lake Trasimeno",
     login: "Login", register: "Sign Up",
     email: "📧 Email", password: "🔑 Password",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
@@ -199,6 +201,7 @@ const TRANSLATIONS = {
   },
   de: {
     appSubtitle: "E-BIKE SHARING · Trasimenischer See",
+    coverageMsg: "E-Bike-Verleih rund um den Trasimenischen See",
     login: "Anmelden", register: "Registrieren",
     email: "📧 E-Mail", password: "🔑 Passwort",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
@@ -271,6 +274,7 @@ const TRANSLATIONS = {
   },
   fr: {
     appSubtitle: "E-BIKE SHARING · Lac Trasimène",
+    coverageMsg: "Location de vélos électriques tout autour du lac Trasimène",
     login: "Connexion", register: "S'inscrire",
     email: "📧 E-mail", password: "🔑 Mot de passe",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
@@ -343,6 +347,7 @@ const TRANSLATIONS = {
   },
   es: {
     appSubtitle: "E-BIKE SHARING · Lago Trasimeno",
+    coverageMsg: "Alquiler de e-bikes en todo el lago Trasimeno",
     login: "Iniciar sesión", register: "Registrarse",
     email: "📧 Correo", password: "🔑 Contraseña",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
@@ -415,6 +420,7 @@ const TRANSLATIONS = {
   },
   nl: {
     appSubtitle: "E-BIKE SHARING · Meer van Trasimeno",
+    coverageMsg: "E-bikeverhuur rond het Meer van Trasimeno",
     login: "Inloggen", register: "Registreren",
     email: "📧 E-mail", password: "🔑 Wachtwoord",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
@@ -487,6 +493,7 @@ const TRANSLATIONS = {
   },
   cs: {
     appSubtitle: "E-BIKE SHARING · Trasimenské jezero",
+    coverageMsg: "Půjčovna e-kol po celém Trasimenském jezeře",
     login: "Přihlásit se", register: "Registrovat se",
     email: "📧 E-mail", password: "🔑 Heslo",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
@@ -1258,6 +1265,8 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       <div style={{width:390,background:C.bgLight,borderRadius:40,border:`6px solid ${C.deepBlue}`,overflow:"hidden",boxShadow:`0 40px 80px rgba(2,48,71,0.5)`}}>
         <div style={{background:C.deepBlue,padding:"22px 24px 16px",textAlign:"center"}}>
           <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
+          <p style={{color:C.skyBlue,fontSize:13,fontFamily:"'DM Sans',sans-serif",margin:"0 0 4px",fontWeight:600,lineHeight:"1.4"}}>{t('coverageMsg')}</p>
+          <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,fontFamily:"'DM Sans',sans-serif",margin:"0 0 12px",lineHeight:"1.4"}}>📍 Castiglione del Lago · Magione · Tuoro · Passignano</p>
           <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
             {LANG_LIST.map(l=>(
               <button key={l} onClick={()=>{setLang(l);setError(null);}}
