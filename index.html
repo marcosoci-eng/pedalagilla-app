@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc, onSnapshot, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
   const firebaseConfig = {
@@ -33,7 +33,7 @@
   window.firebaseDb = getFirestore(app);
   window.firebaseStorage = getStorage(app);
   window.firebaseFunctions = {
-    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail,
     doc, setDoc, getDoc, collection, getDocs, addDoc, onSnapshot, updateDoc, query, orderBy,
     ref, uploadBytes, getDownloadURL
   };
@@ -61,6 +61,7 @@ const TRANSLATIONS = {
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Accedi 🚲", loginLoading: "⏳ Accesso...",
     adminAccess: "🔐 Accesso amministratore",
+    forgotPwd: "Password dimenticata?", resetNoEmail: "Inserisci prima la tua email qui sopra", resetSent: "Se l'indirizzo è registrato, ti abbiamo inviato un'email per reimpostare la password. Controlla anche la cartella SPAM/Posta indesiderata.",
     nome: "👤 Nome *", cognome: "👤 Cognome *", telefono: "📱 Telefono *",
     nomePh: "Mario", cognomePh: "Rossi", telefonoPh: "+39 333 1234567", passwordMin: "Minimo 6 caratteri",
     documento: "📷 Documento", docRequired: "Obbligatorio", docTap: "Tocca per caricare", docLoaded: "✅ Caricato",
@@ -131,6 +132,7 @@ const TRANSLATIONS = {
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Login 🚲", loginLoading: "⏳ Logging in...",
     adminAccess: "🔐 Administrator access",
+    forgotPwd: "Forgot password?", resetNoEmail: "Enter your email above first", resetSent: "If the address is registered, we sent you an email to reset your password. Please also check your SPAM/Junk folder.",
     nome: "👤 First Name *", cognome: "👤 Last Name *", telefono: "📱 Phone *",
     nomePh: "John", cognomePh: "Smith", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 characters",
     documento: "📷 ID Document", docRequired: "Required", docTap: "Tap to upload", docLoaded: "✅ Uploaded",
@@ -202,6 +204,7 @@ const TRANSLATIONS = {
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Anmelden 🚲", loginLoading: "⏳ Anmeldung...",
     adminAccess: "🔐 Administratorzugang",
+    forgotPwd: "Passwort vergessen?", resetNoEmail: "Bitte zuerst E-Mail oben eingeben", resetSent: "Falls die Adresse registriert ist, haben wir Ihnen eine E-Mail zum Zurücksetzen des Passworts gesendet. Bitte auch den SPAM-/Junk-Ordner prüfen.",
     nome: "👤 Vorname *", cognome: "👤 Nachname *", telefono: "📱 Telefon *",
     nomePh: "Hans", cognomePh: "Müller", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 Zeichen",
     documento: "📷 Ausweis", docRequired: "Erforderlich", docTap: "Tippen zum Hochladen", docLoaded: "✅ Hochgeladen",
@@ -273,6 +276,7 @@ const TRANSLATIONS = {
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Connexion 🚲", loginLoading: "⏳ Connexion...",
     adminAccess: "🔐 Accès administrateur",
+    forgotPwd: "Mot de passe oublié ?", resetNoEmail: "Saisissez d'abord votre e-mail ci-dessus", resetSent: "Si l'adresse est enregistrée, nous vous avons envoyé un e-mail pour réinitialiser votre mot de passe. Vérifiez aussi votre dossier SPAM/Indésirables.",
     nome: "👤 Prénom *", cognome: "👤 Nom *", telefono: "📱 Téléphone *",
     nomePh: "Jean", cognomePh: "Dupont", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 caractères",
     documento: "📷 Pièce d'identité", docRequired: "Obligatoire", docTap: "Appuyer pour télécharger", docLoaded: "✅ Téléchargé",
@@ -344,6 +348,7 @@ const TRANSLATIONS = {
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Entrar 🚲", loginLoading: "⏳ Entrando...",
     adminAccess: "🔐 Acceso administrador",
+    forgotPwd: "¿Olvidaste la contraseña?", resetNoEmail: "Introduce primero tu correo arriba", resetSent: "Si la dirección está registrada, te hemos enviado un correo para restablecer la contraseña. Revisa también tu carpeta de SPAM/Correo no deseado.",
     nome: "👤 Nombre *", cognome: "👤 Apellido *", telefono: "📱 Teléfono *",
     nomePh: "Carlos", cognomePh: "García", telefonoPh: "+39 333 1234567", passwordMin: "Mín. 6 caracteres",
     documento: "📷 Documento", docRequired: "Obligatorio", docTap: "Toca para subir", docLoaded: "✅ Subido",
@@ -415,6 +420,7 @@ const TRANSLATIONS = {
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Inloggen 🚲", loginLoading: "⏳ Inloggen...",
     adminAccess: "🔐 Beheerderstoegang",
+    forgotPwd: "Wachtwoord vergeten?", resetNoEmail: "Vul eerst je e-mail hierboven in", resetSent: "Als het adres geregistreerd is, hebben we je een e-mail gestuurd om je wachtwoord te herstellen. Controleer ook je SPAM-/ongewenste map.",
     nome: "👤 Voornaam *", cognome: "👤 Achternaam *", telefono: "📱 Telefoon *",
     nomePh: "Jan", cognomePh: "de Vries", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 tekens",
     documento: "📷 Identiteitsbewijs", docRequired: "Verplicht", docTap: "Tik om te uploaden", docLoaded: "✅ Geüpload",
@@ -486,6 +492,7 @@ const TRANSLATIONS = {
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Přihlásit se 🚲", loginLoading: "⏳ Přihlašování...",
     adminAccess: "🔐 Přístup administrátora",
+    forgotPwd: "Zapomenuté heslo?", resetNoEmail: "Nejprve zadejte svůj e-mail výše", resetSent: "Pokud je adresa zaregistrována, poslali jsme vám e-mail pro obnovení hesla. Zkontrolujte také složku SPAM/Nevyžádaná pošta.",
     nome: "👤 Jméno *", cognome: "👤 Příjmení *", telefono: "📱 Telefon *",
     nomePh: "Jan", cognomePh: "Novák", telefonoPh: "+39 333 1234567", passwordMin: "Min. 6 znaků",
     documento: "📷 Doklad totožnosti", docRequired: "Povinné", docTap: "Klepněte pro nahrání", docLoaded: "✅ Nahráno",
@@ -1133,6 +1140,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
   const [showTermsModal, setShowTermsModal] = React.useState(false);
   const [showResend, setShowResend] = React.useState(false);
   const [showPwd, setShowPwd] = React.useState(false);
+  const [resetMsg, setResetMsg] = React.useState(null);
   const handleDocChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1158,6 +1166,21 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       }
       onLogin({type:"admin", nome:data.nome||"Admin", email:data.email||adminUser});
     } catch(e) { setError(t('errAdmin')); }
+    setLoading(false);
+  };
+  const handlePasswordReset = async () => {
+    setError(null); setResetMsg(null);
+    if (!email) { setError(t('resetNoEmail')); return; }
+    setLoading(true);
+    try {
+      await waitFB();
+      const { sendPasswordResetEmail } = window.firebaseFunctions;
+      await sendPasswordResetEmail(window.firebaseAuth, email);
+      setResetMsg(t('resetSent'));
+    } catch(e) {
+      // Per privacy mostriamo comunque conferma anche se l'email non esiste
+      setResetMsg(t('resetSent'));
+    }
     setLoading(false);
   };
   const handleLogin = async () => {
@@ -1262,7 +1285,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
           {mode!=="adminLogin"&&(
             <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:18}}>
               {[["login",t('login')],["register",t('register')]].map(([m,l])=>(
-                <button key={m} onClick={()=>{setMode(m);setError(null);setShowResend(false);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
+                <button key={m} onClick={()=>{setMode(m);setError(null);setShowResend(false);setResetMsg(null);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
           )}
@@ -1281,6 +1304,10 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
             <button onClick={handleLogin} disabled={loading} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
               {loading?t('loginLoading'):t('loginBtn')}
             </button>
+            <button onClick={handlePasswordReset} disabled={loading} style={{width:"100%",background:"none",border:"none",color:C.blueGreen,fontSize:13,...ds,fontWeight:600,cursor:"pointer",marginBottom:6,textDecoration:"underline"}}>
+              {t('forgotPwd')}
+            </button>
+            {resetMsg&&<p style={{color:C.blueGreen,fontSize:12,margin:"0 0 10px",...ds,lineHeight:"1.4",background:`${C.blueGreen}12`,border:`1px solid ${C.blueGreen}30`,borderRadius:10,padding:"10px 12px"}}>✅ {resetMsg}</p>}
             <a href="/admin" style={{display:"block",width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer",textAlign:"center",textDecoration:"none",marginTop:32}}>
               {t('adminAccess')}
             </a>
