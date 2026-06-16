@@ -1,17 +1,15 @@
-const CACHE_NAME = 'pedalagilla-v2';
+const CACHE_NAME = 'pedalagilla-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json'
 ];
-
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
-
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -20,17 +18,18 @@ self.addEventListener('activate', event => {
   );
   self.clients.claim();
 });
-
 self.addEventListener('fetch', event => {
   // Solo cache per richieste GET
   if (event.request.method !== 'GET') return;
-  
+
+  // Ignora schemi non http/https (es. chrome-extension://) — evita l'errore in console
+  if (!event.request.url.startsWith('http')) return;
+
   // Non cachare Firebase, Stripe, Google Maps
   const url = event.request.url;
   if (url.includes('firebase') || url.includes('stripe') || url.includes('googleapis') || url.includes('gstatic')) {
     return;
   }
-
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
