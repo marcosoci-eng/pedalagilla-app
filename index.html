@@ -12,7 +12,7 @@
 <title>PedalAgilla</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
@@ -2823,6 +2823,8 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           setConfirmed(bks);
           setPlan(activeRides[0].plan || "minuti");
           setRestoredElapsed(new Date(activeRides[0].startTime).getTime());
+          // FIX tariffa convenzione: ripristina il promo salvato cosi il prezzo non torna a 19,90 dopo una riapertura
+          if (activeRides[0].promoType) setPromoApplied({ code: activeRides[0].promoCode||"", type: activeRides[0].promoType, hotelOption: activeRides[0].hotelOption||null, hotelName: activeRides[0].hotelName||"" });
           setRiding(true);
         }
       } catch(e) { console.error("Errore ripristino corsa:", e); }
@@ -2967,6 +2969,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           promoCode: promoApplied?.code||null,
           promoType: promoApplied?.type||null,
           hotelName: promoApplied?.hotelName||null,
+          hotelOption: promoApplied?.hotelOption||null,
           hotelCashback,
           isFree: isFree||false,
           paymentIntentId: paymentIntentId||null,
