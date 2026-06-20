@@ -1408,7 +1408,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPos, availableBikes=[], isFree=false, fixedCost=null }) {
+function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=null, t, userPos, availableBikes=[], isFree=false, fixedCost=null }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
@@ -1417,6 +1417,9 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   const pauseStartRef = React.useRef(null);
   const totalPausedRef = React.useRef(0);
   const [showEndFlow, setShowEndFlow] = React.useState(false);
+  const [swapMode, setSwapMode] = React.useState(false);
+  const [swapPicking, setSwapPicking] = React.useState(false);
+  const [swapPhotoURL, setSwapPhotoURL] = React.useState(null);
   const [parkPhoto, setParkPhoto] = React.useState(null);
   const [parkPreview, setParkPreview] = React.useState(null);
   const [uploading, setUploading] = React.useState(false);
@@ -1710,6 +1713,35 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
     } catch(e){console.error(e);}
     setUploading(false); onEnd(seconds,totalCost,bike.id);
   };
+  // CAMBIA BICI: blocca e fotografa la bici A, poi passa al genitore per sbloccare la bici B (stessa corsa, stesso pagamento)
+  const handleSwapConfirm=async()=>{
+    if(!parkPhoto){alert("📸");return;}
+    setUploading(true);
+    try {
+      await waitFB();
+      const {ref,uploadBytes,getDownloadURL,addDoc,collection}=window.firebaseFunctions;
+      const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0');
+      try {
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
+        await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date(Date.now()+100).toISOString()});
+      } catch(e){ console.error('Errore comandi cambio bici:', e); }
+      const sRef=ref(window.firebaseStorage,`parcheggi/${bike.id}_swap_${Date.now()}`);
+      await uploadBytes(sRef,parkPhoto);
+      const parkPhotoURL=await getDownloadURL(sRef);
+      setUploading(false); setShowEndFlow(false); setSwapMode(false); setParkPhoto(null); setParkPreview(null);
+      setSwapPhotoURL(parkPhotoURL); setSwapPicking(true);
+    } catch(e){ console.error('Errore cambio bici:', e); setUploading(false); }
+  };
+  // Annulla il cambio: riapre la bici precedente e torna alla corsa
+  const cancelSwap = async () => {
+    try {
+      await waitFB();
+      const {addDoc,collection}=window.firebaseFunctions;
+      const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0');
+      await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'unlock',status:'pending',createdAt:new Date().toISOString()});
+    } catch(e){ console.error('Errore annulla cambio:', e); }
+    setSwapPicking(false);
+  };
   const rideMapRef = React.useRef(null);
   const rideMapInstance = React.useRef(null);
   const rideUserMarker = React.useRef(null);
@@ -1812,7 +1844,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
   if(showEndFlow) return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:400,display:"flex",flexDirection:"column",overflowY:"auto"}}>
       <div style={{background:C.deepBlue,padding:"14px 22px"}}>
-        <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>TERMINA CORSA</p>
+        <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>{swapMode?"CAMBIA BICI":"TERMINA CORSA"}</p>
         <h2 style={{color:C.white,fontSize:18,fontWeight:700,margin:"4px 0 0",fontFamily:"Lora"}}>{t('endRideTitle')}</h2>
       </div>
       <div style={{padding:20,flex:1}}>
@@ -1833,10 +1865,28 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             </div>
           ))}
         </div>
-        <button onClick={handleEndConfirm} disabled={!parkPhoto||uploading} style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
-          {uploading?t('saving'):t('confirmEnd')}
+        <button onClick={swapMode?handleSwapConfirm:handleEndConfirm} disabled={!parkPhoto||uploading} style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
+          {uploading?t('saving'):(swapMode?"Conferma cambio bici":t('confirmEnd'))}
         </button>
         <button onClick={()=>setShowEndFlow(false)} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('backToRide')}</button>
+      </div>
+    </div>
+  );
+  if(swapPicking) return(
+    <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:400,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+      <div style={{background:C.deepBlue,padding:"14px 22px"}}>
+        <p style={{color:C.skyBlue,fontSize:10,margin:0,letterSpacing:2,...ds}}>CAMBIA BICI</p>
+        <h2 style={{color:C.white,fontSize:18,fontWeight:700,margin:"4px 0 0",fontFamily:"Lora"}}>Scegli la nuova e-bike</h2>
+      </div>
+      <div style={{padding:20,flex:1}}>
+        <p style={{color:"#888",fontSize:13,...ds,margin:"0 0 14px"}}>La bici precedente è bloccata. Tocca la e-bike su cui vuoi continuare: il giro resta lo stesso e paghi al massimo €19,90.</p>
+        {availableBikes.filter(b=>b.id!==bike.id && (b.status==="Disponibile"||b.status==null) && (b.battery==null||b.battery>15)).sort((a,c)=>(c.battery||0)-(a.battery||0)).map(b=>(
+          <button key={b.id} onClick={()=>{ setSwapPicking(false); if(typeof onSwap==='function') onSwap({oldBikeId:bike.id,newBike:b,rideId,parkPhotoURL:swapPhotoURL,rideStartMs:startTimeRef.current}); }} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",background:C.white,border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:14,marginBottom:10,cursor:"pointer"}}>
+            <span style={{color:C.deepBlue,fontWeight:700,fontSize:15,...ds}}>🚲 {b.id}{b.zone?` · ${b.zone}`:""}</span>
+            <span style={{color:(b.battery||0)>40?C.blueGreen:C.warmOrange,fontWeight:700,...ds}}>⚡{b.battery!=null?b.battery+"%":"—"}</span>
+          </button>
+        ))}
+        <button onClick={cancelSwap} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer",marginTop:6}}>Annulla e riprendi la bici precedente</button>
       </div>
     </div>
   );
@@ -1937,6 +1987,9 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, t, userPo
             🏁 {t('endRide')}
           </button>
         </div>
+        {typeof onSwap==='function' && <button onClick={()=>{ setSwapMode(true); setShowEndFlow(true); }} style={{width:"100%",background:C.blueGreen,border:"none",borderRadius:14,padding:"14px 8px",color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:6}}>
+          🔄 Cambia bici
+        </button>}
         {!isGiornata && !isSettimanale && fixedCost==null && <div style={{display:"flex",justifyContent:"center",gap:20}}>
           {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
             <p key={k} style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{k}: <span style={{color:C.deepBlue,fontWeight:600}}>{v}</span></p>
@@ -3072,6 +3125,32 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     } catch(e){console.error(e); setConfirmed(selectedBikes.length>0?selectedBikes:[selectedBike]);}
   };
 
+  const handleSwapBike = async ({oldBikeId, newBike, rideId, parkPhotoURL, rideStartMs}) => {
+    try {
+      await waitFB();
+      const {doc, updateDoc} = window.firebaseFunctions;
+      // libera bici A (blocco fisico + foto già fatti dal componente)
+      setBikeInUse(oldBikeId, false);
+      // occupa + sblocca bici B
+      setBikeInUse(newBike.id, true);
+      sendBikeCommand(newBike.id, 'unlock');
+      // per chi è al minuto, al cambio scatta il tetto giornaliero (€19,90)
+      const newPlan = plan==='minuti' ? 'giornata' : plan;
+      // sposta la STESSA corsa sulla bici B (stesso pagamento, stesso timer)
+      if (rideId) {
+        await updateDoc(doc(window.firebaseDb,"rides",rideId),{
+          bikeId: newBike.id, zone: newBike.zone||"", plan: newPlan,
+          swappedFrom: oldBikeId, swappedAt: new Date().toISOString(), swapPhotoURL: parkPhotoURL||null
+        });
+      }
+      // stato genitore: la corsa continua sulla bici B
+      if (rideStartMs) setRestoredElapsed(rideStartMs);
+      setPlan(newPlan);
+      setSelectedBike(newBike); setSelectedBikes([newBike]);
+      setCurrentRideIds(prev=>prev.map(r=>r.bikeId===oldBikeId?{bikeId:newBike.id,rideId:r.rideId}:r));
+      setConfirmed([newBike]);
+    } catch(e){ console.error('Errore cambio bici (genitore):', e); }
+  };
   const handleEndRide=(secs,cost,bikeId)=>{
     sendBikeCommand(bikeId, 'lock');
     sendBikeCommand(bikeId, 'gps_normal'); // Frequenza reattiva (30s) per sblocco rapido del prossimo cliente
@@ -3137,7 +3216,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} onSwap={handleSwapBike} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike}/>
             :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t} isFree={isFree} fixedCost={hotelPerBike}/>
         )}
 
