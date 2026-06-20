@@ -1992,6 +1992,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
         {typeof onSwap==='function' && <button onClick={()=>{ setSwapMode(true); setShowEndFlow(true); }} style={{width:"100%",background:C.blueGreen,border:"none",borderRadius:14,padding:"14px 8px",color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:6}}>
           🔄 Cambia bici
         </button>}
+        {typeof onSwap==='function' && <p style={{textAlign:"center",color:"#9aa",fontSize:10.5,...ds,margin:"0 0 8px",lineHeight:1.35}}>Batteria scarica? Cambi bici gratis — paghi al massimo €19,90 al giorno.</p>}
         {!isGiornata && !isSettimanale && fixedCost==null && <div style={{display:"flex",justifyContent:"center",gap:20}}>
           {[[t('ridePerMin'),`€${TARIFFA_MIN}/min`],[t('pausePerMin'),`€${TARIFFA_PAUSA}/min`]].map(([k,v])=>(
             <p key={k} style={{color:"#aaa",fontSize:10,...ds,margin:0}}>{k}: <span style={{color:C.deepBlue,fontWeight:600}}>{v}</span></p>
@@ -3391,6 +3392,12 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                       {plan===p.id&&<div style={{width:22,height:22,borderRadius:11,background:C.blueGreen,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:13}}>✓</div>}
                     </div>
                   ))}
+
+                  {/* Cambio bici gratuito */}
+                  <div style={{background:`${C.blueGreen}10`,border:`1px solid ${C.blueGreen}40`,borderRadius:12,padding:"11px 14px",marginBottom:14}}>
+                    <p style={{color:C.deepBlue,fontSize:12.5,fontWeight:700,margin:"0 0 3px",fontFamily:"Lora"}}>🔋 Batteria scarica? Cambi bici gratis</p>
+                    <p style={{color:"#667",fontSize:11.5,...ds,margin:0,lineHeight:1.45}}>Se l'e-bike si scarica, durante la corsa la cambi quante volte vuoi. Con giornaliera o settimanale è già incluso; con la tariffa al minuto si applica il tetto di €19,90 al giorno — non paghi mai di più.</p>
+                  </div>
 
                   {/* Distanza a piedi (solo per bici singola) */}
                   {userPos&&selectedBike&&selectedBikes.length===1&&(()=>{
