@@ -1749,7 +1749,9 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
 
   // Inizializza mappa durante la corsa
   React.useEffect(()=>{
-    if (!rideMapRef.current || rideMapInstance.current) return;
+    if (showEndFlow || swapPicking || !rideMapRef.current) return;
+    if (rideMapInstance.current && rideMapInstance.current.getDiv && rideMapInstance.current.getDiv() === rideMapRef.current) return;
+    rideMapInstance.current = null; rideUserMarker.current = null; rideZonesDrawn.current = false;
     const tryInit = () => {
       if (!window.google) { setTimeout(tryInit, 300); return; }
       const map = new window.google.maps.Map(rideMapRef.current, {
@@ -1823,7 +1825,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
       drawParkingZones();
     };
     tryInit();
-  }, []);
+  }, [showEndFlow, swapPicking]);
 
   // Aggiorna posizione utente sulla mappa durante corsa
   React.useEffect(()=>{
@@ -1839,7 +1841,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
       rideMapInstance.current.setCenter(userPos);
       rideMapInstance.current.setZoom(16);
     }
-  }, [userPos]);
+  }, [userPos, showEndFlow, swapPicking]);
 
   if(showEndFlow) return(
     <div style={{position:"absolute",inset:0,background:C.bgLight,zIndex:400,display:"flex",flexDirection:"column",overflowY:"auto"}}>
@@ -1880,7 +1882,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
       </div>
       <div style={{padding:20,flex:1}}>
         <p style={{color:"#888",fontSize:13,...ds,margin:"0 0 14px"}}>La bici precedente è bloccata. Tocca la e-bike su cui vuoi continuare: il giro resta lo stesso e paghi al massimo €19,90.</p>
-        {availableBikes.filter(b=>b.id!==bike.id && (b.status==="Disponibile"||b.status==null) && (b.battery==null||b.battery>15)).sort((a,c)=>(c.battery||0)-(a.battery||0)).map(b=>(
+        {availableBikes.filter(b=>b.id!==bike.id && (b.status==="Disponibile"||b.status==null) && (b.battery==null||b.battery>15)).sort((a,c)=>parseInt((a.id||'').replace('PA-',''))-parseInt((c.id||'').replace('PA-',''))).map(b=>(
           <button key={b.id} onClick={()=>{ setSwapPicking(false); if(typeof onSwap==='function') onSwap({oldBikeId:bike.id,newBike:b,rideId,parkPhotoURL:swapPhotoURL,rideStartMs:startTimeRef.current}); }} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",background:C.white,border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:14,marginBottom:10,cursor:"pointer"}}>
             <span style={{color:C.deepBlue,fontWeight:700,fontSize:15,...ds}}>🚲 {b.id}{b.zone?` · ${b.zone}`:""}</span>
             <span style={{color:(b.battery||0)>40?C.blueGreen:C.warmOrange,fontWeight:700,...ds}}>⚡{b.battery!=null?b.battery+"%":"—"}</span>
