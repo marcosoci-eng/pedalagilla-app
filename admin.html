@@ -1643,6 +1643,16 @@ function AdminApp({ user, onLogout, t }) {
   React.useEffect(()=>{if(tab==="utenti")loadUsers();},[tab]);
   const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
   const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
+  // Tiene la finestra manutenzione agganciata ai dati live (batteria, online, stato) man mano che la bici trasmette
+  React.useEffect(()=>{
+    setSelBike(prev=>{
+      if(!prev) return prev;
+      const live = bikes.find(b=>b.id===prev.id);
+      if(!live) return prev;
+      if(prev.battery===live.battery && prev.inUse===live.inUse && prev.online===live.online && prev.status===live.status) return prev;
+      return {...prev, battery:live.battery, inUse:live.inUse, online:live.online, status:live.status, odometer:live.odometer};
+    });
+  },[bikes]);
   const toggleStatus=async(bikeId)=>{
     const bk=bikes.find(b=>b.id===bikeId);
     const newStatus=bk&&bk.status==="Disponibile"?"Manutenzione":"Disponibile";
@@ -1883,7 +1893,8 @@ function AdminApp({ user, onLogout, t }) {
                   {[
                     ["unlock","🔓","Sblocca",C.blueGreen],
                     ["lock","🔒","Blocca",C.warmOrange],
-                    ["battery_open","🔋","Vano batt.",C.sunYellow]
+                    ["battery_open","🔋","Vano batt.",C.sunYellow],
+                    ["gps_normal","🔄","Aggiorna",C.deepBlue]
                   ].map(([type,icon,label,color])=>(
                     <button key={type} onClick={async()=>{
                       try {
@@ -1891,7 +1902,7 @@ function AdminApp({ user, onLogout, t }) {
                         const {collection, addDoc} = window.firebaseFunctions;
                         const normalPedId = 'PED' + selBike.id.replace('PA-','');
                         await addDoc(collection(window.firebaseDb,'bikes',normalPedId,'commands'),{type,status:'pending',createdAt:new Date().toISOString()});
-                        alert(`${icon} Comando "${label}" inviato a ${selBike.id}!`);
+                        alert(type==='gps_normal' ? `🔄 Aggiornamento richiesto a ${selBike.id}. La batteria si aggiorna tra pochi secondi.` : `${icon} Comando "${label}" inviato a ${selBike.id}!`);
                       } catch(e){alert("Errore: "+e.message);}
                     }} style={{background:`${color}15`,border:`1.5px solid ${color}50`,borderRadius:12,padding:"12px 8px",color:color==="--"?C.deepBlue:color,fontSize:11,...ds,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                       <span style={{fontSize:22}}>{icon}</span>
