@@ -1877,7 +1877,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
         <button onClick={swapMode?handleSwapConfirm:handleEndConfirm} disabled={!parkPhoto||uploading} style={{width:"100%",background:parkPhoto&&!uploading?`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`:"#ccc",border:"none",borderRadius:14,padding:15,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:parkPhoto?"pointer":"not-allowed",marginBottom:10}}>
           {uploading?t('saving'):(swapMode?t('swapConfirm'):t('confirmEnd'))}
         </button>
-        <button onClick={()=>setShowEndFlow(false)} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('backToRide')}</button>
+        <button onClick={()=>{ setShowEndFlow(false); setSwapMode(false); }} style={{width:"100%",background:"none",border:`1.5px solid ${C.skyBlue}`,borderRadius:14,padding:11,color:C.deepBlue,fontSize:14,...ds,cursor:"pointer"}}>{t('backToRide')}</button>
       </div>
     </div>
   );
@@ -1992,7 +1992,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
           <button onClick={handlePauseToggle} style={{background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:"16px 8px",color:paused?C.white:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
             {paused?`▶️ ${t('resumeBtn')}`:`⏸️ ${t('pauseBtn')}`}
           </button>
-          <button onClick={()=>setShowEndFlow(true)} style={{background:C.warmOrange,border:"none",borderRadius:14,padding:"16px 8px",color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
+          <button onClick={()=>{ setSwapMode(false); setShowEndFlow(true); }} style={{background:C.warmOrange,border:"none",borderRadius:14,padding:"16px 8px",color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
             🏁 {t('endRide')}
           </button>
         </div>
