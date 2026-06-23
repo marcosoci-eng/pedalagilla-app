@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pedalagilla-v9';
+const CACHE_NAME = 'pedalagilla-v10';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -27,7 +27,7 @@ self.addEventListener('fetch', event => {
 
   // Non cachare Firebase, Stripe, Google Maps
   const url = event.request.url;
-  if (url.includes('firebase') || url.includes('stripe') || url.includes('googleapis') || url.includes('gstatic')) {
+  if (url.includes('firebase') || url.includes('stripe') || url.includes('googleapis') || url.includes('gstatic') || url.includes('/_vercel/')) {
     return;
   }
   event.respondWith(
