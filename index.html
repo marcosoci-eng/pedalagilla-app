@@ -57,7 +57,7 @@ const TRANSLATIONS = {
   it: {
     appSubtitle: "E-BIKE SHARING · Lago Trasimeno",
     coverageMsg: "Noleggio e-bike su tutto il Lago Trasimeno",
-    login: "Accedi", register: "Registrati",
+    login: "Accedi", register: "Registrati", noAccount: "Non hai un account?",
     email: "📧 Email", password: "🔑 Password",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Accedi 🚲", loginLoading: "⏳ Accesso...",
@@ -131,7 +131,7 @@ const TRANSLATIONS = {
   en: {
     appSubtitle: "E-BIKE SHARING · Lake Trasimeno",
     coverageMsg: "E-bike rental all around Lake Trasimeno",
-    login: "Login", register: "Sign Up",
+    login: "Login", register: "Sign Up", noAccount: "Don't have an account?",
     email: "📧 Email", password: "🔑 Password",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Login 🚲", loginLoading: "⏳ Logging in...",
@@ -206,7 +206,7 @@ const TRANSLATIONS = {
   de: {
     appSubtitle: "E-BIKE SHARING · Trasimenischer See",
     coverageMsg: "E-Bike-Verleih rund um den Trasimenischen See",
-    login: "Anmelden", register: "Registrieren",
+    login: "Anmelden", register: "Registrieren", noAccount: "Noch kein Konto?",
     email: "📧 E-Mail", password: "🔑 Passwort",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Anmelden 🚲", loginLoading: "⏳ Anmeldung...",
@@ -281,7 +281,7 @@ const TRANSLATIONS = {
   fr: {
     appSubtitle: "E-BIKE SHARING · Lac Trasimène",
     coverageMsg: "Location de vélos électriques tout autour du lac Trasimène",
-    login: "Connexion", register: "S'inscrire",
+    login: "Connexion", register: "S'inscrire", noAccount: "Pas encore de compte ?",
     email: "📧 E-mail", password: "🔑 Mot de passe",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Connexion 🚲", loginLoading: "⏳ Connexion...",
@@ -356,7 +356,7 @@ const TRANSLATIONS = {
   es: {
     appSubtitle: "E-BIKE SHARING · Lago Trasimeno",
     coverageMsg: "Alquiler de e-bikes en todo el lago Trasimeno",
-    login: "Iniciar sesión", register: "Registrarse",
+    login: "Iniciar sesión", register: "Registrarse", noAccount: "¿No tienes cuenta?",
     email: "📧 Correo", password: "🔑 Contraseña",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Entrar 🚲", loginLoading: "⏳ Entrando...",
@@ -431,7 +431,7 @@ const TRANSLATIONS = {
   nl: {
     appSubtitle: "E-BIKE SHARING · Meer van Trasimeno",
     coverageMsg: "E-bikeverhuur rond het Meer van Trasimeno",
-    login: "Inloggen", register: "Registreren",
+    login: "Inloggen", register: "Registreren", noAccount: "Nog geen account?",
     email: "📧 E-mail", password: "🔑 Wachtwoord",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Inloggen 🚲", loginLoading: "⏳ Inloggen...",
@@ -506,7 +506,7 @@ const TRANSLATIONS = {
   cs: {
     appSubtitle: "E-BIKE SHARING · Trasimenské jezero",
     coverageMsg: "Půjčovna e-kol po celém Trasimenském jezeře",
-    login: "Přihlásit se", register: "Registrovat se",
+    login: "Přihlásit se", register: "Registrovat se", noAccount: "Nemáš účet?",
     email: "📧 E-mail", password: "🔑 Heslo",
     emailPlaceholder: "mario@example.com", passwordPlaceholder: "••••••••",
     loginBtn: "Přihlásit se 🚲", loginLoading: "⏳ Přihlašování...",
@@ -1310,7 +1310,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
           {mode!=="adminLogin"&&(
             <div style={{display:"flex",background:"#e8f4f8",borderRadius:12,padding:4,marginBottom:18}}>
               {[["login",t('login')],["register",t('register')]].map(([m,l])=>(
-                <button key={m} onClick={()=>{setMode(m);setError(null);setShowResend(false);setResetMsg(null);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:"#888",fontSize:13,...ds,fontWeight:600,cursor:"pointer"}}>{l}</button>
+                <button key={m} onClick={()=>{setMode(m);setError(null);setShowResend(false);setResetMsg(null);}} style={{flex:1,background:mode===m?C.deepBlue:"transparent",border:"none",borderRadius:10,padding:10,color:mode===m?C.white:C.deepBlue,fontSize:13.5,...ds,fontWeight:700,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
           )}
@@ -1333,6 +1333,10 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               {t('forgotPwd')}
             </button>
             {resetMsg&&<p style={{color:C.blueGreen,fontSize:12,margin:"0 0 10px",...ds,lineHeight:"1.4",background:`${C.blueGreen}12`,border:`1px solid ${C.blueGreen}30`,borderRadius:10,padding:"10px 12px"}}>✅ {resetMsg}</p>}
+            <div style={{textAlign:"center",marginTop:16,padding:"12px",background:`${C.sunYellow}14`,border:`1px solid ${C.sunYellow}50`,borderRadius:12}}>
+              <span style={{color:C.deepBlue,fontSize:13,...ds}}>{t('noAccount')} </span>
+              <button onClick={()=>{setMode("register");setError(null);setShowResend(false);setResetMsg(null);}} style={{background:"none",border:"none",color:C.warmOrange,fontSize:14.5,...ds,fontWeight:800,cursor:"pointer",textDecoration:"underline",padding:0}}>{t('register')}</button>
+            </div>
             <a href="/admin" style={{display:"block",width:"100%",background:"none",border:`1px solid ${C.deepBlue}30`,borderRadius:14,padding:9,color:"#aaa",fontSize:12,...ds,cursor:"pointer",textAlign:"center",textDecoration:"none",marginTop:32}}>
               {t('adminAccess')}
             </a>
