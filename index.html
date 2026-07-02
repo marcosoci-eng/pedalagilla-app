@@ -72,7 +72,7 @@ const TRANSLATIONS = {
     errEmail: "Inserisci email e password", errCampi: "Compila tutti i campi",
     errNome: "Il nome è obbligatorio", errCognome: "Il cognome è obbligatorio",
     errDoc: "La foto del documento è obbligatoria", errPassword: "Password minimo 6 caratteri",
-    errLogin: "Email o password errati", errEmailUsed: "Email già registrata",
+    errLogin: "Email o password errati", errBlocked: "Account sospeso. Contatta l'assistenza.", errEmailUsed: "Email già registrata",
     errGenerico: "Errore: ", errAdmin: "Credenziali errate", errUnauthorized: "Accesso non autorizzato",
     emailVerifyMsg: "📧 Controlla la tua email e clicca il link di verifica prima di accedere.",
     adminUsername: "👤 Username", adminUsernamePh: "marco",
@@ -146,7 +146,7 @@ const TRANSLATIONS = {
     errEmail: "Enter email and password", errCampi: "Fill in all fields",
     errNome: "First name is required", errCognome: "Last name is required",
     errDoc: "ID document photo is required", errPassword: "Password min. 6 characters",
-    errLogin: "Wrong email or password", errEmailUsed: "Email already registered",
+    errLogin: "Wrong email or password", errBlocked: "Account suspended. Please contact support.", errEmailUsed: "Email already registered",
     errGenerico: "Error: ", errAdmin: "Wrong credentials", errUnauthorized: "Unauthorized access",
     emailVerifyMsg: "📧 Check your email and click the verification link before logging in.",
     adminUsername: "👤 Username", adminUsernamePh: "marco",
@@ -221,7 +221,7 @@ const TRANSLATIONS = {
     errEmail: "E-Mail und Passwort eingeben", errCampi: "Alle Felder ausfüllen",
     errNome: "Vorname ist erforderlich", errCognome: "Nachname ist erforderlich",
     errDoc: "Ausweisfoto ist erforderlich", errPassword: "Passwort min. 6 Zeichen",
-    errLogin: "Falsche E-Mail oder Passwort", errEmailUsed: "E-Mail bereits registriert",
+    errLogin: "Falsche E-Mail oder Passwort", errBlocked: "Konto gesperrt. Bitte kontaktieren Sie den Support.", errEmailUsed: "E-Mail bereits registriert",
     errGenerico: "Fehler: ", errAdmin: "Falsche Anmeldedaten", errUnauthorized: "Zugriff nicht autorisiert",
     emailVerifyMsg: "📧 Überprüfen Sie Ihre E-Mail und klicken Sie auf den Bestätigungslink.",
     adminUsername: "👤 Benutzername", adminUsernamePh: "marco",
@@ -296,7 +296,7 @@ const TRANSLATIONS = {
     errEmail: "Entrez l'e-mail et le mot de passe", errCampi: "Remplissez tous les champs",
     errNome: "Le prénom est obligatoire", errCognome: "Le nom est obligatoire",
     errDoc: "La photo de la pièce d'identité est obligatoire", errPassword: "Mot de passe min. 6 caractères",
-    errLogin: "E-mail ou mot de passe incorrect", errEmailUsed: "E-mail déjà enregistré",
+    errLogin: "E-mail ou mot de passe incorrect", errBlocked: "Compte suspendu. Veuillez contacter l'assistance.", errEmailUsed: "E-mail déjà enregistré",
     errGenerico: "Erreur : ", errAdmin: "Identifiants incorrects", errUnauthorized: "Accès non autorisé",
     emailVerifyMsg: "📧 Vérifiez votre e-mail et cliquez sur le lien de vérification.",
     adminUsername: "👤 Nom d'utilisateur", adminUsernamePh: "marco",
@@ -371,7 +371,7 @@ const TRANSLATIONS = {
     errEmail: "Introduce correo y contraseña", errCampi: "Rellena todos los campos",
     errNome: "El nombre es obligatorio", errCognome: "El apellido es obligatorio",
     errDoc: "La foto del documento es obligatoria", errPassword: "Contraseña mín. 6 caracteres",
-    errLogin: "Correo o contraseña incorrectos", errEmailUsed: "Correo ya registrado",
+    errLogin: "Correo o contraseña incorrectos", errBlocked: "Cuenta suspendida. Contacta con soporte.", errEmailUsed: "Correo ya registrado",
     errGenerico: "Error: ", errAdmin: "Credenciales incorrectas", errUnauthorized: "Acceso no autorizado",
     emailVerifyMsg: "📧 Revisa tu correo y haz clic en el enlace de verificación.",
     adminUsername: "👤 Usuario", adminUsernamePh: "marco",
@@ -446,7 +446,7 @@ const TRANSLATIONS = {
     errEmail: "Vul e-mail en wachtwoord in", errCampi: "Vul alle velden in",
     errNome: "Voornaam is verplicht", errCognome: "Achternaam is verplicht",
     errDoc: "Foto identiteitsbewijs is verplicht", errPassword: "Wachtwoord min. 6 tekens",
-    errLogin: "Verkeerd e-mail of wachtwoord", errEmailUsed: "E-mail al geregistreerd",
+    errLogin: "Verkeerd e-mail of wachtwoord", errBlocked: "Account opgeschort. Neem contact op met de support.", errEmailUsed: "E-mail al geregistreerd",
     errGenerico: "Fout: ", errAdmin: "Verkeerde inloggegevens", errUnauthorized: "Toegang niet geautoriseerd",
     emailVerifyMsg: "📧 Controleer uw e-mail en klik op de verificatielink.",
     adminUsername: "👤 Gebruikersnaam", adminUsernamePh: "marco",
@@ -521,7 +521,7 @@ const TRANSLATIONS = {
     errEmail: "Zadejte e-mail a heslo", errCampi: "Vyplňte všechna pole",
     errNome: "Jméno je povinné", errCognome: "Příjmení je povinné",
     errDoc: "Foto dokladu je povinné", errPassword: "Heslo min. 6 znaků",
-    errLogin: "Špatný e-mail nebo heslo", errEmailUsed: "E-mail již zaregistrován",
+    errLogin: "Špatný e-mail nebo heslo", errBlocked: "Účet pozastaven. Kontaktujte podporu.", errEmailUsed: "E-mail již zaregistrován",
     errGenerico: "Chyba: ", errAdmin: "Špatné přihlašovací údaje", errUnauthorized: "Přístup není povolen",
     emailVerifyMsg: "📧 Zkontrolujte svůj e-mail a klikněte na ověřovací odkaz.",
     adminUsername: "👤 Uživatelské jméno", adminUsernamePh: "marco",
@@ -1213,10 +1213,13 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
     setLoading(true); setError(null);
     try {
       await waitFB();
-      const {signInWithEmailAndPassword,doc,getDoc} = window.firebaseFunctions;
+      const {signInWithEmailAndPassword,signOut,doc,getDoc} = window.firebaseFunctions;
       const cred = await signInWithEmailAndPassword(window.firebaseAuth,email,password);
       const snap = await getDoc(doc(window.firebaseDb,"users",cred.user.uid));
-      onLogin({type:"cliente",...snap.data(),uid:cred.user.uid});
+      const udata = snap.data()||{};
+      const isBlocked = udata.blocked===true || udata.type==="sospeso" || udata.docReviewed==="rejected" || udata.status==="blocked" || udata.status==="sospeso";
+      if (isBlocked) { try{ await signOut(window.firebaseAuth); }catch(_){} setError(t('errBlocked')); setLoading(false); return; }
+      onLogin({type:"cliente",...udata,uid:cred.user.uid});
     } catch(e) { setError(t('errLogin')); }
     setLoading(false);
   };
