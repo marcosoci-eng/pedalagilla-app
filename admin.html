@@ -2131,6 +2131,7 @@ function AdminApp({ user, onLogout, t }) {
                     <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:0,...ds}}>📄 Documento</p>
                     {(u.docReviewed===false||u.docReviewed===undefined)&&<span style={{background:C.warmOrange,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>⚠️ DA VERIFICARE</span>}
                     {u.docReviewed===true&&<span style={{background:C.blueGreen,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>✅ VERIFICATO</span>}
+                    {(u.type==="sospeso"||u.docReviewed==="rejected")&&<span style={{background:"#d32f2f",color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>🚫 BLOCCATO</span>}
                   </div>
                   <img src={u.docURL} style={{width:"100%",borderRadius:10,maxHeight:160,objectFit:"cover",cursor:"pointer",marginBottom:6}} onClick={()=>window.open(u.docURL,"_blank")} alt="Documento"/>
                   {(u.docReviewed===false||u.docReviewed===undefined)&&<div style={{display:"flex",gap:8}}>
@@ -2139,6 +2140,10 @@ function AdminApp({ user, onLogout, t }) {
                   </div>}
                 </div>}
                 <div style={{display:"flex",gap:8,marginTop:8}}>
+                  {u.type!=="admin"&&u.type!=="sospeso"&&<button onClick={async()=>{
+                    if(!window.confirm(`Bloccare ${u.nome||""} ${u.cognome||""}? Non potrà più accedere al servizio.`)) return;
+                    try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{docReviewed:"rejected",type:"sospeso"}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
+                  }} style={{flex:1,background:"#d32f2f15",border:"1px solid #d32f2f",borderRadius:8,padding:"7px",color:"#d32f2f",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🚫 Blocca utente</button>}
                   {u.type!=="admin"&&<button onClick={async()=>{
                     if(!window.confirm(`Promuovere ${u.nome} ${u.cognome} ad amministratore?`)) return;
                     try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{type:"admin"}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
