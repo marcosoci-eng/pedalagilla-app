@@ -1537,6 +1537,8 @@ function AdminApp({ user, onLogout, t }) {
   const [mapFilter, setMapFilter] = React.useState("Tutti");
   const [battSlider, setBattSlider] = React.useState(100);
   const [mapBattSlider, setMapBattSlider] = React.useState(100);
+  const [selectMode, setSelectMode] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState([]);
   const [editNote, setEditNote] = React.useState("");
   const [editChecks, setEditChecks] = React.useState({});
   const [showBikeDetail, setShowBikeDetail] = React.useState(false);
@@ -1663,6 +1665,47 @@ function AdminApp({ user, onLogout, t }) {
       const pedId='PED'+bikeId.replace('PA-','').padStart(3,'0');
       await setDoc(doc(window.firebaseDb,"bikes",pedId),{status:newStatus,updatedAt:new Date().toISOString()},{merge:true});
     } catch(e){ console.error('Errore salvataggio status:',e); }
+  };
+  // Selezione multipla flotta
+  const toggleSelect=(id)=>setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  const exitSelect=()=>{setSelectMode(false);setSelectedIds([]);};
+  // Imposta lo stato (Disponibile/Manutenzione) su piu' bici in una volta
+  const setStatusBatch=async(ids,newStatus)=>{
+    if(!ids||ids.length===0){alert("Nessuna bici selezionata.");return;}
+    setBikes(prev=>prev.map(b=>ids.includes(b.id)?{...b,status:newStatus}:b));
+    try{
+      await waitFB();
+      const {doc,setDoc}=window.firebaseFunctions;
+      let ok=0,ko=0;
+      for(const id of ids){
+        try{
+          const pedId='PED'+id.replace('PA-','').padStart(3,'0');
+          await setDoc(doc(window.firebaseDb,"bikes",pedId),{status:newStatus,updatedAt:new Date().toISOString()},{merge:true});
+          ok++;
+        }catch(e){ko++;console.error('Errore status '+id+':',e);}
+      }
+      alert('✅ '+ok+' bici → '+newStatus+(ko>0?('\n⚠️ '+ko+' non aggiornate'):''));
+      exitSelect();
+    }catch(e){alert('Errore: '+e.message);}
+  };
+  // Apre il vano batteria su piu' bici in una volta (con conferma di sicurezza)
+  const batteryOpenBatch=async(ids)=>{
+    if(!ids||ids.length===0){alert("Nessuna bici selezionata.");return;}
+    if(!window.confirm('🔋 Aprire il vano batteria di '+ids.length+' bici?\n\nFallo solo se le bici sono sotto il tuo controllo (in sede o sul furgone). Il vano resta apribile finché non lo richiudi manualmente.')) return;
+    try{
+      await waitFB();
+      const {collection,addDoc}=window.firebaseFunctions;
+      let ok=0,ko=0;
+      for(const id of ids){
+        try{
+          const pedId='PED'+id.replace('PA-','');
+          await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'battery_open',status:'pending',createdAt:new Date().toISOString()});
+          ok++;
+        }catch(e){ko++;console.error('Errore battery_open '+id+':',e);}
+      }
+      alert('🔋 Comando "Vano batt." inviato a '+ok+' bici'+(ko>0?('\n⚠️ '+ko+' falliti'):'')+'.\nLe bici online eseguono entro pochi secondi.');
+      exitSelect();
+    }catch(e){alert('Errore: '+e.message);}
   };
   const forceEndRide=async(ride)=>{ 
     const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); 
@@ -1897,6 +1940,7 @@ function AdminApp({ user, onLogout, t }) {
                     ["gps_normal","🔄","Aggiorna",C.deepBlue]
                   ].map(([type,icon,label,color])=>(
                     <button key={type} onClick={async()=>{
+                      if(type==='battery_open' && !window.confirm(`🔋 Aprire il vano batteria di ${selBike.id}?\n\nRicordati di richiuderlo a mano: resta apribile finché non lo chiudi.`)) return;
                       try {
                         await waitFB();
                         const {collection, addDoc} = window.firebaseFunctions;
@@ -2045,7 +2089,20 @@ function AdminApp({ user, onLogout, t }) {
                 <span style={{color:"#bbb",fontSize:9,...ds}}>100%</span>
               </div>
             </div>
-            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
+            {/* Barra selezione multipla flotta */}
+            <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
+              <button onClick={()=>{setSelectMode(m=>!m);setSelectedIds([]);}} style={{background:selectMode?C.deepBlue:C.white,border:`1.5px solid ${C.deepBlue}`,borderRadius:20,padding:"6px 14px",color:selectMode?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>{selectMode?"✕ Annulla selezione":"☑️ Seleziona più bici"}</button>
+              {selectMode&&<button onClick={()=>setSelectedIds(selectedIds.length===filteredBikes.length?[]:filteredBikes.map(b=>b.id))} style={{background:C.white,border:`1.5px solid ${C.blueGreen}`,borderRadius:20,padding:"6px 14px",color:C.blueGreen,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>{selectedIds.length===filteredBikes.length&&filteredBikes.length>0?"Deseleziona tutte":"Seleziona tutte"}</button>}
+              {selectMode&&<span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:700}}>{selectedIds.length} selezionate</span>}
+            </div>
+            {selectMode&&selectedIds.length>0&&(
+              <div style={{background:C.white,borderRadius:14,padding:12,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.10)",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <button onClick={()=>setStatusBatch(selectedIds,"Manutenzione")} style={{background:`${C.warmOrange}20`,border:`1.5px solid ${C.warmOrange}`,borderRadius:12,padding:"12px 8px",color:C.warmOrange,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔧 In manutenzione</button>
+                <button onClick={()=>setStatusBatch(selectedIds,"Disponibile")} style={{background:`${C.blueGreen}20`,border:`1.5px solid ${C.blueGreen}`,borderRadius:12,padding:"12px 8px",color:C.blueGreen,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>✅ In servizio</button>
+                <button onClick={()=>batteryOpenBatch(selectedIds)} style={{gridColumn:"1 / -1",background:`${C.sunYellow}20`,border:`1.5px solid ${C.sunYellow}`,borderRadius:12,padding:"12px 8px",color:"#b38600",fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔋 Apri vano batteria ({selectedIds.length})</button>
+              </div>
+            )}
+            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>selectMode?toggleSelect(bike.id):openBikeDetail(bike)} style={{background:selectedIds.includes(bike.id)?"#8ECAE622":C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${selectedIds.includes(bike.id)?C.blueGreen:getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}>{selectMode&&<div style={{width:24,height:24,borderRadius:6,border:`2px solid ${selectedIds.includes(bike.id)?C.blueGreen:C.skyBlue}`,background:selectedIds.includes(bike.id)?C.blueGreen:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:14,flexShrink:0}}>{selectedIds.includes(bike.id)?"✓":""}</div>}<div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
             {/* MTB Muscolari */}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"16px 0 8px",...ds,opacity:0.5}}>🏔️ MTB Muscolari</p>
             {(window._adminMTBBikes||[]).length===0&&<p style={{color:"#aaa",fontSize:12,...ds,textAlign:"center",padding:10}}>Nessuna MTB — vai nel tab MTB per gestirle</p>}
