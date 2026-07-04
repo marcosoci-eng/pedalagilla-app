@@ -1689,9 +1689,11 @@ function AdminApp({ user, onLogout, t }) {
     }catch(e){alert('Errore: '+e.message);}
   };
   // Apre il vano batteria su piu' bici in una volta (con conferma di sicurezza)
-  const batteryOpenBatch=async(ids)=>{
+  // Manda un comando IoT (unlock/lock/battery_open) a piu' bici. Solo il vano batteria chiede conferma.
+  const sendCommandBatch=async(ids,type,label)=>{
     if(!ids||ids.length===0){alert("Nessuna bici selezionata.");return;}
-    if(!window.confirm('🔋 Aprire il vano batteria di '+ids.length+' bici?\n\nFallo solo se le bici sono sotto il tuo controllo (in sede o sul furgone). Il vano resta apribile finché non lo richiudi manualmente.')) return;
+    if(type==='battery_open' && !window.confirm('🔋 Aprire il vano batteria di '+ids.length+' bici?\n\nFallo solo se le bici sono sotto il tuo controllo (in sede o sul furgone). Il vano resta apribile finché non lo richiudi manualmente.')) return;
+    if(type==='unlock' && !window.confirm('🔓 Sbloccare '+ids.length+' bici?\n\nDiventeranno usabili subito: fallo solo se sei presente accanto alle bici.')) return;
     try{
       await waitFB();
       const {collection,addDoc}=window.firebaseFunctions;
@@ -1699,11 +1701,12 @@ function AdminApp({ user, onLogout, t }) {
       for(const id of ids){
         try{
           const pedId='PED'+id.replace('PA-','');
-          await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'battery_open',status:'pending',createdAt:new Date().toISOString()});
+          await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type,status:'pending',createdAt:new Date().toISOString()});
           ok++;
-        }catch(e){ko++;console.error('Errore battery_open '+id+':',e);}
+        }catch(e){ko++;console.error('Errore '+type+' '+id+':',e);}
       }
-      alert('🔋 Comando "Vano batt." inviato a '+ok+' bici'+(ko>0?('\n⚠️ '+ko+' falliti'):'')+'.\nLe bici online eseguono entro pochi secondi.');
+      const ico=type==='battery_open'?'🔋':type==='unlock'?'🔓':'🔒';
+      alert(ico+' Comando "'+label+'" inviato a '+ok+' bici'+(ko>0?('\n⚠️ '+ko+' falliti'):'')+'.\nLe bici online eseguono entro pochi secondi.');
       exitSelect();
     }catch(e){alert('Errore: '+e.message);}
   };
@@ -2096,10 +2099,18 @@ function AdminApp({ user, onLogout, t }) {
               {selectMode&&<span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:700}}>{selectedIds.length} selezionate</span>}
             </div>
             {selectMode&&selectedIds.length>0&&(
-              <div style={{background:C.white,borderRadius:14,padding:12,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.10)",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                <button onClick={()=>setStatusBatch(selectedIds,"Manutenzione")} style={{background:`${C.warmOrange}20`,border:`1.5px solid ${C.warmOrange}`,borderRadius:12,padding:"12px 8px",color:C.warmOrange,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔧 In manutenzione</button>
-                <button onClick={()=>setStatusBatch(selectedIds,"Disponibile")} style={{background:`${C.blueGreen}20`,border:`1.5px solid ${C.blueGreen}`,borderRadius:12,padding:"12px 8px",color:C.blueGreen,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>✅ In servizio</button>
-                <button onClick={()=>batteryOpenBatch(selectedIds)} style={{gridColumn:"1 / -1",background:`${C.sunYellow}20`,border:`1.5px solid ${C.sunYellow}`,borderRadius:12,padding:"12px 8px",color:"#b38600",fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔋 Apri vano batteria ({selectedIds.length})</button>
+              <div style={{background:C.white,borderRadius:14,padding:12,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.10)"}}>
+                <p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,letterSpacing:1,textTransform:"uppercase",opacity:0.5,margin:"0 0 6px"}}>Stato ({selectedIds.length})</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                  <button onClick={()=>setStatusBatch(selectedIds,"Manutenzione")} style={{background:`${C.warmOrange}20`,border:`1.5px solid ${C.warmOrange}`,borderRadius:12,padding:"12px 8px",color:C.warmOrange,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔧 In manutenzione</button>
+                  <button onClick={()=>setStatusBatch(selectedIds,"Disponibile")} style={{background:`${C.blueGreen}20`,border:`1.5px solid ${C.blueGreen}`,borderRadius:12,padding:"12px 8px",color:C.blueGreen,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>✅ In servizio</button>
+                </div>
+                <p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,letterSpacing:1,textTransform:"uppercase",opacity:0.5,margin:"0 0 6px"}}>Comandi bici ({selectedIds.length})</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <button onClick={()=>sendCommandBatch(selectedIds,"unlock","Sblocca")} style={{background:`${C.blueGreen}20`,border:`1.5px solid ${C.blueGreen}`,borderRadius:12,padding:"12px 8px",color:C.blueGreen,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔓 Sblocca</button>
+                  <button onClick={()=>sendCommandBatch(selectedIds,"lock","Blocca")} style={{background:`${C.warmOrange}20`,border:`1.5px solid ${C.warmOrange}`,borderRadius:12,padding:"12px 8px",color:C.warmOrange,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔒 Blocca</button>
+                  <button onClick={()=>sendCommandBatch(selectedIds,"battery_open","Vano batt.")} style={{gridColumn:"1 / -1",background:`${C.sunYellow}20`,border:`1.5px solid ${C.sunYellow}`,borderRadius:12,padding:"12px 8px",color:"#b38600",fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔋 Apri vano batteria</button>
+                </div>
               </div>
             )}
             {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>selectMode?toggleSelect(bike.id):openBikeDetail(bike)} style={{background:selectedIds.includes(bike.id)?"#8ECAE622":C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${selectedIds.includes(bike.id)?C.blueGreen:getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}>{selectMode&&<div style={{width:24,height:24,borderRadius:6,border:`2px solid ${selectedIds.includes(bike.id)?C.blueGreen:C.skyBlue}`,background:selectedIds.includes(bike.id)?C.blueGreen:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:14,flexShrink:0}}>{selectedIds.includes(bike.id)?"✓":""}</div>}<div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
