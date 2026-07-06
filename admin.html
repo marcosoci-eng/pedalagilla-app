@@ -1531,14 +1531,13 @@ function HeatmapView() {
 function AdminApp({ user, onLogout, t }) {
   if (!t) t = (k) => k;
   const [tab, setTab] = React.useState("dashboard");
+  const [bonusEnabled, setBonusEnabled] = React.useState(null); // interruttore globale bonus benvenuto (null=in caricamento)
   const [bikes, setBikes] = React.useState(initBikes);
   const [selBike, setSelBike] = React.useState(null);
   const [filter, setFilter] = React.useState("Tutti");
   const [mapFilter, setMapFilter] = React.useState("Tutti");
   const [battSlider, setBattSlider] = React.useState(100);
   const [mapBattSlider, setMapBattSlider] = React.useState(100);
-  const [selectMode, setSelectMode] = React.useState(false);
-  const [selectedIds, setSelectedIds] = React.useState([]);
   const [editNote, setEditNote] = React.useState("");
   const [editChecks, setEditChecks] = React.useState({});
   const [showBikeDetail, setShowBikeDetail] = React.useState(false);
@@ -1643,6 +1642,15 @@ function AdminApp({ user, onLogout, t }) {
 
   const loadUsers=async()=>{ setLoadingUsers(true); try{ await waitFB(); const {collection,getDocs}=window.firebaseFunctions; const snap=await getDocs(collection(window.firebaseDb,"users")); setFbUsers(snap.docs.map(d=>({id:d.id,...d.data()}))); } catch(e){} setLoadingUsers(false); };
   React.useEffect(()=>{if(tab==="utenti")loadUsers();},[tab]);
+  // Interruttore globale bonus benvenuto (config/app) — stesso percorso di config/zones (permessi collaudati)
+  const loadBonusFlag=async()=>{ try{ await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const s=await getDoc(doc(window.firebaseDb,"config","app")); setBonusEnabled(s.data()?.welcomeBonusEnabled===true); }catch(e){ setBonusEnabled(false); } };
+  React.useEffect(()=>{if(tab==="utenti")loadBonusFlag();},[tab]);
+  const toggleBonusFlag=async()=>{
+    const next=!(bonusEnabled===true);
+    if(!window.confirm(next?"ACCENDERE il bonus benvenuto (30 min gratis prima corsa) per tutti i nuovi iscritti?":"SPEGNERE il bonus benvenuto? Nessuna nuova corsa applicherà più il bonus (le corse già in corso restano invariate).")) return;
+    try{ await waitFB(); const {doc,setDoc}=window.firebaseFunctions; await setDoc(doc(window.firebaseDb,"config","app"),{welcomeBonusEnabled:next,updatedAt:new Date().toISOString()},{merge:true}); setBonusEnabled(next); }
+    catch(e){ alert("Errore: "+e.message); }
+  };
   const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
   const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
   // Tiene la finestra manutenzione agganciata ai dati live (batteria, online, stato) man mano che la bici trasmette
@@ -1665,50 +1673,6 @@ function AdminApp({ user, onLogout, t }) {
       const pedId='PED'+bikeId.replace('PA-','').padStart(3,'0');
       await setDoc(doc(window.firebaseDb,"bikes",pedId),{status:newStatus,updatedAt:new Date().toISOString()},{merge:true});
     } catch(e){ console.error('Errore salvataggio status:',e); }
-  };
-  // Selezione multipla flotta
-  const toggleSelect=(id)=>setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
-  const exitSelect=()=>{setSelectMode(false);setSelectedIds([]);};
-  // Imposta lo stato (Disponibile/Manutenzione) su piu' bici in una volta
-  const setStatusBatch=async(ids,newStatus)=>{
-    if(!ids||ids.length===0){alert("Nessuna bici selezionata.");return;}
-    setBikes(prev=>prev.map(b=>ids.includes(b.id)?{...b,status:newStatus}:b));
-    try{
-      await waitFB();
-      const {doc,setDoc}=window.firebaseFunctions;
-      let ok=0,ko=0;
-      for(const id of ids){
-        try{
-          const pedId='PED'+id.replace('PA-','').padStart(3,'0');
-          await setDoc(doc(window.firebaseDb,"bikes",pedId),{status:newStatus,updatedAt:new Date().toISOString()},{merge:true});
-          ok++;
-        }catch(e){ko++;console.error('Errore status '+id+':',e);}
-      }
-      alert('✅ '+ok+' bici → '+newStatus+(ko>0?('\n⚠️ '+ko+' non aggiornate'):''));
-      exitSelect();
-    }catch(e){alert('Errore: '+e.message);}
-  };
-  // Apre il vano batteria su piu' bici in una volta (con conferma di sicurezza)
-  // Manda un comando IoT (unlock/lock/battery_open) a piu' bici. Solo il vano batteria chiede conferma.
-  const sendCommandBatch=async(ids,type,label)=>{
-    if(!ids||ids.length===0){alert("Nessuna bici selezionata.");return;}
-    if(type==='battery_open' && !window.confirm('🔋 Aprire il vano batteria di '+ids.length+' bici?\n\nFallo solo se le bici sono sotto il tuo controllo (in sede o sul furgone). Il vano resta apribile finché non lo richiudi manualmente.')) return;
-    if(type==='unlock' && !window.confirm('🔓 Sbloccare '+ids.length+' bici?\n\nDiventeranno usabili subito: fallo solo se sei presente accanto alle bici.')) return;
-    try{
-      await waitFB();
-      const {collection,addDoc}=window.firebaseFunctions;
-      let ok=0,ko=0;
-      for(const id of ids){
-        try{
-          const pedId='PED'+id.replace('PA-','');
-          await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type,status:'pending',createdAt:new Date().toISOString()});
-          ok++;
-        }catch(e){ko++;console.error('Errore '+type+' '+id+':',e);}
-      }
-      const ico=type==='battery_open'?'🔋':type==='unlock'?'🔓':'🔒';
-      alert(ico+' Comando "'+label+'" inviato a '+ok+' bici'+(ko>0?('\n⚠️ '+ko+' falliti'):'')+'.\nLe bici online eseguono entro pochi secondi.');
-      exitSelect();
-    }catch(e){alert('Errore: '+e.message);}
   };
   const forceEndRide=async(ride)=>{ 
     const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); 
@@ -1943,7 +1907,6 @@ function AdminApp({ user, onLogout, t }) {
                     ["gps_normal","🔄","Aggiorna",C.deepBlue]
                   ].map(([type,icon,label,color])=>(
                     <button key={type} onClick={async()=>{
-                      if(type==='battery_open' && !window.confirm(`🔋 Aprire il vano batteria di ${selBike.id}?\n\nRicordati di richiuderlo a mano: resta apribile finché non lo chiudi.`)) return;
                       try {
                         await waitFB();
                         const {collection, addDoc} = window.firebaseFunctions;
@@ -2092,28 +2055,7 @@ function AdminApp({ user, onLogout, t }) {
                 <span style={{color:"#bbb",fontSize:9,...ds}}>100%</span>
               </div>
             </div>
-            {/* Barra selezione multipla flotta */}
-            <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
-              <button onClick={()=>{setSelectMode(m=>!m);setSelectedIds([]);}} style={{background:selectMode?C.deepBlue:C.white,border:`1.5px solid ${C.deepBlue}`,borderRadius:20,padding:"6px 14px",color:selectMode?C.white:C.deepBlue,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>{selectMode?"✕ Annulla selezione":"☑️ Seleziona più bici"}</button>
-              {selectMode&&<button onClick={()=>setSelectedIds(selectedIds.length===filteredBikes.length?[]:filteredBikes.map(b=>b.id))} style={{background:C.white,border:`1.5px solid ${C.blueGreen}`,borderRadius:20,padding:"6px 14px",color:C.blueGreen,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>{selectedIds.length===filteredBikes.length&&filteredBikes.length>0?"Deseleziona tutte":"Seleziona tutte"}</button>}
-              {selectMode&&<span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:700}}>{selectedIds.length} selezionate</span>}
-            </div>
-            {selectMode&&selectedIds.length>0&&(
-              <div style={{background:C.white,borderRadius:14,padding:12,marginBottom:10,boxShadow:"0 2px 10px rgba(2,48,71,0.10)"}}>
-                <p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,letterSpacing:1,textTransform:"uppercase",opacity:0.5,margin:"0 0 6px"}}>Stato ({selectedIds.length})</p>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-                  <button onClick={()=>setStatusBatch(selectedIds,"Manutenzione")} style={{background:`${C.warmOrange}20`,border:`1.5px solid ${C.warmOrange}`,borderRadius:12,padding:"12px 8px",color:C.warmOrange,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔧 In manutenzione</button>
-                  <button onClick={()=>setStatusBatch(selectedIds,"Disponibile")} style={{background:`${C.blueGreen}20`,border:`1.5px solid ${C.blueGreen}`,borderRadius:12,padding:"12px 8px",color:C.blueGreen,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>✅ In servizio</button>
-                </div>
-                <p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,letterSpacing:1,textTransform:"uppercase",opacity:0.5,margin:"0 0 6px"}}>Comandi bici ({selectedIds.length})</p>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <button onClick={()=>sendCommandBatch(selectedIds,"unlock","Sblocca")} style={{background:`${C.blueGreen}20`,border:`1.5px solid ${C.blueGreen}`,borderRadius:12,padding:"12px 8px",color:C.blueGreen,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔓 Sblocca</button>
-                  <button onClick={()=>sendCommandBatch(selectedIds,"lock","Blocca")} style={{background:`${C.warmOrange}20`,border:`1.5px solid ${C.warmOrange}`,borderRadius:12,padding:"12px 8px",color:C.warmOrange,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔒 Blocca</button>
-                  <button onClick={()=>sendCommandBatch(selectedIds,"battery_open","Vano batt.")} style={{gridColumn:"1 / -1",background:`${C.sunYellow}20`,border:`1.5px solid ${C.sunYellow}`,borderRadius:12,padding:"12px 8px",color:"#b38600",fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔋 Apri vano batteria</button>
-                </div>
-              </div>
-            )}
-            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>selectMode?toggleSelect(bike.id):openBikeDetail(bike)} style={{background:selectedIds.includes(bike.id)?"#8ECAE622":C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${selectedIds.includes(bike.id)?C.blueGreen:getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}>{selectMode&&<div style={{width:24,height:24,borderRadius:6,border:`2px solid ${selectedIds.includes(bike.id)?C.blueGreen:C.skyBlue}`,background:selectedIds.includes(bike.id)?C.blueGreen:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontSize:14,flexShrink:0}}>{selectedIds.includes(bike.id)?"✓":""}</div>}<div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
+            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
             {/* MTB Muscolari */}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"16px 0 8px",...ds,opacity:0.5}}>🏔️ MTB Muscolari</p>
             {(window._adminMTBBikes||[]).length===0&&<p style={{color:"#aaa",fontSize:12,...ds,textAlign:"center",padding:10}}>Nessuna MTB — vai nel tab MTB per gestirle</p>}
@@ -2158,6 +2100,14 @@ function AdminApp({ user, onLogout, t }) {
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>Utenti ({fbUsers.filter(u=>u.type!=="admin").length})</p>
               <button onClick={exportExcel} style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"7px 14px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📊 Excel</button>
             </div>
+            {/* INTERRUTTORE GLOBALE BONUS BENVENUTO */}
+            <div style={{background: bonusEnabled===true?`${C.blueGreen}12`:"#8888880f", border:`1.5px solid ${bonusEnabled===true?C.blueGreen:"#ccc"}`, borderRadius:14, padding:"12px 14px", marginBottom:12, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10}}>
+              <div>
+                <p style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:700,margin:0}}>🎁 Bonus benvenuto — {bonusEnabled===null?"…":bonusEnabled?"ATTIVO":"SPENTO"}</p>
+                <p style={{color:C.deepBlue,fontSize:10,...ds,margin:"2px 0 0",opacity:0.6}}>30 min gratis sulla 1ª corsa dei nuovi iscritti. Da qui lo fermi all'istante, senza ripubblicare.</p>
+              </div>
+              <button onClick={toggleBonusFlag} disabled={bonusEnabled===null} style={{flexShrink:0, background: bonusEnabled===true?C.warmOrange:C.blueGreen, border:"none", borderRadius:20, padding:"9px 16px", color:C.white, fontSize:12, ...ds, fontWeight:700, cursor: bonusEnabled===null?"default":"pointer"}}>{bonusEnabled===true?"Spegni":"Accendi"}</button>
+            </div>
             {/* Ricerca */}
             <input value={userSearch} onChange={e=>{setUserSearch(e.target.value);setUsersPage(0);}}
               placeholder="🔍 Cerca per nome o email..."
@@ -2200,6 +2150,7 @@ function AdminApp({ user, onLogout, t }) {
                     {(u.docReviewed===false||u.docReviewed===undefined)&&<span style={{background:C.warmOrange,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>⚠️ DA VERIFICARE</span>}
                     {u.docReviewed===true&&<span style={{background:C.blueGreen,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>✅ VERIFICATO</span>}
                     {(u.type==="sospeso"||u.docReviewed==="rejected")&&<span style={{background:"#d32f2f",color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>🚫 BLOCCATO</span>}
+                    {u.welcomeBonusAvailable===true&&<span style={{background:C.blueGreen,color:C.white,fontSize:9,...ds,fontWeight:600,padding:"2px 8px",borderRadius:20}}>🎁 BONUS 30'</span>}
                   </div>
                   <img src={u.docURL} style={{width:"100%",borderRadius:10,maxHeight:160,objectFit:"cover",cursor:"pointer",marginBottom:6}} onClick={()=>window.open(u.docURL,"_blank")} alt="Documento"/>
                   {(u.docReviewed===false||u.docReviewed===undefined)&&<div style={{display:"flex",gap:8}}>
@@ -2224,6 +2175,17 @@ function AdminApp({ user, onLogout, t }) {
                     try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{type:"cliente",docReviewed:true}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
                   }} style={{flex:1,background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}`,borderRadius:8,padding:"7px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>✅ Riattiva utente</button>}
                 </div>
+                {u.type!=="admin"&&<div style={{display:"flex",gap:8,marginTop:8}}>
+                  {u.welcomeBonusAvailable===true
+                    ? <button onClick={async()=>{
+                        if(!window.confirm(`Togliere il bonus benvenuto (30 min) a ${u.nome||""} ${u.cognome||""}?`)) return;
+                        try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{welcomeBonusAvailable:false}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
+                      }} style={{flex:1,background:`${C.blueGreen}20`,border:`1px solid ${C.blueGreen}`,borderRadius:8,padding:"7px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🎁 Togli bonus</button>
+                    : <button onClick={async()=>{
+                        if(!window.confirm(`Dare il bonus benvenuto (30 min gratis prima corsa) a ${u.nome||""} ${u.cognome||""}?`)) return;
+                        try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{welcomeBonusAvailable:true}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
+                      }} style={{flex:1,background:C.white,border:`1px solid ${C.blueGreen}`,borderRadius:8,padding:"7px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🎁 Dai bonus</button>}
+                </div>}
               </div>
             ))}
 
