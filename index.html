@@ -700,6 +700,7 @@ const TARIFFA_GIORNATA = 19.90;
 const TARIFFA_SETTIMANALE = 99.00;
 const TARIFFA_MTB_ADULTO = 15.00;
 const TARIFFA_MTB_BAMBINO = 10.00;
+const WELCOME_BONUS_MIN = 30; // minuti gratis di benvenuto, una tantum sulla prima corsa
 const QR_BASE_URL = "https://www.pedalagilla.it/?bike=";
 const QR_MTB_URL = "https://www.pedalagilla.it/?mtb=";
 const APP_URL = "https://www.pedalagilla.it";
@@ -1238,7 +1239,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       const sRef = ref(window.firebaseStorage,`documenti/${cred.user.uid}`);
       await uploadBytes(sRef,docFile);
       const docURL = await getDownloadURL(sRef);
-      await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString(),docReviewed:false});
+      await setDoc(doc(window.firebaseDb,"users",cred.user.uid),{nome,cognome,email,telefono,docURL,type:"cliente",createdAt:new Date().toISOString(),docReviewed:false,welcomeBonusAvailable:true});
       // Notifica admin via Resend
       try {
         await fetch("https://api.resend.com/emails", {
@@ -1424,7 +1425,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=null, t, userPos, availableBikes=[], isFree=false, fixedCost=null }) {
+function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=null, t, userPos, availableBikes=[], isFree=false, fixedCost=null, bonusRide=false }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
@@ -1659,7 +1660,23 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
     return Math.min(costoBase, cap);
   }, [seconds, pauseSeconds, isGiornata, isSettimanale]);
 
-  const rideCost = fixedCost!=null ? fixedCost : (isGiornata ? TARIFFA_GIORNATA : isSettimanale ? TARIFFA_SETTIMANALE : calcMinutiCost);
+  // Costo con BONUS BENVENUTO (30 min gratis, una tantum, solo tariffa al minuto). Sblocco gratis; oltre 30 min paghi tariffa piena sull'eccedenza.
+  const bonusCost = React.useMemo(() => {
+    if (!bonusRide) return null;
+    if (isGiornata || isSettimanale || fixedCost!=null) return null;
+    const activeSecs = Math.max(0, seconds - pauseSeconds);
+    const activeMin = activeSecs/60;
+    let cost = (activeMin <= WELCOME_BONUS_MIN) ? 0 : (activeMin - WELCOME_BONUS_MIN)*TARIFFA_MIN; // sblocco incluso nel regalo
+    // Cap giornaliero €19,90 (multi-giorno come per la tariffa standard)
+    const startMs = Date.now() - seconds*1000;
+    const startDay = new Date(startMs); startDay.setHours(0,0,0,0);
+    const todayDay = new Date(); todayDay.setHours(0,0,0,0);
+    const daysPassed = Math.max(0, Math.round((todayDay - startDay)/86400000));
+    const cap = (daysPassed+1)*TARIFFA_GIORNATA;
+    return Math.min(cost, cap);
+  }, [seconds, pauseSeconds, isGiornata, isSettimanale, fixedCost, bonusRide]);
+
+  const rideCost = fixedCost!=null ? fixedCost : (isGiornata ? TARIFFA_GIORNATA : isSettimanale ? TARIFFA_SETTIMANALE : (bonusCost!=null ? bonusCost : calcMinutiCost));
   const pauseCost = isGiornata||isSettimanale ? 0 : 0; // incluso in calcMinutiCost
   const totalCost = isFree ? 0 : rideCost;
   const cappedAtMax = !isGiornata && !isSettimanale && fixedCost==null && (() => {
@@ -1725,6 +1742,11 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
           }
         } catch(e){ console.error('Errore cattura pagamento:', e); }
         await updateDoc(doc(window.firebaseDb,"rides",rideId),{status:"Completata",endTime:new Date().toISOString(),duration:seconds,pauseDuration:pauseSeconds,cost:totalCost,amountPaid:captured!==null?captured:totalCost,parkPhotoURL,track:trackRef.current});
+      }
+      // BONUS BENVENUTO: se questa corsa aveva il bonus, consumalo (una tantum) — non piu' disponibile in futuro
+      if(bonusRide && user && user.uid){
+        try { await updateDoc(doc(window.firebaseDb,"users",user.uid),{welcomeBonusAvailable:false}); console.log('🎁 Bonus benvenuto consumato'); }
+        catch(e){ console.error('Errore consumo bonus:', e); }
       }
     } catch(e){console.error(e);}
     setUploading(false); onEnd(seconds,totalCost,bike.id);
@@ -1925,6 +1947,13 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
         </div>
         {paused&&<div style={{background:C.sunYellow,borderRadius:8,padding:"3px 10px"}}><p style={{color:C.deepBlue,fontSize:10,...ds,fontWeight:700,margin:0}}>PAUSA</p></div>}
       </div>
+
+      {/* BANNER BONUS BENVENUTO */}
+      {bonusRide&&(
+        <div style={{background:C.blueGreen,padding:"5px 16px",flexShrink:0}}>
+          <p style={{color:"#fff",fontSize:10,...ds,fontWeight:700,margin:0,letterSpacing:0.5}}>🎁 Benvenuto! Primi {WELCOME_BONUS_MIN} minuti gratis{(Math.max(0,seconds-pauseSeconds)/60)>WELCOME_BONUS_MIN?" · oltre, tariffa normale":""}</p>
+        </div>
+      )}
 
       {/* COUNTDOWN MEZZANOTTE — barra compatta sotto header */}
       {midnightCountdown&&(
@@ -2776,6 +2805,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [riding, setRiding] = React.useState(false);
   const [confirmed, setConfirmed] = React.useState([]);
   const [currentRideIds, setCurrentRideIds] = React.useState([]);
+  const [bonusRide, setBonusRide] = React.useState(false); // questa corsa applica il bonus benvenuto?
   const [showSummary, setShowSummary] = React.useState(false);
   const [rideSummary, setRideSummary] = React.useState(null);
   const [feedback, setFeedback] = React.useState(null); // 'up' | 'down'
@@ -2894,6 +2924,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           setCurrentRideIds(rideIds);
           setConfirmed(bks);
           setPlan(activeRides[0].plan || "minuti");
+          setBonusRide(activeRides[0].welcomeBonus === true);
           setRestoredElapsed(new Date(activeRides[0].startTime).getTime());
           // FIX tariffa convenzione: ripristina il promo salvato cosi il prezzo non torna a 19,90 dopo una riapertura
           if (activeRides[0].promoType) setPromoApplied({ code: activeRides[0].promoCode||"", type: activeRides[0].promoType, hotelOption: activeRides[0].hotelOption||null, hotelName: activeRides[0].hotelName||"" });
@@ -3031,6 +3062,19 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       const bks=selectedBikes.length>0?selectedBikes:[selectedBike];
       const rideIds=[];
       const hotelCashback = promoApplied?.type==="hotel" && promoApplied?.hotelOption==="cashback" ? 3 : 0;
+      // BONUS BENVENUTO: vale solo se disponibile, tariffa al minuto, singola bici, nessun promo/omaggio. Lettura fresca del flag.
+      let bonusEligible = false;
+      if(plan==='minuti' && !isFree && !promoApplied && bks.length===1 && user && user.uid){
+        try {
+          // INTERRUTTORE GLOBALE: se spento (o assente/illeggibile) => nessun bonus (default sicuro = tariffa normale)
+          const cfgSnap=await getDoc(doc(window.firebaseDb,"config","app"));
+          if(cfgSnap.data()?.welcomeBonusEnabled === true){
+            const usnap=await getDoc(doc(window.firebaseDb,"users",user.uid));
+            bonusEligible = (usnap.data()?.welcomeBonusAvailable === true);
+          }
+        } catch(e){ console.error('Errore lettura bonus:', e); bonusEligible=false; }
+      }
+      setBonusRide(bonusEligible);
       for(const bike of bks){
         const rideDoc=await addDoc(collection(window.firebaseDb,"rides"),{
           bikeId:bike.id, userId:user.uid||"",
@@ -3048,6 +3092,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           paymentMethodId: paymentMethodId||null,
           isPreAuth: isPreAuth||false,
           amountPaid: isPreAuth ? 0 : (payAmount||0),
+          welcomeBonus: bonusEligible,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
         console.log(`✅ Ride creata: ${rideDoc.id} per ${bike.id}, status: In corso`);
@@ -3235,7 +3280,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} onSwap={handleSwapBike} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} onSwap={handleSwapBike} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike} bonusRide={bonusRide}/>
             :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t} isFree={isFree} fixedCost={hotelPerBike}/>
         )}
 
