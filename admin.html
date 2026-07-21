@@ -1627,6 +1627,9 @@ function AdminApp({ user, onLogout, t }) {
               online: data.online || false,
               status: data.status || updatedBikes[idx].status,
               lastSeen: data.lastSeen || updatedBikes[idx].lastSeen || null,
+              note: typeof data.note === 'string' ? data.note : updatedBikes[idx].note,
+              checks: data.checks || updatedBikes[idx].checks,
+              lastMaint: data.lastMaint || updatedBikes[idx].lastMaint,
             };
           }
         });
@@ -1652,7 +1655,17 @@ function AdminApp({ user, onLogout, t }) {
     catch(e){ alert("Errore: "+e.message); }
   };
   const openBikeDetail=(bike)=>{setSelBike(bike);setEditNote(bike.note||"");setEditChecks(bike.checks||{});setShowBikeDetail(true);};
-  const saveBike=()=>{setBikes(prev=>prev.map(b=>b.id===selBike.id?{...b,note:editNote,checks:editChecks,lastMaint:new Date().toLocaleDateString("it-IT")}:b));setShowBikeDetail(false);};
+  const saveBike=async()=>{
+    const bikeId=selBike.id, nota=editNote, checks=editChecks, dataManut=new Date().toLocaleDateString("it-IT");
+    setBikes(prev=>prev.map(b=>b.id===bikeId?{...b,note:nota,checks:checks,lastMaint:dataManut}:b));
+    setShowBikeDetail(false);
+    try{
+      await waitFB();
+      const {doc,setDoc}=window.firebaseFunctions;
+      const pedId='PED'+bikeId.replace('PA-','').padStart(3,'0');
+      await setDoc(doc(window.firebaseDb,"bikes",pedId),{note:nota,checks:checks,lastMaint:dataManut,updatedAt:new Date().toISOString()},{merge:true});
+    }catch(e){ console.error('Errore salvataggio nota:',e); alert("Attenzione: nota NON salvata sul server. "+e.message); }
+  };
   // Tiene la finestra manutenzione agganciata ai dati live (batteria, online, stato) man mano che la bici trasmette
   React.useEffect(()=>{
     setSelBike(prev=>{
