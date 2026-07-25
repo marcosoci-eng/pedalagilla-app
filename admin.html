@@ -1583,6 +1583,13 @@ function AdminApp({ user, onLogout, t }) {
   const monthRides=rides;
   const todayIncassi=todayRides.filter(r=>r.status==="Completata"&&!r.isFree).reduce((a,r)=>a+(r.cost||0),0);
   const monthIncassi=monthRides.filter(r=>r.status==="Completata"&&!r.isFree).reduce((a,r)=>a+(r.cost||0),0);
+  // --- Filtro per data sulle corse (riusa statsFrom/statsTo) ---
+  const _pFrom = statsFrom ? new Date(statsFrom+"T00:00:00").getTime() : 0;
+  const _pTo = statsTo ? new Date(statsTo+"T23:59:59").getTime() : Date.now();
+  const periodRides = rides.filter(r=>{ if(!r.startTime) return false; const t=new Date(r.startTime).getTime(); return !isNaN(t) && t>=_pFrom && t<=_pTo; });
+  const periodIncassi = periodRides.filter(r=>r.status==="Completata"&&!r.isFree).reduce((a,r)=>a+(r.cost||0),0);
+  const shownRides = incassiPeriod==="oggi"?todayRides:incassiPeriod==="periodo"?periodRides:monthRides;
+  const shownIncassi = incassiPeriod==="oggi"?todayIncassi:incassiPeriod==="periodo"?periodIncassi:monthIncassi;
   const available=bikes.filter(b=>b.status==="Disponibile").length;
   const maint=bikes.filter(b=>b.status==="Manutenzione").length;
   const low=bikes.filter(b=>b.battery<50).length;
@@ -1992,8 +1999,8 @@ function AdminApp({ user, onLogout, t }) {
                 </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <div style={{background:`linear-gradient(135deg,${C.blueGreen},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>INCASSI</p><p style={{color:C.sunYellow,fontSize:20,fontWeight:700,margin:0,...ds}}>€{(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)}</p></div>
-                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>CORSE</p><p style={{color:C.blueGreen,fontSize:20,fontWeight:700,margin:0,...ds}}>{incassiPeriod==="oggi"?todayRides.length:monthRides.length}</p></div>
+                <div style={{background:`linear-gradient(135deg,${C.blueGreen},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>INCASSI</p><p style={{color:C.sunYellow,fontSize:20,fontWeight:700,margin:0,...ds}}>€{shownIncassi.toFixed(2)}</p></div>
+                <div style={{background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,borderRadius:12,padding:"12px 14px",textAlign:"center"}}><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 4px"}}>CORSE</p><p style={{color:C.blueGreen,fontSize:20,fontWeight:700,margin:0,...ds}}>{shownRides.length}</p></div>
               </div>
             </div>
             {bikes.filter(b=>b.status==="Manutenzione").length>0&&(<div style={{background:`${C.sunYellow}10`,border:`1px solid ${C.sunYellow}40`,borderRadius:14,padding:"12px 14px",marginBottom:12}}><p style={{color:C.sunYellow,fontSize:12,fontWeight:600,margin:"0 0 8px",...ds}}>🔧 In manutenzione</p>{bikes.filter(b=>b.status==="Manutenzione").map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{display:"flex",justifyContent:"space-between",padding:"6px 8px",background:"rgba(255,255,255,0.5)",borderRadius:8,marginBottom:4}}><span style={{color:C.deepBlue,fontSize:13,...ds,fontWeight:600}}>{bike.id} · {bike.zone}</span><span style={{color:"#888",fontSize:11,...ds}}>{bike.battery}% ›</span></div>))}</div>)}
@@ -2077,12 +2084,33 @@ function AdminApp({ user, onLogout, t }) {
 
           {tab==="corse"&&<div className="slide" style={{padding:"16px 18px 0"}}>
             <div style={{display:"flex",gap:8,marginBottom:12}}>
-              {[["oggi","Oggi"],["mese","Mese"]].map(([v,l])=>(<button key={v} onClick={()=>{setIncassiPeriod(v);setRidesPage(0);}} style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>))}
+              {[["oggi","Oggi"],["mese","Tutte"],["periodo","📅 Periodo"]].map(([v,l])=>(<button key={v} onClick={()=>{setIncassiPeriod(v);setRidesPage(0);}} style={{background:incassiPeriod===v?C.deepBlue:C.white,border:`1.5px solid ${incassiPeriod===v?C.deepBlue:C.skyBlue+"50"}`,borderRadius:20,padding:"6px 14px",color:incassiPeriod===v?C.white:C.deepBlue,fontSize:11,...ds,cursor:"pointer",fontWeight:500}}>{l}</button>))}
             </div>
+            {incassiPeriod==="periodo"&&(
+              <div style={{background:C.white,borderRadius:14,padding:12,marginBottom:12,boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1}}>
+                    <p style={{color:"#aaa",fontSize:10,...ds,margin:"0 0 4px",letterSpacing:1}}>DAL</p>
+                    <input type="date" value={statsFrom} onChange={e=>{setStatsFrom(e.target.value);setRidesPage(0);}} style={{width:"100%",padding:"8px 10px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white}}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <p style={{color:"#aaa",fontSize:10,...ds,margin:"0 0 4px",letterSpacing:1}}>AL</p>
+                    <input type="date" value={statsTo} onChange={e=>{setStatsTo(e.target.value);setRidesPage(0);}} style={{width:"100%",padding:"8px 10px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white}}/>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+                  {[["Questo mese",()=>{const d=new Date();setStatsFrom(new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10));setStatsTo(new Date().toISOString().slice(0,10));}],
+                    ["Mese scorso",()=>{const d=new Date();setStatsFrom(new Date(d.getFullYear(),d.getMonth()-1,1).toISOString().slice(0,10));setStatsTo(new Date(d.getFullYear(),d.getMonth(),0).toISOString().slice(0,10));}],
+                    ["Ultimi 7 gg",()=>{const d=new Date();setStatsFrom(new Date(d.getTime()-6*86400000).toISOString().slice(0,10));setStatsTo(new Date().toISOString().slice(0,10));}]].map(([lbl,fn])=>(
+                    <button key={lbl} onClick={()=>{fn();setRidesPage(0);}} style={{background:`${C.blueGreen}12`,border:`1px solid ${C.blueGreen}35`,borderRadius:8,padding:"4px 10px",color:C.blueGreen,fontSize:10,...ds,fontWeight:600,cursor:"pointer"}}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
-              {[["💶",(incassiPeriod==="oggi"?todayIncassi:monthIncassi).toFixed(2)+"€","Incassi",C.sunYellow],["🏁",(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata").length,"Completate",C.blueGreen],["🚴",rides.filter(r=>r.status==="In corso").length,"In corso",C.warmOrange]].map(([icon,val,label,color])=>(<div key={label} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:18,marginBottom:4}}>{icon}</div><div style={{color,fontSize:18,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div></div>))}
+              {[["💶",shownIncassi.toFixed(2)+"€","Incassi",C.sunYellow],["🏁",shownRides.filter(r=>r.status==="Completata").length,"Completate",C.blueGreen],["🚴",rides.filter(r=>r.status==="In corso").length,"In corso",C.warmOrange]].map(([icon,val,label,color])=>(<div key={label} style={{background:C.white,borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(2,48,71,0.07)"}}><div style={{fontSize:18,marginBottom:4}}>{icon}</div><div style={{color,fontSize:18,fontWeight:700,...ds}}>{val}</div><div style={{color:"#aaa",fontSize:10,marginTop:2,...ds}}>{label}</div></div>))}
             </div>
-            {(()=>{ const pr=(incassiPeriod==="oggi"?todayRides:monthRides).filter(r=>r.status==="Completata"&&(r.hotelCashback||0)>0); const tot=pr.reduce((a,r)=>a+(r.hotelCashback||0),0); return tot>0?(
+            {(()=>{ const pr=shownRides.filter(r=>r.status==="Completata"&&(r.hotelCashback||0)>0); const tot=pr.reduce((a,r)=>a+(r.hotelCashback||0),0); return tot>0?(
               <div style={{background:`linear-gradient(135deg,#6A1B9A,#4A148C)`,borderRadius:14,padding:"12px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div><p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:"0 0 2px",letterSpacing:1}}>🏨 RIMBORSO ALBERGATORI ({incassiPeriod==="oggi"?"oggi":"mese"})</p><p style={{color:"#fff",fontSize:11,...ds,margin:0,opacity:0.85}}>{pr.length} corse con cashback</p></div>
                 <p style={{color:"#FFD54F",fontSize:22,fontWeight:700,margin:0,...ds}}>€{tot.toFixed(2)}</p>
@@ -2092,7 +2120,7 @@ function AdminApp({ user, onLogout, t }) {
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>🔴 In corso</p>
               {[...rides].filter(r=>r.status==="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p><p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>💶 €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min</p><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button></div>))}
             </>}
-            {(()=>{ const completed=[...(incassiPeriod==="oggi"?todayRides:monthRides)].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)); const totalPages=Math.ceil(completed.length/RIDES_PER_PAGE)||1; const page=Math.min(ridesPage,totalPages-1); const pageRides=completed.slice(page*RIDES_PER_PAGE,(page+1)*RIDES_PER_PAGE); return (<>
+            {(()=>{ const completed=[...shownRides].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)); const totalPages=Math.ceil(completed.length/RIDES_PER_PAGE)||1; const page=Math.min(ridesPage,totalPages-1); const pageRides=completed.slice(page*RIDES_PER_PAGE,(page+1)*RIDES_PER_PAGE); return (<>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"12px 0 8px"}}>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>Completate ({completed.length})</p>
               <button onClick={()=>exportExcelRides(completed,"corse_"+incassiPeriod)} style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"6px 12px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📊 Excel</button>
