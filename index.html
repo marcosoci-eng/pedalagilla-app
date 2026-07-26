@@ -1403,6 +1403,14 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               </button>
             ))}
           </div>
+          {/* Contatti assistenza sempre visibili */}
+          <div style={{marginTop:12,background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:14,padding:"10px 12px"}}>
+            <p style={{color:"rgba(255,255,255,0.85)",fontSize:11,fontFamily:"'DM Sans',sans-serif",margin:"0 0 8px",textAlign:"center",letterSpacing:1}}>{t('assistance')}</p>
+            <div style={{display:"flex",gap:8}}>
+              <a href="tel:+393495240422" style={{flex:1,display:"block",background:"#FB8500",borderRadius:10,padding:"9px 8px",color:"#fff",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none",textAlign:"center"}}>📞 +39 349 524 0422</a>
+              <a href="https://wa.me/393495240422" target="_blank" rel="noopener" style={{flex:1,display:"block",background:"#25D366",borderRadius:10,padding:"9px 8px",color:"#fff",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none",textAlign:"center"}}>💬 WhatsApp</a>
+            </div>
+          </div>
           {/* Bottone sviluppatore */}
           <div style={{marginTop:12,textAlign:"center"}}>
             <button onClick={()=>setShowDev(s=>!s)} style={{background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"6px 18px",color:"rgba(255,255,255,0.8)",fontSize:11,fontFamily:"'DM Sans',sans-serif",cursor:"pointer"}}>👨‍💻 Sviluppatore</button>
@@ -2197,6 +2205,22 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t, isFree=false, fi
   const activeBikes=bikes.filter(b=>!completedBikes.includes(b.id));
   const totalCost=Math.min((costPerBike+pauseCost), TARIFFA_GIORNATA)*activeBikes.length;
 
+  const handleGlobalPause = async () => {
+    const willPause = !globalPaused;
+    const active = bikes.filter(b=>!completedBikes.includes(b.id));
+    try {
+      await waitFB();
+      const {collection, addDoc} = window.firebaseFunctions;
+      for (const b of active) {
+        const pedId = 'PED' + b.id.replace('PA-','').padStart(3,'0');
+        try {
+          await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type: willPause?'lock':'unlock', status:'pending', createdAt:new Date().toISOString()});
+        } catch(inner){ console.error('Errore comando pausa su', pedId, inner); }
+      }
+    } catch(e){ console.error('Errore lock/unlock pausa multipla:', e); }
+    setGlobalPaused(p=>!p);
+  };
+
   const handleParkPhoto=(e)=>{ 
     const file=e.target.files[0]; 
     if(!file) return;
@@ -2330,7 +2354,7 @@ function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t, isFree=false, fi
                   <p style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:700,margin:0}}>⏸ Pausa · {pauseMins}min {pauseSeconds%60}sec · {isGiornata?t('free'):`€${pauseCost.toFixed(2)}`}</p>
                 </div>
               )}
-              <button onClick={()=>setGlobalPaused(p=>!p)} style={{width:"100%",background:globalPaused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:14,color:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
+              <button onClick={handleGlobalPause} style={{width:"100%",background:globalPaused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:14,color:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer",marginBottom:10}}>
                 {globalPaused?t('resumeBtn'):t('pauseBtn')}
               </button>
               <button onClick={()=>startEndFlow(bike)} style={{width:"100%",background:C.warmOrange,border:"none",borderRadius:14,padding:14,color:C.white,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
