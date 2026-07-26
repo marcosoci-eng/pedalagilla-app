@@ -1253,6 +1253,7 @@ function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hideP
 
 function AuthScreen({ onLogin, lang, setLang, t }) {
   const [showDev, setShowDev] = React.useState(false);
+  const [showAssist, setShowAssist] = React.useState(false);
   const [mode, setMode] = React.useState("login");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -1403,13 +1404,15 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
               </button>
             ))}
           </div>
-          {/* Contatti assistenza sempre visibili */}
-          <div style={{marginTop:12,background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:14,padding:"10px 12px"}}>
-            <p style={{color:"rgba(255,255,255,0.85)",fontSize:11,fontFamily:"'DM Sans',sans-serif",margin:"0 0 8px",textAlign:"center",letterSpacing:1}}>{t('assistance')}</p>
-            <div style={{display:"flex",gap:8}}>
-              <a href="tel:+393495240422" style={{flex:1,display:"block",background:"#FB8500",borderRadius:10,padding:"9px 8px",color:"#fff",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none",textAlign:"center"}}>📞 +39 349 524 0422</a>
-              <a href="https://wa.me/393495240422" target="_blank" rel="noopener" style={{flex:1,display:"block",background:"#25D366",borderRadius:10,padding:"9px 8px",color:"#fff",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none",textAlign:"center"}}>💬 WhatsApp</a>
-            </div>
+          {/* Contatti assistenza (a scomparsa) */}
+          <div style={{marginTop:12,textAlign:"center"}}>
+            <button onClick={()=>setShowAssist(s=>!s)} style={{background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"6px 18px",color:"rgba(255,255,255,0.8)",fontSize:11,fontFamily:"'DM Sans',sans-serif",cursor:"pointer"}}>{t('assistance')}</button>
+            {showAssist&&(
+              <div style={{marginTop:10,display:"flex",gap:8}}>
+                <a href="tel:+393495240422" style={{flex:1,display:"block",background:"#FB8500",borderRadius:10,padding:"9px 8px",color:"#fff",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none",textAlign:"center"}}>📞 +39 349 524 0422</a>
+                <a href="https://wa.me/393495240422" target="_blank" rel="noopener" style={{flex:1,display:"block",background:"#25D366",borderRadius:10,padding:"9px 8px",color:"#fff",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,textDecoration:"none",textAlign:"center"}}>💬 WhatsApp</a>
+              </div>
+            )}
           </div>
           {/* Bottone sviluppatore */}
           <div style={{marginTop:12,textAlign:"center"}}>
