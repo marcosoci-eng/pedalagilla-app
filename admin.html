@@ -1552,6 +1552,7 @@ function AdminApp({ user, onLogout, t }) {
   const [fbUsers, setFbUsers] = React.useState([]);
   const [usersPage, setUsersPage] = React.useState(0);
   const [userSearch, setUserSearch] = React.useState("");
+  const [expandedUser, setExpandedUser] = React.useState(null);
   const USERS_PER_PAGE = 10;
   const [rides, setRides] = React.useState([]);
   const [loadingUsers, setLoadingUsers] = React.useState(false);
@@ -1715,6 +1716,58 @@ function AdminApp({ user, onLogout, t }) {
       if(pedId) await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'gps_normal',status:'pending',createdAt:new Date().toISOString()});
       alert(`✅ Corsa terminata. Bici ${ride.bike} liberata.`);
     } catch(e){alert("Errore: "+e.message);} 
+  };
+  // === RECUPERO CORSE ABBANDONATE (cliente che ha chiuso l'app senza terminare) ===
+  const calcAbandono=(ride)=>{
+    if(!ride||!ride.startTime) return {minuti:0, importo:0};
+    const start=new Date(ride.startTime).getTime();
+    if(isNaN(start)) return {minuti:0, importo:0};
+    const minuti=Math.max(0,Math.round((Date.now()-start)/60000));
+    const importo=Math.min(SBLOCCO + minuti*TARIFFA_MIN, TARIFFA_GIORNATA); // cap €19,90 raggiunto a ~100 min
+    return {minuti, importo:Math.round(importo*100)/100};
+  };
+  const incassaEChiudi=async(ride)=>{
+    const a=calcAbandono(ride);
+    const val=window.prompt(`${ride.bike} · ${ride.user}\nAperta da ~${a.minuti} min\n\nImporto da incassare (max €19,90):`, a.importo.toFixed(2));
+    if(val===null) return;
+    const amount=parseFloat(val)||0;
+    try{
+      await waitFB();
+      const {doc,getDoc,updateDoc,setDoc,collection,addDoc}=window.firebaseFunctions;
+      const snap=await getDoc(doc(window.firebaseDb,"rides",ride.id));
+      const rd=snap.exists()?snap.data():{};
+      if(rd.status==="Completata"){ alert("Questa corsa è già stata chiusa."); return; }
+      let captured=null;
+      if(rd.isPreAuth && rd.paymentIntentId && !rd.isFree && amount>0){
+        const r=await fetch('https://web-production-eafa5.up.railway.app/capture-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentIntentId:rd.paymentIntentId, amount})});
+        const cd=await r.json();
+        if(!cd.success){ alert('❌ Cattura fallita: '+(cd.error||'errore')+'\nLa corsa NON è stata chiusa.'); return; }
+        captured=cd.cancelled?0:(cd.captured||amount);
+      }
+      await updateDoc(doc(window.firebaseDb,"rides",ride.id),{status:"Completata",endTime:new Date().toISOString(),cost:amount,amountPaid:captured!=null?captured:amount,duration:ride.duration||0,closedByAdmin:true,autoRecovered:true});
+      await setDoc(doc(window.firebaseDb,"bikesStatus",ride.bike),{inUse:false,userId:null,updatedAt:new Date().toISOString()},{merge:true});
+      const pedId='PED'+ride.bike.replace('PA-','').padStart(3,'0');
+      await addDoc(collection(window.firebaseDb,"bikes",pedId,"commands"),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
+      await setDoc(doc(window.firebaseDb,"bikes",pedId),{status:"Disponibile",updatedAt:new Date().toISOString()},{merge:true});
+      alert(captured!=null?`✅ Incassati €${captured.toFixed(2)} · ${ride.bike} chiusa`:`✅ ${ride.bike} chiusa`);
+    }catch(e){ console.error('incassaEChiudi:',e); alert('Errore: '+e.message); }
+  };
+  const pauseBikeAdmin=async(ride)=>{
+    try{
+      await waitFB();
+      const {doc,getDoc,updateDoc,collection,addDoc}=window.firebaseFunctions;
+      const pedId='PED'+ride.bike.replace('PA-','').padStart(3,'0');
+      const snap=await getDoc(doc(window.firebaseDb,"bikes",pedId));
+      const d=snap.exists()?snap.data():{};
+      const speed=d.speed||0;
+      const gpsAge=d.lastGPS?(Date.now()-new Date(d.lastGPS).getTime())/1000:9999;
+      if(speed>3){ alert(`⚠️ ${ride.bike} in movimento (${speed} km/h). Riprova quando è ferma.`); return; }
+      if(gpsAge>90){ alert(`⚠️ Posizione di ${ride.bike} non aggiornata (~${Math.round(gpsAge)}s fa). Non blocco: non so se è ferma.`); return; }
+      if(!window.confirm(`Mettere in pausa ${ride.bike}? La bici si blocca; il cliente la riprende dalla sua app.`)) return;
+      await addDoc(collection(window.firebaseDb,"bikes",pedId,"commands"),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
+      await updateDoc(doc(window.firebaseDb,"rides",ride.id),{adminPaused:true,adminPausedAt:new Date().toISOString()});
+      alert(`⏸️ ${ride.bike} messa in pausa. Il cliente la sbloccherà dalla sua app.`);
+    }catch(e){ console.error('pauseBikeAdmin:',e); alert('Errore: '+e.message); }
   };
   const [fbFeedback, setFbFeedback] = React.useState([]);
   const [loadingFb, setLoadingFb] = React.useState(true);
@@ -2118,7 +2171,7 @@ function AdminApp({ user, onLogout, t }) {
             ):null; })()}
             {rides.filter(r=>r.status==="In corso").length>0&&<>
               <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>🔴 In corso</p>
-              {[...rides].filter(r=>r.status==="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p><p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>💶 €{ride.startTime?(SBLOCCO+(Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000))*TARIFFA_MIN).toFixed(2):"0.00"} · ⏱️ {ride.startTime?Math.floor((Date.now()-new Date(ride.startTime).getTime())/60000):0} min</p><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button></div>))}
+              {[...rides].filter(r=>r.status==="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).map(ride=>(<div key={ride.id} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${C.warmOrange}`}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6,alignItems:"center"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{ride.bike}</span><div style={{display:"flex",gap:6}}>{ride.adminPaused?<span style={{background:"#ccc",color:"#666",borderRadius:8,padding:"4px 10px",fontSize:11,...ds,fontWeight:600}}>⏸️ In pausa</span>:<button onClick={()=>pauseBikeAdmin(ride)} style={{background:"#6c757d",border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>⏸️ Pausa</button>}<button onClick={()=>incassaEChiudi(ride)} style={{background:C.blueGreen,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>💰 Incassa €{calcAbandono(ride).importo.toFixed(2)}</button><button onClick={()=>forceEndRide(ride)} style={{background:C.warmOrange,border:"none",borderRadius:8,padding:"4px 10px",color:C.white,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🛑 Termina</button></div></div><p style={{color:"#888",fontSize:12,...ds,margin:"0 0 2px"}}>👤 {ride.user} · 📍 {ride.zone}</p><p style={{color:"#aaa",fontSize:11,...ds,margin:"0 0 4px"}}>⏰ {ride.startTime?new Date(ride.startTime).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):ride.date}</p><p style={{color:C.blueGreen,fontSize:12,...ds,fontWeight:600,margin:"0 0 8px"}}>⏱️ {calcAbandono(ride).minuti} min · 💶 €{calcAbandono(ride).importo.toFixed(2)}{calcAbandono(ride).minuti>=100?" (cap raggiunto)":""}</p><button onClick={()=>{setSelectedRide(ride);setShowTrack(true);}} style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:8,padding:"5px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗺️ Vedi percorso</button></div>))}
             </>}
             {(()=>{ const completed=[...shownRides].filter(r=>r.status!=="In corso").sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)); const totalPages=Math.ceil(completed.length/RIDES_PER_PAGE)||1; const page=Math.min(ridesPage,totalPages-1); const pageRides=completed.slice(page*RIDES_PER_PAGE,(page+1)*RIDES_PER_PAGE); return (<>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"12px 0 8px"}}>
@@ -2163,7 +2216,7 @@ function AdminApp({ user, onLogout, t }) {
             {(()=>{
               const filtered = [...fbUsers]
                 .filter(u=>u.type!=="admin")
-                .filter(u=>!userSearch||`${u.nome} ${u.cognome} ${u.email}`.toLowerCase().includes(userSearch.toLowerCase()))
+                .filter(u=>!userSearch||`${u.nome} ${u.cognome} ${u.email} ${u.telefono||""}`.toLowerCase().includes(userSearch.toLowerCase()))
                 .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
               const totalPages = Math.ceil(filtered.length/USERS_PER_PAGE);
               const paginated = filtered.slice(usersPage*USERS_PER_PAGE, (usersPage+1)*USERS_PER_PAGE);
@@ -2185,6 +2238,29 @@ function AdminApp({ user, onLogout, t }) {
                 </div>
                 <p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 4px"}}>📧 {u.email}</p>
                 <p style={{color:C.deepBlue,fontSize:12,...ds,margin:"0 0 6px"}}>📱 {u.telefono||"—"}</p>
+                {(()=>{
+                  const nomeU=`${u.nome||""} ${u.cognome||""}`.trim().toLowerCase();
+                  const uRides=rides.filter(r=>(r.userId&&r.userId===u.id)||(nomeU&&r.user&&r.user.toLowerCase()===nomeU));
+                  const done=uRides.filter(r=>r.status==="Completata");
+                  const incassato=done.filter(r=>!r.isFree).reduce((a,r)=>a+(r.amountPaid!=null?r.amountPaid:(r.cost||0)),0);
+                  const aperte=uRides.filter(r=>r.status==="In corso").length;
+                  const isOpen=expandedUser===u.id;
+                  return(<div style={{background:`${C.blueGreen}0C`,borderRadius:10,padding:"8px 10px",margin:"0 0 6px"}}>
+                    <div onClick={()=>setExpandedUser(isOpen?null:u.id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                      <span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:600}}>🚲 {done.length} corse{aperte>0?` · 🟠 ${aperte} in corso`:""} · 💶 €{incassato.toFixed(2)}</span>
+                      <span style={{color:C.blueGreen,fontSize:11,...ds}}>{isOpen?"▲ chiudi":"▼ dettaglio"}</span>
+                    </div>
+                    {isOpen&&<div style={{marginTop:8,borderTop:`1px solid ${C.blueGreen}20`,paddingTop:8}}>
+                      {[...uRides].sort((a,b)=>new Date(b.startTime||0)-new Date(a.startTime||0)).slice(0,30).map((r,ri)=>(
+                        <div key={ri} style={{display:"flex",justifyContent:"space-between",fontSize:11,...ds,color:"#555",padding:"3px 0"}}>
+                          <span>{r.date||"—"} · {r.bike||"—"} · {r.duration?Math.round(r.duration/60):0}min {r.status==="In corso"?"🟠":r.isFree?"🎁":""}</span>
+                          <span style={{fontWeight:600,color:C.deepBlue}}>€{(r.amountPaid!=null?r.amountPaid:(r.cost||0)).toFixed(2)}</span>
+                        </div>
+                      ))}
+                      {uRides.length===0&&<p style={{color:"#aaa",fontSize:11,...ds,margin:0}}>Nessuna corsa registrata</p>}
+                    </div>}
+                  </div>);
+                })()}
                 {u.docURL&&<div style={{marginTop:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                     <p style={{color:C.deepBlue,fontSize:11,fontWeight:600,margin:0,...ds}}>📄 Documento</p>
