@@ -92,7 +92,7 @@ const TRANSLATIONS = {
     rideInProgress: "CORSA IN CORSO", ridePause: "PAUSA", totalCost: "Costo totale",
     swapBike: "🔄 Cambia bici", swapHeader: "CAMBIA BICI", swapChooseTitle: "Scegli la nuova e-bike", swapChooseSub: "La bici precedente è bloccata. Tocca la e-bike su cui vuoi continuare: il giro resta lo stesso e paghi al massimo €19,90.", swapCancel: "Annulla e riprendi la bici precedente", swapConfirm: "Conferma cambio bici", swapFreeTitle: "🔋 Batteria scarica? Cambi bici gratis", swapFreeBody: "Se l'e-bike si scarica, durante la corsa la cambi quante volte vuoi. Con giornaliera o settimanale è già incluso; con la tariffa al minuto si applica il tetto di €19,90 al giorno — non paghi mai di più.", swapFreeCaption: "Batteria scarica? Cambi bici gratis — paghi al massimo €19,90 al giorno.",
     unlock: "🔓 Sblocco", ridePerMin: "⏱️ Corsa", pausePerMin: "⏸️ Pausa", zone: "📍 Zona",
-    pauseBtn: "⏸️ Pausa", resumeBtn: "▶️ Riprendi", endRide: "🏁 Termina corsa", free: "Gratis",
+    pauseBtn: "⏸️ Pausa", resumeBtn: "▶️ Riprendi", adminPausedTitle: "⏸️ Messa in pausa dall'operatore", adminPausedHint: "Premi ▶️ Riprendi per sbloccare la bici", endRide: "🏁 Termina corsa", free: "Gratis",
     endRideTitle: "Foto del parcheggio", photoRequired: "📸 Obbligatorio",
     photoDesc: "Scatta una foto alla bici parcheggiata", takePhoto: "Scatta foto parcheggio",
     photoChange: "✅ Tocca per cambiare", confirmEnd: "✅ Conferma fine corsa",
@@ -180,7 +180,7 @@ const TRANSLATIONS = {
     rideInProgress: "RIDE IN PROGRESS", ridePause: "PAUSE", totalCost: "Total cost",
     swapBike: "🔄 Swap bike", swapHeader: "SWAP BIKE", swapChooseTitle: "Choose your new e-bike", swapChooseSub: "Your previous bike is locked. Tap the e-bike you want to continue on: it's the same ride and you pay €19.90 max.", swapCancel: "Cancel and keep the previous bike", swapConfirm: "Confirm bike swap", swapFreeTitle: "🔋 Low battery? Swap bikes for free", swapFreeBody: "If your e-bike runs low, swap it as many times as you like during your ride. Included with the daily and weekly plans; with the per-minute plan the €19.90/day cap applies — you never pay more.", swapFreeCaption: "Low battery? Swap bikes for free — you pay €19.90/day max.",
     unlock: "🔓 Unlock", ridePerMin: "⏱️ Ride", pausePerMin: "⏸️ Pause", zone: "📍 Zone",
-    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Resume", endRide: "🏁 End ride", free: "Free",
+    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Resume", adminPausedTitle: "⏸️ Paused by the operator", adminPausedHint: "Press ▶️ Resume to unlock the bike", endRide: "🏁 End ride", free: "Free",
     endRideTitle: "Parking photo", photoRequired: "📸 Required",
     photoDesc: "Take a photo of the parked bike", takePhoto: "Take parking photo",
     photoChange: "✅ Tap to change", confirmEnd: "✅ Confirm end of ride",
@@ -269,7 +269,7 @@ const TRANSLATIONS = {
     rideInProgress: "FAHRT LÄUFT", ridePause: "PAUSE", totalCost: "Gesamtkosten",
     swapBike: "🔄 Rad wechseln", swapHeader: "RAD WECHSELN", swapChooseTitle: "Wähle dein neues E-Bike", swapChooseSub: "Dein vorheriges Rad ist gesperrt. Tippe auf das E-Bike, mit dem du weiterfahren willst: gleiche Fahrt, du zahlst höchstens 19,90 €.", swapCancel: "Abbrechen und vorheriges Rad behalten", swapConfirm: "Radwechsel bestätigen", swapFreeTitle: "🔋 Akku leer? Rad kostenlos wechseln", swapFreeBody: "Wenn dein E-Bike schwächelt, wechsle es während der Fahrt beliebig oft. Im Tages- und Wochentarif inklusive; im Minutentarif gilt das Limit von 19,90 €/Tag – du zahlst nie mehr.", swapFreeCaption: "Akku leer? Rad kostenlos wechseln – du zahlst höchstens 19,90 €/Tag.",
     unlock: "🔓 Entsperren", ridePerMin: "⏱️ Fahrt", pausePerMin: "⏸️ Pause", zone: "📍 Zone",
-    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Fortsetzen", endRide: "🏁 Fahrt beenden", free: "Kostenlos",
+    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Fortsetzen", adminPausedTitle: "⏸️ Vom Betreiber pausiert", adminPausedHint: "Drücke ▶️ Fortsetzen, um das Rad zu entsperren", endRide: "🏁 Fahrt beenden", free: "Kostenlos",
     endRideTitle: "Parkfoto", photoRequired: "📸 Erforderlich",
     photoDesc: "Foto vom geparkten Fahrrad machen", takePhoto: "Parkfoto aufnehmen",
     photoChange: "✅ Tippen zum Ändern", confirmEnd: "✅ Fahrtende bestätigen",
@@ -358,7 +358,7 @@ const TRANSLATIONS = {
     rideInProgress: "TRAJET EN COURS", ridePause: "PAUSE", totalCost: "Coût total",
     swapBike: "🔄 Changer de vélo", swapHeader: "CHANGER DE VÉLO", swapChooseTitle: "Choisis ton nouveau vélo", swapChooseSub: "Ton vélo précédent est verrouillé. Touche le vélo sur lequel continuer : c'est le même trajet et tu paies 19,90 € maximum.", swapCancel: "Annuler et reprendre le vélo précédent", swapConfirm: "Confirmer le changement de vélo", swapFreeTitle: "🔋 Batterie faible ? Change de vélo gratuitement", swapFreeBody: "Si ton vélo se décharge, change-le autant de fois que tu veux pendant le trajet. Inclus dans les forfaits journée et semaine ; au tarif à la minute, le plafond de 19,90 €/jour s'applique — tu ne paies jamais plus.", swapFreeCaption: "Batterie faible ? Change de vélo gratuitement — tu paies 19,90 €/jour maximum.",
     unlock: "🔓 Déverrouillage", ridePerMin: "⏱️ Trajet", pausePerMin: "⏸️ Pause", zone: "📍 Zone",
-    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Reprendre", endRide: "🏁 Terminer le trajet", free: "Gratuit",
+    pauseBtn: "⏸️ Pause", resumeBtn: "▶️ Reprendre", adminPausedTitle: "⏸️ Mis en pause par l'opérateur", adminPausedHint: "Appuie sur ▶️ Reprendre pour déverrouiller le vélo", endRide: "🏁 Terminer le trajet", free: "Gratuit",
     endRideTitle: "Photo de stationnement", photoRequired: "📸 Obligatoire",
     photoDesc: "Prenez une photo du vélo garé", takePhoto: "Prendre la photo",
     photoChange: "✅ Appuyer pour changer", confirmEnd: "✅ Confirmer la fin du trajet",
@@ -447,7 +447,7 @@ const TRANSLATIONS = {
     rideInProgress: "VIAJE EN CURSO", ridePause: "PAUSA", totalCost: "Coste total",
     swapBike: "🔄 Cambiar bici", swapHeader: "CAMBIAR BICI", swapChooseTitle: "Elige tu nueva e-bike", swapChooseSub: "Tu bici anterior está bloqueada. Toca la e-bike con la que quieres continuar: es el mismo viaje y pagas 19,90 € como máximo.", swapCancel: "Cancelar y retomar la bici anterior", swapConfirm: "Confirmar cambio de bici", swapFreeTitle: "🔋 ¿Batería baja? Cambia de bici gratis", swapFreeBody: "Si tu e-bike se descarga, cámbiala las veces que quieras durante el viaje. Incluido en las tarifas de día y semana; con la tarifa por minuto se aplica el tope de 19,90 €/día — nunca pagas más.", swapFreeCaption: "¿Batería baja? Cambia de bici gratis — pagas 19,90 €/día como máximo.",
     unlock: "🔓 Desbloqueo", ridePerMin: "⏱️ Viaje", pausePerMin: "⏸️ Pausa", zone: "📍 Zona",
-    pauseBtn: "⏸️ Pausa", resumeBtn: "▶️ Reanudar", endRide: "🏁 Terminar viaje", free: "Gratis",
+    pauseBtn: "⏸️ Pausa", resumeBtn: "▶️ Reanudar", adminPausedTitle: "⏸️ Pausado por el operador", adminPausedHint: "Pulsa ▶️ Reanudar para desbloquear la bici", endRide: "🏁 Terminar viaje", free: "Gratis",
     endRideTitle: "Foto del aparcamiento", photoRequired: "📸 Obligatorio",
     photoDesc: "Haz una foto a la bici aparcada", takePhoto: "Hacer foto",
     photoChange: "✅ Toca para cambiar", confirmEnd: "✅ Confirmar fin del viaje",
@@ -536,7 +536,7 @@ const TRANSLATIONS = {
     rideInProgress: "RIT BEZIG", ridePause: "PAUZE", totalCost: "Totale kosten",
     swapBike: "🔄 Fiets wisselen", swapHeader: "FIETS WISSELEN", swapChooseTitle: "Kies je nieuwe e-bike", swapChooseSub: "Je vorige fiets is vergrendeld. Tik op de e-bike waarmee je verder wilt: zelfde rit en je betaalt maximaal € 19,90.", swapCancel: "Annuleren en vorige fiets houden", swapConfirm: "Fietswissel bevestigen", swapFreeTitle: "🔋 Batterij leeg? Wissel gratis van fiets", swapFreeBody: "Als je e-bike leegraakt, wissel hem zo vaak je wilt tijdens je rit. Inbegrepen bij het dag- en weektarief; bij het minutentarief geldt de limiet van € 19,90/dag — je betaalt nooit meer.", swapFreeCaption: "Batterij leeg? Wissel gratis van fiets — je betaalt max. € 19,90/dag.",
     unlock: "🔓 Ontgrendeling", ridePerMin: "⏱️ Rit", pausePerMin: "⏸️ Pauze", zone: "📍 Zone",
-    pauseBtn: "⏸️ Pauze", resumeBtn: "▶️ Hervatten", endRide: "🏁 Rit beëindigen", free: "Gratis",
+    pauseBtn: "⏸️ Pauze", resumeBtn: "▶️ Hervatten", adminPausedTitle: "⏸️ Gepauzeerd door de beheerder", adminPausedHint: "Druk op ▶️ Hervatten om de fiets te ontgrendelen", endRide: "🏁 Rit beëindigen", free: "Gratis",
     endRideTitle: "Parkeerfoto", photoRequired: "📸 Verplicht",
     photoDesc: "Maak een foto van de geparkeerde fiets", takePhoto: "Foto maken",
     photoChange: "✅ Tik om te wijzigen", confirmEnd: "✅ Einde rit bevestigen",
@@ -625,7 +625,7 @@ const TRANSLATIONS = {
     rideInProgress: "JÍZDA PROBÍHÁ", ridePause: "PAUZA", totalCost: "Celkové náklady",
     swapBike: "🔄 Vyměnit kolo", swapHeader: "VYMĚNIT KOLO", swapChooseTitle: "Vyber si nové e-kolo", swapChooseSub: "Tvé předchozí kolo je zamčené. Klepni na e-kolo, na kterém chceš pokračovat: stejná jízda a zaplatíš maximálně 19,90 €.", swapCancel: "Zrušit a vzít zpět předchozí kolo", swapConfirm: "Potvrdit výměnu kola", swapFreeTitle: "🔋 Slabá baterie? Vyměň kolo zdarma", swapFreeBody: "Když ti e-kolo dochází, vyměň ho během jízdy kolikrát chceš. V denním a týdenním tarifu je to zahrnuto; u minutového tarifu platí strop 19,90 €/den — nikdy nezaplatíš víc.", swapFreeCaption: "Slabá baterie? Vyměň kolo zdarma — zaplatíš maximálně 19,90 €/den.",
     unlock: "🔓 Odemknutí", ridePerMin: "⏱️ Jízda", pausePerMin: "⏸️ Pauza", zone: "📍 Zóna",
-    pauseBtn: "⏸️ Pauza", resumeBtn: "▶️ Pokračovat", endRide: "🏁 Ukončit jízdu", free: "Zdarma",
+    pauseBtn: "⏸️ Pauza", resumeBtn: "▶️ Pokračovat", adminPausedTitle: "⏸️ Pozastaveno operátorem", adminPausedHint: "Stiskni ▶️ Pokračovat pro odemčení kola", endRide: "🏁 Ukončit jízdu", free: "Zdarma",
     endRideTitle: "Foto parkování", photoRequired: "📸 Povinné",
     photoDesc: "Vyfoťte zaparkované kolo", takePhoto: "Vyfotit parkování",
     photoChange: "✅ Klepněte pro změnu", confirmEnd: "✅ Potvrdit konec jízdy",
@@ -1385,6 +1385,8 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
     } catch(e) { setError(e.code==="auth/email-already-in-use"?t('errEmailUsed'):t('errGenerico')+e.message); }
     setLoading(false);
   };
+  const [bonusOn, setBonusOn] = React.useState(false);
+  React.useEffect(()=>{ (async()=>{ try{ await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const s=await getDoc(doc(window.firebaseDb,"config","app")); setBonusOn(s.data()?.welcomeBonusEnabled===true); }catch(_e){} })(); },[]);
   const inp = {width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10};
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -1393,9 +1395,9 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
           <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
           <p style={{color:C.skyBlue,fontSize:13,fontFamily:"'DM Sans',sans-serif",margin:"0 0 4px",fontWeight:600,lineHeight:"1.4"}}>{t('coverageMsg')}</p>
           <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,fontFamily:"'DM Sans',sans-serif",margin:"0 0 12px",lineHeight:"1.4"}}>📍 Castiglione del Lago · Magione · Tuoro · Passignano</p>
-          <div style={{background:C.sunYellow,borderRadius:10,padding:"7px 12px",margin:"0 0 12px"}}>
+          {bonusOn&&(<div style={{background:C.sunYellow,borderRadius:10,padding:"7px 12px",margin:"0 0 12px"}}>
             <p style={{color:C.deepBlue,fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:700,margin:0,lineHeight:"1.35"}}>{t('welcomePromo')}</p>
-          </div>
+          </div>)}
           <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
             {LANG_LIST.map(l=>(
               <button key={l} onClick={()=>{setLang(l);setError(null);}}
@@ -1546,6 +1548,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
+  const [adminPausedFlag, setAdminPausedFlag] = React.useState(false);
   const [pauseSeconds, setPauseSeconds] = React.useState(0);
   const startTimeRef = React.useRef(computedStart);
   const pauseStartRef = React.useRef(null);
@@ -1606,10 +1609,26 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
         const pedId = 'PED' + bike.id.replace('PA-','').padStart(3,'0');
         console.log('▶️ Riprendi — invio unlock a', pedId);
         await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'unlock',status:'pending',createdAt:new Date().toISOString()});
+        try{ const {doc:_d,updateDoc:_u}=window.firebaseFunctions; if(rideId){ await _u(_d(window.firebaseDb,"rides",rideId),{adminPaused:false}); } }catch(_e){}
       } catch(e){ console.error('Errore unlock ripresa:', e); }
     }
     setPaused(p => !p);
   };
+  // Pausa messa dall'operatore: l'app legge lo stato dalla corsa e blocca il conteggio
+  React.useEffect(()=>{
+    if(!rideId) return;
+    let unsub=null;
+    (async()=>{
+      await waitFB();
+      const {doc,onSnapshot}=window.firebaseFunctions;
+      unsub=onSnapshot(doc(window.firebaseDb,"rides",rideId),(snap)=>{
+        const d=(snap&&snap.data&&snap.data())||{};
+        if(d.adminPaused===true){ setAdminPausedFlag(true); setPaused(prev=>{ if(!prev){ pauseStartRef.current=Date.now(); } return true; }); }
+        else { setAdminPausedFlag(false); }
+      });
+    })();
+    return ()=>{ if(unsub) unsub(); };
+  },[rideId]);
   React.useEffect(() => {
     if (!navigator.geolocation||showEndFlow) return;
     const haversine = (a,b) => {
@@ -2142,6 +2161,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
 
       {/* BOTTONI IN BASSO — più spazio e più grandi */}
       <div style={{padding:"12px 14px 20px",flexShrink:0,background:C.white,boxShadow:"0 -2px 12px rgba(2,48,71,0.08)"}}>
+        {adminPausedFlag&&<div style={{background:`${C.warmOrange}22`,border:`1px solid ${C.warmOrange}`,borderRadius:12,padding:"10px 12px",marginBottom:10,textAlign:"center"}}><p style={{color:C.warmOrange,fontSize:13,fontWeight:700,margin:0,...ds}}>{t('adminPausedTitle')}</p><p style={{color:C.deepBlue,fontSize:11,margin:"4px 0 0",...ds}}>{t('adminPausedHint')}</p></div>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:6}}>
           <button onClick={handlePauseToggle} style={{background:paused?C.blueGreen:C.sunYellow,border:"none",borderRadius:14,padding:"16px 8px",color:paused?C.white:C.deepBlue,fontSize:15,...ds,fontWeight:700,cursor:"pointer"}}>
             {paused?`▶️ ${t('resumeBtn')}`:`⏸️ ${t('pauseBtn')}`}
