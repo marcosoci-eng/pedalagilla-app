@@ -2724,7 +2724,7 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
         {!promoApplied ? (
           <div style={{display:"flex",gap:8}}>
             <input value={promoCode} onChange={e=>{setPromoCode(e.target.value.toUpperCase());setPromoError("");}}
-              placeholder="Es. THESOCIS2026"
+              placeholder="Es. ABC123"
               style={{flex:1,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${C.skyBlue}`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,textTransform:"uppercase",letterSpacing:2}}/>
             <button onClick={applyMTBPromo} disabled={promoLoading||!promoCode.trim()}
               style={{background:promoCode.trim()?C.deepBlue:"#ccc",border:"none",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
