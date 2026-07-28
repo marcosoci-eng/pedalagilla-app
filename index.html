@@ -3885,15 +3885,15 @@ function Main() {
     <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:`linear-gradient(135deg,${C.deepBlue},#034a6e)`,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 -4px 20px rgba(2,48,71,0.5)"}}>
       <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:44,height:44,borderRadius:10,objectFit:"contain",background:"white",padding:2}} alt=""/>
       <div style={{flex:1}}>
-        <p style={{color:C.white,fontSize:14,fontWeight:700,margin:0,...ds}}>Installa PedalAgilla</p>
+        <p style={{color:C.white,fontSize:14,fontWeight:700,margin:0,...ds}}>Installa l'app PedalAgilla</p>
         <p style={{color:C.skyBlue,fontSize:12,margin:0,...ds}}>
-          {isIOS ? "Tocca ⎋ → 'Aggiungi a schermata Home'" : "Aggiungi alla schermata Home per un accesso rapido"}
+          {isIOS ? "Per installare l'app: tocca ⎋ → 'Aggiungi a schermata Home'" : "Installa l'app per un accesso rapido"}
         </p>
       </div>
       {!isIOS && installPrompt && (
         <button onClick={async()=>{ installPrompt.prompt(); await installPrompt.userChoice; setShowInstallBanner(false); }}
           style={{background:C.blueGreen,border:"none",borderRadius:10,padding:"10px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-          Installa
+          Installa app
         </button>
       )}
       <button onClick={()=>setShowInstallBanner(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.5)",fontSize:22,cursor:"pointer",padding:"0 4px",flexShrink:0}}>✕</button>
