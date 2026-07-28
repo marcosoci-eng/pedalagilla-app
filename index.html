@@ -804,6 +804,7 @@ const TARIFFA_SETTIMANALE = 99.00;
 const TARIFFA_MTB_ADULTO = 15.00;
 const TARIFFA_MTB_BAMBINO = 10.00;
 const WELCOME_BONUS_MIN = 30; // minuti gratis di benvenuto, una tantum sulla prima corsa
+const WELCOME_PROMO_SHOW = false; // scritta promo benvenuto in homepage: true=mostra, false=nascondi (interruttore stagionale, indipendente dal pulsante bonus)
 const QR_BASE_URL = "https://www.pedalagilla.it/?bike=";
 const QR_MTB_URL = "https://www.pedalagilla.it/?mtb=";
 const APP_URL = "https://www.pedalagilla.it";
@@ -1385,8 +1386,6 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
     } catch(e) { setError(e.code==="auth/email-already-in-use"?t('errEmailUsed'):t('errGenerico')+e.message); }
     setLoading(false);
   };
-  const [bonusOn, setBonusOn] = React.useState(false);
-  React.useEffect(()=>{ (async()=>{ try{ await waitFB(); const {doc,getDoc}=window.firebaseFunctions; const s=await getDoc(doc(window.firebaseDb,"config","app")); setBonusOn(s.data()?.welcomeBonusEnabled===true); }catch(_e){} })(); },[]);
   const inp = {width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:14,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10};
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.deepBlue} 0%,#034a6e 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -1395,7 +1394,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
           <img src="https://www.pedalagilla.it/icons/icon-192x192.png" style={{width:140,height:140,objectFit:"contain",marginBottom:10}} alt="PedalAgilla"/>
           <p style={{color:C.skyBlue,fontSize:13,fontFamily:"'DM Sans',sans-serif",margin:"0 0 4px",fontWeight:600,lineHeight:"1.4"}}>{t('coverageMsg')}</p>
           <p style={{color:"rgba(255,255,255,0.7)",fontSize:11,fontFamily:"'DM Sans',sans-serif",margin:"0 0 12px",lineHeight:"1.4"}}>📍 Castiglione del Lago · Magione · Tuoro · Passignano</p>
-          {bonusOn&&(<div style={{background:C.sunYellow,borderRadius:10,padding:"7px 12px",margin:"0 0 12px"}}>
+          {WELCOME_PROMO_SHOW&&(<div style={{background:C.sunYellow,borderRadius:10,padding:"7px 12px",margin:"0 0 12px"}}>
             <p style={{color:C.deepBlue,fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:700,margin:0,lineHeight:"1.35"}}>{t('welcomePromo')}</p>
           </div>)}
           <div style={{display:"flex",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
