@@ -2204,10 +2204,11 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
 // ═══════════════════════════════════════════════════════
 // MULTIRIDETIMER — più bici (NUOVO)
 // ═══════════════════════════════════════════════════════
-function MultiRideTimer({ bikes, plan, user, rideIds, onEnd, t, isFree=false, fixedCost=null }) {
+function MultiRideTimer({ bikes, plan, user, rideIds, rideStartTime=0, onEnd, t, isFree=false, fixedCost=null }) {
   const [activeTab, setActiveTab] = React.useState(0);
   const [globalPaused, setGlobalPaused] = React.useState(false);
-  const [seconds, setSeconds] = React.useState(0);
+  const computedStart = rideStartTime || Date.now(); // orario di partenza reale: sopravvive a un reload (prima il timer riazzerava a 0 = sotto-fatturazione)
+  const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [pauseSeconds, setPauseSeconds] = React.useState(0);
   const [completedBikes, setCompletedBikes] = React.useState([]);
   const [showEndFlow, setShowEndFlow] = React.useState(false);
@@ -3224,6 +3225,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
   const handlePaySuccess=async(paymentMethodId, paymentIntentId, isPreAuth=false)=>{
     setShowPayment(false); setShowPlan(false);
+    setRestoredElapsed(0); // corsa NUOVA: azzera l'orario di ripristino, il timer parte da adesso (evita seed da un orario vecchio = niente sovra-fatturazione)
     console.log("💳 handlePaySuccess chiamato");
     try {
       await waitFB();
@@ -3260,7 +3262,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           paymentIntentId: paymentIntentId||null,
           paymentMethodId: paymentMethodId||null,
           isPreAuth: isPreAuth||false,
-          amountPaid: isPreAuth ? 0 : (payAmount||0),
+          amountPaid: isPreAuth ? 0 : ((payAmount||0)/bks.length), // per-bici: payAmount e' sempre valore-bici * nBikes, quindi diviso e' il costo reale della singola bici (no gonfiaggio report)
           welcomeBonus: bonusEligible,
         });
         rideIds.push({bikeId:bike.id,rideId:rideDoc.id});
@@ -3450,7 +3452,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {riding&&confirmed&&confirmed.length>0&&(
           confirmed.length===1
             ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} onSwap={handleSwapBike} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike} bonusRide={bonusRide}/>
-            :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} onEnd={handleEndRide} t={t} isFree={isFree} fixedCost={hotelPerBike}/>
+            :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} rideStartTime={restoredElapsed} onEnd={handleEndRide} t={t} isFree={isFree} fixedCost={hotelPerBike}/>
         )}
 
         {/* Riepilogo fine corsa */}
