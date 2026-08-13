@@ -2975,6 +2975,11 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [riding, setRiding] = React.useState(false);
   const [confirmed, setConfirmed] = React.useState([]);
   const [currentRideIds, setCurrentRideIds] = React.useState([]);
+  // FIX corse multi-bici: congela il gruppo iniziale (bici + rideIds) all'avvio.
+  // Quando una bici finisce, confirmed/currentRideIds si accorciano: senza questo,
+  // alla penultima bici il render passava da MultiRideTimer a RideTimer (timer azzerato)
+  // e la cattura di gruppo sommava solo le bici rimaste (sotto-fatturazione).
+  const groupStartRef = React.useRef({ bikes: [], rideIds: [] });
   const [bonusRide, setBonusRide] = React.useState(false); // questa corsa applica il bonus benvenuto?
   const [showSummary, setShowSummary] = React.useState(false);
   const [rideSummary, setRideSummary] = React.useState(null);
@@ -3091,6 +3096,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
             const found = initBikes.find(b => b.id === r.bikeId);
             return found || {id: r.bikeId, zone: r.zone||"", battery: 80, status: "Disponibile", lat: 43.15, lng: 12.08};
           });
+          groupStartRef.current = { bikes: bks, rideIds };
           setCurrentRideIds(rideIds);
           setConfirmed(bks);
           setPlan(activeRides[0].plan || "minuti");
@@ -3278,6 +3284,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
           await updateDoc(codeRef, { totalCashback: current + hotelCashback * bks.length, totalUses: uses + bks.length });
         } catch(e){}
       }
+      groupStartRef.current = { bikes: bks, rideIds };
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
       setRiding(true); // Mostra timer SUBITO senza aspettare i comandi IoT
@@ -3348,6 +3355,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         await sendBikeCommand(bike.id, 'gps_high');
         await setBikeInUse(bike.id, true);
       }
+      groupStartRef.current = { bikes: bks, rideIds };
       setCurrentRideIds(rideIds);
       setConfirmed(bks);
       setRiding(true); // Mostra timer SUBITO
@@ -3450,9 +3458,9 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
 
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
-          confirmed.length===1
+          groupStartRef.current.bikes.length<=1
             ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} onSwap={handleSwapBike} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike} bonusRide={bonusRide}/>
-            :<MultiRideTimer bikes={confirmed} plan={plan} user={user} rideIds={currentRideIds} rideStartTime={restoredElapsed} onEnd={handleEndRide} t={t} isFree={isFree} fixedCost={hotelPerBike}/>
+            :<MultiRideTimer bikes={groupStartRef.current.bikes} plan={plan} user={user} rideIds={groupStartRef.current.rideIds} rideStartTime={restoredElapsed} onEnd={handleEndRide} t={t} isFree={isFree} fixedCost={hotelPerBike}/>
         )}
 
         {/* Riepilogo fine corsa */}
