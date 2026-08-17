@@ -1339,6 +1339,10 @@ function MTBAdmin() {
   const [rentals, setRentals] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState({});
+  const [newMtbId, setNewMtbId] = React.useState("");
+  const [newMtbZone, setNewMtbZone] = React.useState("");
+  const [newMtbType, setNewMtbType] = React.useState("MTB");
+  const [addingMtb, setAddingMtb] = React.useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -1394,6 +1398,23 @@ function MTBAdmin() {
     } catch(e){}
   };
 
+  const addMtb = async () => {
+    const id = newMtbId.trim();
+    if(!id){ alert("Inserisci l'ID della MTB (es. MTB-03)"); return; }
+    if(bikes.some(b=>b.id===id)){ alert(`⚠️ La MTB "${id}" esiste già.`); return; }
+    setAddingMtb(true);
+    try {
+      await waitFB();
+      const {doc, setDoc} = window.firebaseFunctions;
+      const zone = newMtbZone.trim()||"Castiglione";
+      await setDoc(doc(window.firebaseDb,"mtbBikers",id),{status:"Disponibile", zone, type:newMtbType, createdAt:new Date().toISOString()});
+      setBikes(prev=>[...prev,{id, status:"Disponibile", zone, type:newMtbType}]);
+      setNewMtbId(""); setNewMtbZone(""); setNewMtbType("MTB");
+      alert(`✅ MTB "${id}" aggiunta e già Disponibile in app.\n\nOra, quando sei accanto alla bici, premi "📍 Sono qui — salva posizione" per farla comparire sulla mappa, e "🔄 Genera nuovo codice" per il lucchetto.`);
+    } catch(e){ alert("Errore: "+e.message); }
+    setAddingMtb(false);
+  };
+
   const activeRentals = rentals.filter(r=>r.status==="In corso");
   const completedRentals = rentals.filter(r=>r.status==="Completata");
 
@@ -1402,6 +1423,25 @@ function MTBAdmin() {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:0,...ds,opacity:0.5}}>MTB Muscolari ({bikes.length})</p>
         <button onClick={loadData} style={{background:`${C.blueGreen}20`,border:`1px solid ${C.blueGreen}`,borderRadius:10,padding:"6px 12px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🔄 Aggiorna</button>
+      </div>
+
+      {/* AGGIUNGI MTB */}
+      <div style={{background:C.white,borderRadius:16,padding:16,marginBottom:14,boxShadow:"0 2px 12px rgba(2,48,71,0.08)",border:`1.5px dashed ${C.blueGreen}60`}}>
+        <p style={{color:C.deepBlue,fontSize:13,fontWeight:700,margin:"0 0 10px",...ds}}>➕ Aggiungi una MTB</p>
+        <input value={newMtbId} onChange={e=>setNewMtbId(e.target.value)} placeholder="ID — identico al QR (es. MTB-03)"
+          style={{width:"100%",boxSizing:"border-box",border:`1px solid ${C.skyBlue}60`,borderRadius:10,padding:"10px 12px",fontSize:13,...ds,marginBottom:8}}/>
+        <input value={newMtbZone} onChange={e=>setNewMtbZone(e.target.value)} placeholder="Zona (default: Castiglione)"
+          style={{width:"100%",boxSizing:"border-box",border:`1px solid ${C.skyBlue}60`,borderRadius:10,padding:"10px 12px",fontSize:13,...ds,marginBottom:8}}/>
+        <select value={newMtbType} onChange={e=>setNewMtbType(e.target.value)}
+          style={{width:"100%",boxSizing:"border-box",border:`1px solid ${C.skyBlue}60`,borderRadius:10,padding:"10px 12px",fontSize:13,...ds,marginBottom:10,background:C.white}}>
+          <option value="MTB">MTB adulto</option>
+          <option value="Bambino">Bici bambino</option>
+        </select>
+        <button onClick={addMtb} disabled={addingMtb}
+          style={{width:"100%",background:addingMtb?"#ccc":`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:12,padding:12,color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer"}}>
+          {addingMtb?"⏳ Aggiunta...":"➕ Aggiungi MTB"}
+        </button>
+        <p style={{color:"#9aa",fontSize:10.5,...ds,margin:"8px 0 0",lineHeight:1.35}}>L'ID deve essere identico a quello nel QR (la parte dopo <b>?mtb=</b>). Dopo l'aggiunta imposta posizione GPS e codice lucchetto nella card qui sotto.</p>
       </div>
 
       {loading && <p style={{color:"#aaa",fontSize:13,...ds,textAlign:"center",padding:20}}>⏳ Caricamento...</p>}
@@ -1445,6 +1485,15 @@ function MTBAdmin() {
               style={{background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}30`,borderRadius:10,padding:"10px 14px",color:C.blueGreen,fontSize:12,...ds,fontWeight:600,textDecoration:"none",display:"flex",alignItems:"center"}}>
               🗺️
             </a>}
+          </div>
+
+          {/* QR CODE MTB */}
+          <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${C.skyBlue}20`,display:"flex",alignItems:"center",gap:12}}>
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(QR_MTB_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=1`} style={{width:90,height:90,borderRadius:8,border:`2px solid ${C.skyBlue}30`}} alt={`QR ${bike.id}`}/>
+            <a href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(QR_MTB_URL+bike.id)}&bgcolor=ffffff&color=023047&qzone=2`} target="_blank"
+              style={{flex:1,background:C.deepBlue,borderRadius:10,padding:"10px 14px",color:C.white,fontSize:12,...ds,fontWeight:600,textDecoration:"none",textAlign:"center"}}>
+              🖨️ Stampa QR {bike.id}
+            </a>
           </div>
         </div>
       ))}
@@ -1541,6 +1590,8 @@ function AdminApp({ user, onLogout, t }) {
   const [editNote, setEditNote] = React.useState("");
   const [editChecks, setEditChecks] = React.useState({});
   const [showBikeDetail, setShowBikeDetail] = React.useState(false);
+  const [selectMode, setSelectMode] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState([]);
   const [incassiPeriod, setIncassiPeriod] = React.useState("oggi");
   const [ridesPage, setRidesPage] = React.useState(0);
   const RIDES_PER_PAGE = 15;
@@ -1694,6 +1745,24 @@ function AdminApp({ user, onLogout, t }) {
       const pedId='PED'+bikeId.replace('PA-','').padStart(3,'0');
       await setDoc(doc(window.firebaseDb,"bikes",pedId),{status:newStatus,updatedAt:new Date().toISOString()},{merge:true});
     } catch(e){ console.error('Errore salvataggio status:',e); }
+  };
+  const setStatusMany = async (ids, targetStatus) => {
+    if(!ids.length) return;
+    setBikes(prev=>prev.map(b=>ids.includes(b.id)?{...b,status:targetStatus}:b));
+    let ok=0;
+    try {
+      await waitFB();
+      const {doc,setDoc}=window.firebaseFunctions;
+      for(const id of ids){
+        try{
+          const pedId='PED'+id.replace('PA-','').padStart(3,'0');
+          await setDoc(doc(window.firebaseDb,"bikes",pedId),{status:targetStatus,updatedAt:new Date().toISOString()},{merge:true});
+          ok++;
+        }catch(e){ console.error('batch status',id,e); }
+      }
+    } catch(e){ console.error(e); }
+    setSelectedIds([]); setSelectMode(false);
+    alert(`✅ ${ok}/${ids.length} bici → ${targetStatus}.`);
   };
   const forceEndRide=async(ride)=>{ 
     const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); 
@@ -2128,7 +2197,29 @@ function AdminApp({ user, onLogout, t }) {
                 <span style={{color:"#bbb",fontSize:9,...ds}}>100%</span>
               </div>
             </div>
-            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>openBikeDetail(bike)} style={{background:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
+            {/* SELEZIONE MULTIPLA */}
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+              <button onClick={()=>{setSelectMode(m=>!m);setSelectedIds([]);}}
+                style={{background:selectMode?C.blueGreen:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}`,borderRadius:10,padding:"7px 12px",color:selectMode?C.white:C.blueGreen,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>
+                {selectMode?"✕ Annulla selezione":"☑️ Seleziona più bici"}
+              </button>
+              {selectMode&&<>
+                <button onClick={()=>setSelectedIds(filteredBikes.map(b=>b.id))}
+                  style={{background:`${C.skyBlue}15`,border:`1px solid ${C.skyBlue}`,borderRadius:10,padding:"7px 12px",color:C.deepBlue,fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>Tutte</button>
+                <button onClick={()=>setSelectedIds([])}
+                  style={{background:"#f3f3f3",border:"1px solid #ddd",borderRadius:10,padding:"7px 12px",color:"#888",fontSize:12,...ds,fontWeight:600,cursor:"pointer"}}>Nessuna</button>
+                <span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:700}}>{selectedIds.length} selez.</span>
+              </>}
+            </div>
+            {selectMode&&selectedIds.length>0&&(
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <button onClick={()=>setStatusMany(selectedIds,"Manutenzione")}
+                  style={{flex:1,background:C.warmOrange,border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔧 In manutenzione ({selectedIds.length})</button>
+                <button onClick={()=>setStatusMany(selectedIds,"Disponibile")}
+                  style={{flex:1,background:C.blueGreen,border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>✅ In servizio ({selectedIds.length})</button>
+              </div>
+            )}
+            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>selectMode?setSelectedIds(prev=>prev.includes(bike.id)?prev.filter(x=>x!==bike.id):[...prev,bike.id]):openBikeDetail(bike)} style={{background:selectedIds.includes(bike.id)?`${C.blueGreen}12`:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${selectedIds.includes(bike.id)?C.blueGreen:getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}>{selectMode&&<div style={{width:22,height:22,borderRadius:6,border:`2px solid ${selectedIds.includes(bike.id)?C.blueGreen:"#ccc"}`,background:selectedIds.includes(bike.id)?C.blueGreen:"#fff",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{selectedIds.includes(bike.id)?"✓":""}</div>}<div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
             {/* MTB Muscolari */}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"16px 0 8px",...ds,opacity:0.5}}>🏔️ MTB Muscolari</p>
             {(window._adminMTBBikes||[]).length===0&&<p style={{color:"#aaa",fontSize:12,...ds,textAlign:"center",padding:10}}>Nessuna MTB — vai nel tab MTB per gestirle</p>}
