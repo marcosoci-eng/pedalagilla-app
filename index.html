@@ -2412,7 +2412,7 @@ function MultiRideTimer({ bikes, plan, user, rideIds, rideStartTime=0, onEnd, t,
 // ═══════════════════════════════════════════════════════
 // MTB NOLEGGIO — bici muscolari
 // ═══════════════════════════════════════════════════════
-function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = React.useState(false);
+function MTBTab({ user, t, initialMtbId, onMtbConsumed }) {  const [showInstructions, setShowInstructions] = React.useState(false);
   const [mtbFeedback, setMtbFeedback] = React.useState(null);
   const [mtbFeedbackProblems, setMtbFeedbackProblems] = React.useState([]);
   const [mtbFeedbackNote, setMtbFeedbackNote] = React.useState("");
@@ -2421,6 +2421,13 @@ function MTBTab({ user, t }) {  const [showInstructions, setShowInstructions] = 
   const MTB_PROBLEMI = ["🔒 Problema lucchetto","🚲 Ruota sgonfia","⛓️ Catena a terra","🦶 Pedale difficile","💺 Seggiolino danneggiato","🧹 Bici sporca","💰 Troppo costosa"];
   const [mtbBikes, setMtbBikes] = React.useState([]);
   const [selectedMTB, setSelectedMTB] = React.useState(null);
+  // Apertura diretta da QR telefono (?mtb=ID): apre la schermata noleggio della MTB
+  React.useEffect(()=>{
+    if(!initialMtbId) return;
+    const bike = mtbBikes.find(b=>b.id===initialMtbId) || {id:initialMtbId,name:`MTB ${initialMtbId}`,zone:"Castiglione"};
+    setSelectedMTB(bike);
+    if(onMtbConsumed) onMtbConsumed();
+  },[initialMtbId]);
   const [tariffa, setTariffa] = React.useState(null);
   const [showPayment, setShowPayment] = React.useState(false);
   const [showCode, setShowCode] = React.useState(false);
@@ -3159,6 +3166,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   },[showQRScanner]);
 
   const [pendingUrlBike, setPendingUrlBike] = React.useState(() => getUrlBike());
+  const [pendingUrlMtb, setPendingUrlMtb] = React.useState(() => new URLSearchParams(window.location.search).get("mtb"));
   React.useEffect(() => {
     if(!pendingUrlBike) return;
     if(user?.type==="admin"){ window.location.href="/admin"; return; }
@@ -3171,6 +3179,13 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
     if(!res.ok){ alert(res.msg); return; }
     setSelectedBike(res.bike); setSelectedBikes([res.bike]); setShowPlan(true);
   },[pendingUrlBike, bikesLoaded, allBikes, activeBikeIds, user]);
+
+  // QR MTB inquadrato con la fotocamera del telefono (?mtb=ID): apre la tab MTB
+  React.useEffect(() => {
+    if(!pendingUrlMtb) return;
+    if(user?.type==="admin"){ window.location.href="/admin"; return; }
+    setTab("mtb");
+  },[pendingUrlMtb, user]);
 
   // Verifica robusta prima di avviare una corsa: blocca manutenzione, già in uso, non disponibile
   const resolveBikeForStart=(bikeId)=>{
@@ -3800,7 +3815,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                 <button onClick={onLogout} style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:10,padding:"6px 12px",color:C.skyBlue,fontSize:11,...ds,cursor:"pointer"}}>{t('logout')}</button>
               </div>
             </div>
-            <MTBTab user={user} t={t}/>
+            <MTBTab user={user} t={t} initialMtbId={pendingUrlMtb} onMtbConsumed={()=>{ setPendingUrlMtb(null); window.history.replaceState({},"","/"); }}/>
           </div>
         )}
 
