@@ -1616,8 +1616,10 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
         console.log('⏸️ Pausa — invio lock a', pedId);
         await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'lock',status:'pending',createdAt:new Date().toISOString()});
       } catch(e){ console.error('Errore lock pausa:', e); }
+      try{ const {doc:_d,updateDoc:_u}=window.firebaseFunctions; if(rideId){ await _u(_d(window.firebaseDb,"rides",rideId),{clientPaused:true, clientPauseStartAt: pauseStartRef.current, clientTotalPausedMs: totalPausedRef.current}); } }catch(_e){ console.error('persist pausa:', _e); }
     } else {
-      totalPausedRef.current += Date.now() - pauseStartRef.current;
+      const _lastPauseMs = Date.now() - pauseStartRef.current;
+      totalPausedRef.current += _lastPauseMs;
       pauseStartRef.current = null;
       try {
         await waitFB();
@@ -1625,7 +1627,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
         const pedId = 'PED' + bike.id.replace('PA-','').padStart(3,'0');
         console.log('▶️ Riprendi — invio unlock a', pedId);
         await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:'unlock',status:'pending',createdAt:new Date().toISOString()});
-        try{ const {doc:_d,updateDoc:_u}=window.firebaseFunctions; if(rideId){ await _u(_d(window.firebaseDb,"rides",rideId),{adminPaused:false}); } }catch(_e){}
+        try{ const {doc:_d,updateDoc:_u}=window.firebaseFunctions; if(rideId){ await _u(_d(window.firebaseDb,"rides",rideId),{adminPaused:false, clientPaused:false, clientPauseStartAt:null, clientTotalPausedMs: totalPausedRef.current, clientLastPauseMs: _lastPauseMs}); } }catch(_e){}
       } catch(e){ console.error('Errore unlock ripresa:', e); }
     }
     setPaused(p => !p);
@@ -1644,6 +1646,35 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
       });
     })();
     return ()=>{ if(unsub) unsub(); };
+  },[rideId]);
+  // Ripristino PAUSA dopo chiusura/riapertura app: la pausa del cliente è salvata sulla corsa
+  // (clientPaused/clientPauseStartAt/clientTotalPausedMs/clientLastPauseMs) e qui la ricostruiamo,
+  // così il tempo in pausa resta accreditato e non si fattura a tariffa piena (fix sovra-fatturazione).
+  const pauseRestoredRef = React.useRef(false);
+  React.useEffect(() => {
+    if(!rideId || pauseRestoredRef.current) return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        await waitFB();
+        const {doc,getDoc}=window.firebaseFunctions;
+        const snap=await getDoc(doc(window.firebaseDb,"rides",rideId));
+        if(cancelled || !snap || !snap.exists()) return;
+        const d=snap.data()||{};
+        pauseRestoredRef.current = true;
+        if(typeof d.clientTotalPausedMs==='number') totalPausedRef.current = d.clientTotalPausedMs;
+        if(d.clientPaused===true && d.clientPauseStartAt){
+          pauseStartRef.current = d.clientPauseStartAt;
+          setPaused(true);
+          setSeconds(Math.max(0, Math.floor((d.clientPauseStartAt - startTimeRef.current - totalPausedRef.current)/1000)));
+          setPauseSeconds(Math.max(0, Math.floor((Date.now() - d.clientPauseStartAt)/1000)));
+        } else {
+          setSeconds(Math.max(0, Math.floor((Date.now() - startTimeRef.current - totalPausedRef.current)/1000)));
+          if(typeof d.clientLastPauseMs==='number') setPauseSeconds(Math.floor(d.clientLastPauseMs/1000));
+        }
+      }catch(e){ console.error('Ripristino pausa:', e); }
+    })();
+    return ()=>{ cancelled=true; };
   },[rideId]);
   React.useEffect(() => {
     if (!navigator.geolocation||showEndFlow) return;
@@ -2207,6 +2238,9 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
 function MultiRideTimer({ bikes, plan, user, rideIds, rideStartTime=0, onEnd, t, isFree=false, fixedCost=null }) {
   const [activeTab, setActiveTab] = React.useState(0);
   const [globalPaused, setGlobalPaused] = React.useState(false);
+  const pauseStartRef = React.useRef(null);
+  const totalPausedRef = React.useRef(0);
+  const pauseRestoredRef = React.useRef(false);
   const computedStart = rideStartTime || Date.now(); // orario di partenza reale: sopravvive a un reload (prima il timer riazzerava a 0 = sotto-fatturazione)
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [pauseSeconds, setPauseSeconds] = React.useState(0);
@@ -2248,19 +2282,58 @@ function MultiRideTimer({ bikes, plan, user, rideIds, rideStartTime=0, onEnd, t,
 
   const handleGlobalPause = async () => {
     const willPause = !globalPaused;
+    if (willPause) { pauseStartRef.current = Date.now(); }
+    else { if(pauseStartRef.current){ totalPausedRef.current += Date.now() - pauseStartRef.current; } pauseStartRef.current = null; }
+    const pauseFields = willPause
+      ? {groupPaused:true, groupPauseStartAt: pauseStartRef.current, groupTotalPausedMs: totalPausedRef.current}
+      : {groupPaused:false, groupPauseStartAt:null, groupTotalPausedMs: totalPausedRef.current};
     const active = bikes.filter(b=>!completedBikes.includes(b.id));
     try {
       await waitFB();
-      const {collection, addDoc} = window.firebaseFunctions;
+      const {collection, addDoc, doc, updateDoc} = window.firebaseFunctions;
       for (const b of active) {
         const pedId = 'PED' + b.id.replace('PA-','').padStart(3,'0');
         try {
           await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type: willPause?'lock':'unlock', status:'pending', createdAt:new Date().toISOString()});
         } catch(inner){ console.error('Errore comando pausa su', pedId, inner); }
+        const re = rideIds.find(r=>r.bikeId===b.id);
+        if(re){ try{ await updateDoc(doc(window.firebaseDb,"rides",re.rideId), pauseFields); }catch(pe){ console.error('persist pausa gruppo', pe); } }
       }
     } catch(e){ console.error('Errore lock/unlock pausa multipla:', e); }
     setGlobalPaused(p=>!p);
   };
+  // Ripristino PAUSA di GRUPPO dopo chiusura/riapertura app: la pausa (globale, tutte le bici
+  // insieme) è salvata sulle corse del gruppo e qui la ricostruiamo, così il tempo in pausa
+  // resta accreditato per l'intero gruppo e non si fattura a tariffa piena.
+  React.useEffect(()=>{
+    const first = rideIds && rideIds[0] && rideIds[0].rideId;
+    if(!first || pauseRestoredRef.current) return;
+    let cancelled=false;
+    (async()=>{
+      try{
+        await waitFB();
+        const {doc,getDoc}=window.firebaseFunctions;
+        const snap=await getDoc(doc(window.firebaseDb,"rides",first));
+        if(cancelled || !snap || !snap.exists()) return;
+        const d=snap.data()||{};
+        pauseRestoredRef.current=true;
+        const totalPausedMs=(typeof d.groupTotalPausedMs==='number')?d.groupTotalPausedMs:0;
+        totalPausedRef.current=totalPausedMs;
+        const totalElapsedSec=Math.max(0, Math.floor((Date.now()-computedStart)/1000));
+        if(d.groupPaused===true && d.groupPauseStartAt){
+          pauseStartRef.current=d.groupPauseStartAt;
+          const ongoing=Math.max(0, Math.floor((Date.now()-d.groupPauseStartAt)/1000));
+          setGlobalPaused(true);
+          setSeconds(Math.max(0, totalElapsedSec - Math.floor(totalPausedMs/1000) - ongoing));
+          setPauseSeconds(Math.floor(totalPausedMs/1000) + ongoing);
+        } else {
+          setSeconds(Math.max(0, totalElapsedSec - Math.floor(totalPausedMs/1000)));
+          setPauseSeconds(Math.floor(totalPausedMs/1000));
+        }
+      }catch(e){ console.error('Ripristino pausa gruppo:', e); }
+    })();
+    return ()=>{ cancelled=true; };
+  },[rideIds]);
 
   const handleParkPhoto=(e)=>{ 
     const file=e.target.files[0]; 
