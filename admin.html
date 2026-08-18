@@ -1400,7 +1400,7 @@ function MTBAdmin() {
 
   const addMtb = async () => {
     const id = newMtbId.trim();
-    if(!id){ alert("Inserisci l'ID della MTB (es. MTB-03)"); return; }
+    if(!id){ alert("Inserisci l'ID della MTB (es. M01)"); return; }
     if(bikes.some(b=>b.id===id)){ alert(`⚠️ La MTB "${id}" esiste già.`); return; }
     setAddingMtb(true);
     try {
@@ -1428,7 +1428,7 @@ function MTBAdmin() {
       {/* AGGIUNGI MTB */}
       <div style={{background:C.white,borderRadius:16,padding:16,marginBottom:14,boxShadow:"0 2px 12px rgba(2,48,71,0.08)",border:`1.5px dashed ${C.blueGreen}60`}}>
         <p style={{color:C.deepBlue,fontSize:13,fontWeight:700,margin:"0 0 10px",...ds}}>➕ Aggiungi una MTB</p>
-        <input value={newMtbId} onChange={e=>setNewMtbId(e.target.value)} placeholder="ID — identico al QR (es. MTB-03)"
+        <input value={newMtbId} onChange={e=>setNewMtbId(e.target.value)} placeholder="ID — identico al QR (es. M01)"
           style={{width:"100%",boxSizing:"border-box",border:`1px solid ${C.skyBlue}60`,borderRadius:10,padding:"10px 12px",fontSize:13,...ds,marginBottom:8}}/>
         <input value={newMtbZone} onChange={e=>setNewMtbZone(e.target.value)} placeholder="Zona (default: Castiglione)"
           style={{width:"100%",boxSizing:"border-box",border:`1px solid ${C.skyBlue}60`,borderRadius:10,padding:"10px 12px",fontSize:13,...ds,marginBottom:8}}/>
