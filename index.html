@@ -1573,6 +1573,7 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
   // Batteria reale della bici (aggiornata in tempo reale da Firestore)
   const [liveBattery, setLiveBattery] = React.useState(typeof bike.battery==='number'?bike.battery:null);
   const [lowBattDismissed, setLowBattDismissed] = React.useState(false);
+  const [showNearby, setShowNearby] = React.useState(false);
   const isGiornata = plan==="giornata";
   React.useEffect(() => {
     const i = setInterval(() => {
@@ -1818,6 +1819,14 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
     candidates.forEach(b=>{const d=hav(userPos,{lat:b.lat,lng:b.lng}); if(d<bestD){bestD=d;best={...b,distKm:d};}});
     return best;
   },[lowBattery,userPos,availableBikes,bike.id]);
+  // Elenco e-bike disponibili più vicine (per trovarne un'altra durante la corsa)
+  const nearbyBikes = React.useMemo(()=>{
+    if(!userPos || !availableBikes || availableBikes.length===0) return [];
+    const hav=(a,b)=>{const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLon=(b.lng-a.lng)*Math.PI/180,x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));};
+    return availableBikes.filter(b=>b.id!==bike.id && b.lat && b.lng)
+      .map(b=>({...b, distKm: hav(userPos,{lat:b.lat,lng:b.lng})}))
+      .sort((a,b)=>a.distKm-b.distKm).slice(0,5);
+  },[userPos,availableBikes,bike.id]);
   // Conto alla rovescia a mezzanotte (sia giornata che minuti)
   const midnightCountdown = React.useMemo(() => {
     const midnight = new Date(); midnight.setHours(24,0,0,0);
@@ -2158,6 +2167,29 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
             </p>
           </div>
           <button onClick={()=>setLowBattDismissed(true)} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:6,color:"#fff",fontSize:14,...ds,fontWeight:700,cursor:"pointer",padding:"0 8px",flexShrink:0,lineHeight:"22px"}}>✕</button>
+        </div>
+      )}
+      {/* BICI DISPONIBILI VICINE — trova un'altra e-bike durante la corsa */}
+      {nearbyBikes.length>0&&(
+        <div style={{background:"#F5F7F9",borderBottom:`1px solid ${C.skyBlue}20`,flexShrink:0}}>
+          <button onClick={()=>setShowNearby(v=>!v)} style={{width:"100%",background:"transparent",border:"none",padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+            <span style={{color:C.deepBlue,fontSize:12,...ds,fontWeight:700}}>🚲 Altre e-bike disponibili vicine ({nearbyBikes.length})</span>
+            <span style={{color:C.blueGreen,fontSize:13,...ds,fontWeight:700}}>{showNearby?"▲":"▼"}</span>
+          </button>
+          {showNearby&&(
+            <div style={{padding:"0 16px 8px"}}>
+              {nearbyBikes.map(b=>(
+                <div key={b.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"7px 0",borderTop:`1px solid ${C.skyBlue}15`}}>
+                  <div style={{minWidth:0}}>
+                    <p style={{color:C.deepBlue,fontSize:12.5,...ds,fontWeight:700,margin:0}}>{b.id}{b.zone?` · ${b.zone}`:""}</p>
+                    <p style={{color:"#7a8a95",fontSize:10.5,...ds,margin:0}}>{b.distKm<1?Math.round(b.distKm*1000)+" m":b.distKm.toFixed(1)+" km"}{typeof b.battery==='number'?` · 🔋 ${b.battery}%`:""}</p>
+                  </div>
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}`} target="_blank" rel="noopener noreferrer"
+                    style={{background:C.blueGreen,borderRadius:9,padding:"7px 12px",color:C.white,fontSize:11.5,...ds,fontWeight:700,textDecoration:"none",flexShrink:0,whiteSpace:"nowrap"}}>📍 Maps</a>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {/* AVVISO FUORI AREA DI FUNZIONAMENTO */}
