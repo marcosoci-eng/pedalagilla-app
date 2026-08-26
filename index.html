@@ -3104,6 +3104,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
   const [addingBike, setAddingBike] = React.useState(false);
   const [restoringRide, setRestoringRide] = React.useState(true);
   const [restoredElapsed, setRestoredElapsed] = React.useState(0); // controlla corsa attiva al login
+  const restoredOnceRef = React.useRef(false);
   const qrIntervalRef = React.useRef(null);
   const [clientZones, setClientZones] = React.useState([]);
   const [userPos, setUserPos] = React.useState(null);
@@ -3221,9 +3222,9 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
       } catch(e) { console.error("Errore ripristino corsa:", e); }
       setRestoringRide(false);
     };
-    if (user?.uid) restore();
+    if (user?.uid) { if (!restoredOnceRef.current) { restoredOnceRef.current = true; restore(); } }
     else setRestoringRide(false);
-  },[]);
+  },[user?.uid]);
 
   // QR scanner — usato sia per prima bici che per aggiungerne altre
   const startQRScanner = (isAdding=false) => {
