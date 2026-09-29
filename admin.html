@@ -1032,6 +1032,8 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
       drawZones(zones, map);
       // Esponi il ref delle zone per il salvataggio
       window._zoneEditorRef = zonesRef;
+      // Forza il ridisegno delle mattonelle quando il riquadro è pronto (evita la mappa "tutta blu")
+      [350,900].forEach(ms=>setTimeout(()=>{ if(mapInstanceRef.current&&window.google){ window.google.maps.event.trigger(mapInstanceRef.current,"resize"); mapInstanceRef.current.setCenter({lat:43.1500,lng:12.0800}); } }, ms));
     };
     tryInit();
   }, []);
