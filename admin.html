@@ -1654,6 +1654,7 @@ function AdminApp({ user, onLogout, t }) {
   const low=bikes.filter(b=>b.battery<50).length;
   const avg=Math.round(bikes.reduce((a,b)=>a+b.battery,0)/bikes.length);
   const [bikesRealtime, setBikesRealtime] = React.useState({});
+  const [inUseIds, setInUseIds] = React.useState([]); // bici marcate "in uso" su bikesStatus (corse app + noleggi manuali)
   const filteredBikesBase=filter==="Tutti"?bikes:filter==="Disponibile"?bikes.filter(b=>b.status==="Disponibile"):filter==="Manutenzione"?bikes.filter(b=>b.status==="Manutenzione"):bikes.filter(b=>Number(b.battery)<50);
   // Filtro batteria: mostra solo bici con carica <= soglia. Esclude le bici "mai viste" (nessun dato reale).
   const isKnownBike=(b)=>{ const pedId='PED'+b.id.replace('PA-','').padStart(3,'0'); const rt=(bikesRealtime||{})[pedId]; return !!(rt&&rt.lastSeen); };
@@ -1705,6 +1706,7 @@ function AdminApp({ user, onLogout, t }) {
       // Rides listener
       onSnapshot(collection(window.firebaseDb,"rides"),snap=>{ setRides(snap.docs.map(d=>{ const dd=d.data(); return{id:d.id,...dd,date:dd.startTime?new Date(dd.startTime).toLocaleDateString("it-IT"):"",user:dd.userName||"—",bike:dd.bikeId||"—",zone:dd.zone||"—",cost:dd.cost||0,status:dd.status||"In corso",duration:dd.duration||0,parkPhotoURL:dd.parkPhotoURL||null,track:dd.track||[]}; })); });
       onSnapshot(collection(window.firebaseDb,"hotelPayments"),snap=>{ setHotelPayments(snap.docs.map(d=>({id:d.id,...d.data()}))); });
+      onSnapshot(collection(window.firebaseDb,"bikesStatus"),snap=>{ setInUseIds(snap.docs.filter(d=>d.data().inUse===true).map(d=>d.id)); });
     };
     load();
   },[]);
@@ -1771,7 +1773,32 @@ function AdminApp({ user, onLogout, t }) {
     setSelectedIds([]); setSelectMode(false);
     alert(`✅ ${ok}/${ids.length} bici → ${targetStatus}.`);
   };
-  const forceEndRide=async(ride)=>{ 
+  // Sblocco/blocco multiplo per NOLEGGIO MANUALE (gruppi che non usano l'app).
+  // Sblocca: marca le bici "in uso" così l'auto-blocco del server (bici ferme >4h) NON le richiude, poi manda unlock.
+  // Blocca: manda lock e libera le bici (inUse:false) a fine noleggio.
+  const commandMany = async (ids, action) => {
+    if(!ids.length) return;
+    const isUnlock = action==='unlock';
+    if(!window.confirm(isUnlock
+      ? `Sbloccare ${ids.length} bici per un NOLEGGIO MANUALE?\n\nLe bici vengono aperte e marcate "in uso", così il sistema NON le richiude da solo.\n\n⚠️ A fine noleggio ricordati di premere "🔒 Blocca insieme" per richiuderle.`
+      : `Bloccare e chiudere il noleggio manuale di ${ids.length} bici?`)) return;
+    let ok=0;
+    try {
+      await waitFB();
+      const {doc,setDoc,collection,addDoc}=window.firebaseFunctions;
+      for(const id of ids){
+        try{
+          const pedId='PED'+id.replace('PA-','').padStart(3,'0');
+          await setDoc(doc(window.firebaseDb,"bikesStatus",id),{inUse:isUnlock,userId:null,updatedAt:new Date().toISOString()},{merge:true});
+          await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type:isUnlock?'unlock':'lock',status:'pending',createdAt:new Date().toISOString()});
+          ok++;
+        }catch(e){ console.error('batch cmd',id,e); }
+      }
+    } catch(e){ console.error(e); }
+    setSelectedIds([]); setSelectMode(false);
+    alert(isUnlock ? `🔓 ${ok}/${ids.length} bici sbloccate per noleggio manuale.\nRestano aperte finché non le blocchi tu.` : `🔒 ${ok}/${ids.length} bici bloccate e liberate.`);
+  };
+  const forceEndRide=async(ride)=>{
     const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); 
     if(importoStr===null) return; 
     const importoForced=parseFloat(importoStr)||0; 
@@ -2160,7 +2187,7 @@ function AdminApp({ user, onLogout, t }) {
                 ...mapBikes.map(b=>{
                   const pedId = b.id.replace('PA-','PED');
                   const rt = bikesRealtime[pedId];
-                  const isInUse = rides.some(r=>r.status==='In corso'&&r.bike===b.id);
+                  const isInUse = rides.some(r=>r.status==='In corso'&&r.bike===b.id) || inUseIds.includes(b.id);
                   return rt?.lat ? {...b, lat:rt.lat, lng:rt.lng, battery:rt.batteryPercent||b.battery, inUse:isInUse} : {...b, inUse:isInUse};
                 }),
                 ...(window._adminMTBBikes||[]).map(b=>({...b, isMTB:true, battery:100}))
@@ -2227,7 +2254,15 @@ function AdminApp({ user, onLogout, t }) {
                   style={{flex:1,background:C.blueGreen,border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>✅ In servizio ({selectedIds.length})</button>
               </div>
             )}
-            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>selectMode?setSelectedIds(prev=>prev.includes(bike.id)?prev.filter(x=>x!==bike.id):[...prev,bike.id]):openBikeDetail(bike)} style={{background:selectedIds.includes(bike.id)?`${C.blueGreen}12`:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${selectedIds.includes(bike.id)?C.blueGreen:getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}>{selectMode&&<div style={{width:22,height:22,borderRadius:6,border:`2px solid ${selectedIds.includes(bike.id)?C.blueGreen:"#ccc"}`,background:selectedIds.includes(bike.id)?C.blueGreen:"#fff",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{selectedIds.includes(bike.id)?"✓":""}</div>}<div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
+            {selectMode&&selectedIds.length>0&&(
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <button onClick={()=>commandMany(selectedIds,"unlock")}
+                  style={{flex:1,background:C.deepBlue,border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔓 Sblocca insieme ({selectedIds.length})</button>
+                <button onClick={()=>commandMany(selectedIds,"lock")}
+                  style={{flex:1,background:"#6c757d",border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔒 Blocca insieme ({selectedIds.length})</button>
+              </div>
+            )}
+            {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>selectMode?setSelectedIds(prev=>prev.includes(bike.id)?prev.filter(x=>x!==bike.id):[...prev,bike.id]):openBikeDetail(bike)} style={{background:selectedIds.includes(bike.id)?`${C.blueGreen}12`:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${selectedIds.includes(bike.id)?C.blueGreen:getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}>{selectMode&&<div style={{width:22,height:22,borderRadius:6,border:`2px solid ${selectedIds.includes(bike.id)?C.blueGreen:"#ccc"}`,background:selectedIds.includes(bike.id)?C.blueGreen:"#fff",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{selectedIds.includes(bike.id)?"✓":""}</div>}<div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}{inUseIds.includes(bike.id)?" · 🔓 in uso":""}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
             {/* MTB Muscolari */}
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"16px 0 8px",...ds,opacity:0.5}}>🏔️ MTB Muscolari</p>
             {(window._adminMTBBikes||[]).length===0&&<p style={{color:"#aaa",fontSize:12,...ds,textAlign:"center",padding:10}}>Nessuna MTB — vai nel tab MTB per gestirle</p>}
