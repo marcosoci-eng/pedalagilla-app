@@ -1194,8 +1194,18 @@ function PaymentForm({ amount, bike, plan, planId, onSuccess, onCancel, t, hideP
       console.log('💳 Stripe response status:', resp.status);
       data = await resp.json();
       console.log('💳 Stripe response:', data);
+      // 3D Secure / SCA: se la banca richiede l'autenticazione, va completata PRIMA di sbloccare.
+      // La bici parte SOLO se l'autenticazione va a buon fine e il pagamento è valido.
+      if (data.requires_action && data.clientSecret) {
+        const { error: actErr, paymentIntent: actPI } = await stripeInstance.handleCardAction(data.clientSecret);
+        if (actErr) { setError(actErr.message || t('errPayment')); setLoading(false); return; }
+        if (!actPI || (actPI.status !== 'requires_capture' && actPI.status !== 'succeeded')) { setError(t('errPayment')); setLoading(false); return; }
+        setLoading(false);
+        onSuccess(paymentMethod.id, data.paymentIntentId, isPreAuth);
+        return;
+      }
       if (!data.success) { setError(data.error || t('errPayment')); setLoading(false); return; }
-      
+
       setLoading(false);
       // Passa anche isPreAuth: se true, l'importo va catturato a fine corsa
       onSuccess(paymentMethod.id, data.paymentIntentId, isPreAuth);
