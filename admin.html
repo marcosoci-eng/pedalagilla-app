@@ -18,9 +18,9 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
   const firebaseConfig = {
     apiKey: "AIzaSyA_iALG1PiWQBT2xsQiRuKNd3pR7ZE-f5w",
     authDomain: "pedalagilla.firebaseapp.com",
@@ -34,9 +34,9 @@
   window.firebaseDb = getFirestore(app);
   window.firebaseStorage = getStorage(app);
   window.firebaseFunctions = {
-    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail,
     doc, setDoc, getDoc, collection, getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, query, orderBy,
-    ref, uploadBytes, getDownloadURL
+    ref, uploadBytes, getDownloadURL, deleteObject
   };
   window.firebaseReady = true;
   window.dispatchEvent(new Event("firebaseReady"));
@@ -1780,7 +1780,7 @@ function AdminApp({ user, onLogout, t }) {
     if(!ids.length) return;
     const isUnlock = action==='unlock';
     if(!window.confirm(isUnlock
-      ? `Sbloccare ${ids.length} bici per un NOLEGGIO MANUALE?\n\nLe bici vengono aperte e marcate "in uso", così il sistema NON le richiude da solo.\n\n⚠️ A fine noleggio ricordati di premere "🔒 Blocca insieme" per richiuderle.`
+      ? `Sbloccare ${ids.length} bici per un NOLEGGIO MANUALE?\n\nLe bici vengono aperte e marcate "in uso", così il sistema NON le richiude da solo.\n\n⚠️ A fine noleggio ricordati di premere "🔒 Chiudi noleggio" per richiuderle.`
       : `Bloccare e chiudere il noleggio manuale di ${ids.length} bici?`)) return;
     let ok=0;
     try {
@@ -1797,6 +1797,24 @@ function AdminApp({ user, onLogout, t }) {
     } catch(e){ console.error(e); }
     setSelectedIds([]); setSelectMode(false);
     alert(isUnlock ? `🔓 ${ok}/${ids.length} bici sbloccate per noleggio manuale.\nRestano aperte finché non le blocchi tu.` : `🔒 ${ok}/${ids.length} bici bloccate e liberate.`);
+  };
+  // Comandi "semplici" in batch (NON toccano il flag noleggio/in uso): sblocca, blocca, apri vano batteria.
+  const plainCmdMany = async (ids, type) => {
+    if(!ids.length) return;
+    const verb = type==='unlock' ? 'SBLOCCARE' : type==='lock' ? 'BLOCCARE' : 'APRIRE il vano batteria di';
+    const extra = type==='battery_open' ? '\n\n⚠️ Il vano resta aperto finché non lo richiudi a mano: fallo solo con le bici in sede o sul furgone.' : '';
+    if(!window.confirm(`Vuoi ${verb} ${ids.length} bici selezionate?${extra}`)) return;
+    let ok=0;
+    try {
+      await waitFB();
+      const {collection,addDoc}=window.firebaseFunctions;
+      for(const id of ids){
+        try{ const pedId='PED'+id.replace('PA-','').padStart(3,'0'); await addDoc(collection(window.firebaseDb,'bikes',pedId,'commands'),{type,status:'pending',createdAt:new Date().toISOString()}); ok++; }
+        catch(e){ console.error('plain cmd',id,e); }
+      }
+    } catch(e){ console.error(e); }
+    setSelectedIds([]); setSelectMode(false);
+    alert(`✅ Comando inviato a ${ok}/${ids.length} bici.`);
   };
   const forceEndRide=async(ride)=>{
     const importoStr=window.prompt(`Corsa di ${ride.user}\nCosto stimato: €${(ride.cost||0).toFixed(2)}\n\nImporto da fatturare:`,(ride.cost||0).toFixed(2)); 
@@ -2257,9 +2275,19 @@ function AdminApp({ user, onLogout, t }) {
             {selectMode&&selectedIds.length>0&&(
               <div style={{display:"flex",gap:8,marginBottom:10}}>
                 <button onClick={()=>commandMany(selectedIds,"unlock")}
-                  style={{flex:1,background:C.deepBlue,border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔓 Sblocca insieme ({selectedIds.length})</button>
+                  style={{flex:1,background:C.deepBlue,border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔓 Sblocca noleggio ({selectedIds.length})</button>
                 <button onClick={()=>commandMany(selectedIds,"lock")}
-                  style={{flex:1,background:"#6c757d",border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔒 Blocca insieme ({selectedIds.length})</button>
+                  style={{flex:1,background:"#6c757d",border:"none",borderRadius:10,padding:"10px",color:C.white,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔒 Chiudi noleggio ({selectedIds.length})</button>
+              </div>
+            )}
+            {selectMode&&selectedIds.length>0&&(
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <button onClick={()=>plainCmdMany(selectedIds,"unlock")}
+                  style={{flex:1,background:`${C.blueGreen}15`,border:`1px solid ${C.blueGreen}`,borderRadius:10,padding:"10px",color:C.blueGreen,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔓 Sblocca ({selectedIds.length})</button>
+                <button onClick={()=>plainCmdMany(selectedIds,"lock")}
+                  style={{flex:1,background:`${C.warmOrange}15`,border:`1px solid ${C.warmOrange}`,borderRadius:10,padding:"10px",color:C.warmOrange,fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔒 Blocca ({selectedIds.length})</button>
+                <button onClick={()=>plainCmdMany(selectedIds,"battery_open")}
+                  style={{flex:1,background:`${C.sunYellow}20`,border:`1px solid ${C.sunYellow}`,borderRadius:10,padding:"10px",color:"#b38600",fontSize:12,...ds,fontWeight:700,cursor:"pointer"}}>🔋 Apri vano ({selectedIds.length})</button>
               </div>
             )}
             {filteredBikes.map(bike=>(<div key={bike.id} className="card" onClick={()=>selectMode?setSelectedIds(prev=>prev.includes(bike.id)?prev.filter(x=>x!==bike.id):[...prev,bike.id]):openBikeDetail(bike)} style={{background:selectedIds.includes(bike.id)?`${C.blueGreen}12`:C.white,borderRadius:14,padding:14,marginBottom:8,boxShadow:"0 2px 10px rgba(2,48,71,0.07)",borderLeft:`3px solid ${selectedIds.includes(bike.id)?C.blueGreen:getStatusColor(bike.status)}`}}><div style={{display:"flex",alignItems:"center",gap:12}}>{selectMode&&<div style={{width:22,height:22,borderRadius:6,border:`2px solid ${selectedIds.includes(bike.id)?C.blueGreen:"#ccc"}`,background:selectedIds.includes(bike.id)?C.blueGreen:"#fff",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{selectedIds.includes(bike.id)?"✓":""}</div>}<div style={{width:44,height:44,borderRadius:22,background:`${getBattColor(bike.battery)}15`,border:`2px solid ${getBattColor(bike.battery)}50`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🚲</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.deepBlue,fontWeight:700,fontSize:14,fontFamily:"Lora"}}>{bike.id}</span><span style={{color:getBattColor(bike.battery),fontSize:13,fontWeight:700,...ds}}>{bike.battery}% · ~{getRange(bike.battery)}km</span></div><div style={{height:4,background:"#eee",borderRadius:3,margin:"5px 0",overflow:"hidden"}}><div style={{width:`${bike.battery}%`,height:"100%",background:getBattColor(bike.battery),borderRadius:3}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:getStatusColor(bike.status),fontSize:11,...ds}}>● {bike.status}{inUseIds.includes(bike.id)?" · 🔓 in uso":""}</span><span style={{color:"#bbb",fontSize:11,...ds}}>📍 {bike.zone} · {bike.lastMaint}</span></div>{bike.note&&<p style={{color:"#aaa",fontSize:11,...ds,margin:"4px 0 0",fontStyle:"italic"}}>📝 {bike.note}</p>}{(()=>{ const pedId='PED'+bike.id.replace('PA-','').padStart(3,'0'); const rt=bikesRealtime[pedId]; if(!rt?.lastSeen) return null; const mins=Math.floor((Date.now()-new Date(rt.lastSeen).getTime())/60000); const color=mins<10?C.blueGreen:mins<20?"#8BC34A":mins<30?C.sunYellow:mins<60?C.warmOrange:"#E53935"; const label=mins<10?`📡 ${mins}min fa`:mins<20?`⚠️ ${mins}min fa`:mins<60?`🔴 ${mins}min fa`:mins<1440?`🔴 ${Math.floor(mins/60)}h fa`:`⛔ ${Math.floor(mins/1440)}gg`; return <p style={{color,fontSize:10,...ds,margin:"3px 0 0",fontWeight:600}}>{label}</p>; })()}</div><span style={{color:C.blueGreen,fontSize:18}}>›</span></div></div>))}
@@ -2437,6 +2465,13 @@ function AdminApp({ user, onLogout, t }) {
                         try{ await waitFB(); const {doc,updateDoc}=window.firebaseFunctions; await updateDoc(doc(window.firebaseDb,"users",u.id),{welcomeBonusAvailable:true}); loadUsers(); }catch(e){alert("Errore: "+e.message);}
                       }} style={{flex:1,background:C.white,border:`1px solid ${C.blueGreen}`,borderRadius:8,padding:"7px",color:C.blueGreen,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🎁 Dai bonus</button>}
                 </div>}
+                <div style={{display:"flex",gap:8,marginTop:8}}>
+                  <button onClick={async()=>{ if(!u.email){alert("Questo utente non ha un'email.");return;} if(!window.confirm(`Inviare a ${u.email} l'email per reimpostare la password?`)) return; try{ await waitFB(); const {sendPasswordResetEmail}=window.firebaseFunctions; await sendPasswordResetEmail(window.firebaseAuth,u.email); alert("📧 Email di reset password inviata a "+u.email); }catch(e){alert("Errore: "+e.message);} }} style={{flex:1,background:`${C.deepBlue}12`,border:`1px solid ${C.deepBlue}`,borderRadius:8,padding:"7px",color:C.deepBlue,fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>📧 Reset password</button>
+                </div>
+                <div style={{display:"flex",gap:8,marginTop:8}}>
+                  {u.docURL&&<button onClick={async()=>{ if(!window.confirm(`Eliminare DEFINITIVAMENTE il documento d'identità di ${u.nome||""} ${u.cognome||""}?\n\nNon reversibile.`)) return; try{ await waitFB(); const {deleteObject,ref,doc,updateDoc}=window.firebaseFunctions; try{ await deleteObject(ref(window.firebaseStorage,u.docURL)); }catch(err){ console.error('doc del',err); } await updateDoc(doc(window.firebaseDb,"users",u.id),{docURL:null,docReviewed:false}); loadUsers(); alert("🗑️ Documento eliminato."); }catch(e){alert("Errore: "+e.message);} }} style={{flex:1,background:"#fff3e0",border:"1px solid #FB8500",borderRadius:8,padding:"7px",color:"#b35a00",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>🗑️ Elimina documento</button>}
+                  <button onClick={async()=>{ if(!window.confirm(`ELIMINARE l'utenza di ${u.nome||""} ${u.cognome||""} (${u.email||""})?\n\nCancella dati personali e documento. Non reversibile.`)) return; try{ await waitFB(); const {deleteObject,ref,doc,deleteDoc}=window.firebaseFunctions; if(u.docURL){ try{ await deleteObject(ref(window.firebaseStorage,u.docURL)); }catch(err){ console.error('doc del',err); } } await deleteDoc(doc(window.firebaseDb,"users",u.id)); loadUsers(); alert("❌ Utenza eliminata (dati e documento). La sola email di accesso va rimossa dal server se richiesto."); }catch(e){alert("Errore: "+e.message);} }} style={{flex:1,background:"#ffebee",border:"1px solid #d32f2f",borderRadius:8,padding:"7px",color:"#d32f2f",fontSize:11,...ds,fontWeight:600,cursor:"pointer"}}>❌ Elimina utenza</button>
+                </div>
               </div>
             ))}
 
