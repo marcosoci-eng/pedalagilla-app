@@ -148,7 +148,7 @@ const TRANSLATIONS = {
     distLbl: "DISTANZA",
     bonusBanner: "🎁 Benvenuto! Primi {n} minuti gratis",
     bonusBannerOver: " · oltre, tariffa normale",
-    videosBtn: "📺⚔️ Scopri il Trasimeno", videosTitle: "Scopri il Trasimeno",
+    videosBtn: "Scopri il Trasimeno", videosTitle: "Scopri il Trasimeno",
     vidSpaceT: "Il Trasimeno dallo spazio", vidSpaceD: "Il lago ripreso dal satellite Copernicus Sentinel-2 dell'ESA.",
     vidBattleT: "La Battaglia del Trasimeno (217 a.C.)", vidBattleD: "La storica imboscata di Annibale alle legioni romane sul lago.",
     vidWatch: "Guarda il video",
@@ -243,7 +243,7 @@ const TRANSLATIONS = {
     distLbl: "DISTANCE",
     bonusBanner: "🎁 Welcome! First {n} minutes free",
     bonusBannerOver: " · beyond that, standard rate",
-    videosBtn: "📺⚔️ Discover Lake Trasimeno", videosTitle: "Discover Lake Trasimeno",
+    videosBtn: "Discover Lake Trasimeno", videosTitle: "Discover Lake Trasimeno",
     vidSpaceT: "Lake Trasimeno from space", vidSpaceD: "The lake seen by ESA's Copernicus Sentinel-2 satellite.",
     vidBattleT: "The Battle of Lake Trasimene (217 BC)", vidBattleD: "Hannibal's historic ambush of the Roman legions at the lake.",
     vidWatch: "Watch the video",
@@ -338,7 +338,7 @@ const TRANSLATIONS = {
     distLbl: "DISTANZ",
     bonusBanner: "🎁 Willkommen! Die ersten {n} Minuten gratis",
     bonusBannerOver: " · danach Normaltarif",
-    videosBtn: "📺⚔️ Entdecke den Trasimeno", videosTitle: "Entdecke den Trasimeno",
+    videosBtn: "Entdecke den Trasimeno", videosTitle: "Entdecke den Trasimeno",
     vidSpaceT: "Der Trasimeno aus dem All", vidSpaceD: "Der See, aufgenommen vom ESA-Satelliten Copernicus Sentinel-2.",
     vidBattleT: "Die Schlacht am Trasimenischen See (217 v. Chr.)", vidBattleD: "Hannibals historischer Hinterhalt gegen die römischen Legionen am See.",
     vidWatch: "Video ansehen",
@@ -433,7 +433,7 @@ const TRANSLATIONS = {
     distLbl: "DISTANCE",
     bonusBanner: "🎁 Bienvenue ! Les {n} premières minutes gratuites",
     bonusBannerOver: " · au-delà, tarif normal",
-    videosBtn: "📺⚔️ Découvrir le Trasimène", videosTitle: "Découvrir le Trasimène",
+    videosBtn: "Découvrir le Trasimène", videosTitle: "Découvrir le Trasimène",
     vidSpaceT: "Le Trasimène vu de l'espace", vidSpaceD: "Le lac filmé par le satellite Copernicus Sentinel-2 de l'ESA.",
     vidBattleT: "La bataille du lac Trasimène (217 av. J.-C.)", vidBattleD: "L'embuscade historique d'Hannibal contre les légions romaines au bord du lac.",
     vidWatch: "Voir la vidéo",
@@ -528,7 +528,7 @@ const TRANSLATIONS = {
     distLbl: "DISTANCIA",
     bonusBanner: "🎁 ¡Bienvenido! Primeros {n} minutos gratis",
     bonusBannerOver: " · después, tarifa normal",
-    videosBtn: "📺⚔️ Descubre el Trasimeno", videosTitle: "Descubre el Trasimeno",
+    videosBtn: "Descubre el Trasimeno", videosTitle: "Descubre el Trasimeno",
     vidSpaceT: "El Trasimeno desde el espacio", vidSpaceD: "El lago visto por el satélite Copernicus Sentinel-2 de la ESA.",
     vidBattleT: "La batalla del lago Trasimeno (217 a.C.)", vidBattleD: "La histórica emboscada de Aníbal a las legiones romanas en el lago.",
     vidWatch: "Ver el vídeo",
@@ -623,7 +623,7 @@ const TRANSLATIONS = {
     distLbl: "AFSTAND",
     bonusBanner: "🎁 Welkom! Eerste {n} minuten gratis",
     bonusBannerOver: " · daarna normaal tarief",
-    videosBtn: "📺⚔️ Ontdek het Trasimeno", videosTitle: "Ontdek het Trasimeno",
+    videosBtn: "Ontdek het Trasimeno", videosTitle: "Ontdek het Trasimeno",
     vidSpaceT: "Het Trasimenomeer vanuit de ruimte", vidSpaceD: "Het meer gezien door ESA's Copernicus Sentinel-2-satelliet.",
     vidBattleT: "De Slag bij het Trasimeense meer (217 v.Chr.)", vidBattleD: "Hannibals historische hinderlaag voor de Romeinse legioenen bij het meer.",
     vidWatch: "Bekijk de video",
@@ -718,7 +718,7 @@ const TRANSLATIONS = {
     distLbl: "VZDÁLENOST",
     bonusBanner: "🎁 Vítej! Prvních {n} minut zdarma",
     bonusBannerOver: " · poté běžný tarif",
-    videosBtn: "📺⚔️ Objevte Trasimeno", videosTitle: "Objevte Trasimeno",
+    videosBtn: "Objevte Trasimeno", videosTitle: "Objevte Trasimeno",
     vidSpaceT: "Trasimenské jezero z vesmíru", vidSpaceD: "Jezero zachycené satelitem ESA Copernicus Sentinel-2.",
     vidBattleT: "Bitva u Trasimenského jezera (217 př. n. l.)", vidBattleD: "Hannibalova historická léčka na římské legie u jezera.",
     vidWatch: "Přehrát video",
@@ -3939,14 +3939,16 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
               }} style={{position:"absolute",right:0,bottom:130,background:"white",border:`2px solid ${C.blueGreen}`,borderRadius:12,padding:"10px 12px",color:C.blueGreen,fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.15)",zIndex:11}}>
                 📍
               </button>}
-              <button onClick={()=>startQRScanner(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                {t('scanQR')}
-              </button>
               <a href="https://www.instagram.com/pedalagilla" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,width:"100%",boxSizing:"border-box",background:"linear-gradient(90deg,#833AB4,#E1306C,#F77737)",borderRadius:14,padding:"8px 16px",color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none",marginBottom:8}}>
                 {t("igBtn")}
               </a>
-              <button onClick={()=>setShowVideos(true)} style={{width:"100%",boxSizing:"border-box",background:"linear-gradient(90deg,#B08D57,#7c5e3b)",border:"none",borderRadius:14,padding:"9px 16px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:0,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              <button onClick={()=>startQRScanner(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"13px 16px",color:C.white,fontSize:14,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 3px 12px rgba(2,48,71,0.25)"}}>
+                {t('scanQR')}
+              </button>
+              <button onClick={()=>setShowVideos(true)} style={{width:"100%",boxSizing:"border-box",background:"linear-gradient(90deg,#B08D57,#7c5e3b)",border:"none",borderRadius:14,padding:"9px 16px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:0,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
+                <span style={{fontSize:18,lineHeight:1}}>⚔️</span>
                 {t("videosBtn")}
+                <span style={{fontSize:15,lineHeight:1}}>📺</span>
               </button>
             </div>
           </div>
@@ -4017,7 +4019,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         )}
 
 {riding && (
-          <button onClick={()=>setShowVideos(true)} aria-label="video" style={{position:"absolute",bottom:84,right:16,zIndex:30,width:52,height:52,borderRadius:26,background:"linear-gradient(135deg,#B08D57,#7c5e3b)",border:"2px solid #fff",color:"#fff",fontSize:22,cursor:"pointer",boxShadow:"0 4px 14px rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>📺</button>
+          <button onClick={()=>setShowVideos(true)} aria-label="video" style={{position:"absolute",bottom:84,right:16,zIndex:320,width:52,height:52,borderRadius:26,background:"linear-gradient(135deg,#B08D57,#7c5e3b)",border:"2px solid #fff",color:"#fff",fontSize:22,cursor:"pointer",boxShadow:"0 4px 14px rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>📺</button>
         )}
               {showVideos && (
                 <div onClick={()=>setShowVideos(false)} style={{position:"fixed",inset:0,background:"rgba(2,48,71,0.75)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:18}}>
