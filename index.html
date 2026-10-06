@@ -3939,7 +3939,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                       <p style={{color:C.deepBlue,fontSize:16,fontWeight:700,margin:0,fontFamily:"Lora"}}>📺 {t("videosTitle")}</p>
                       <button onClick={()=>setShowVideos(false)} style={{background:"none",border:"none",fontSize:22,color:"#aaa",cursor:"pointer",padding:0,lineHeight:1}}>✕</button>
                     </div>
-                    {[["https://www.esa.int/ESA_Multimedia/Videos/2022/09/Earth_from_Space_Lake_Trasimeno","🛰️",t("vidSpaceT"),t("vidSpaceD"),"ESA / Copernicus"],["https://www.youtube.com/watch?v=T4Dgc4Zao2U","⚔️",t("vidBattleT"),t("vidBattleD"),"YouTube"]].map(v=>(
+                    {[["https://www.esa.int/ESA_Multimedia/Videos/2022/09/Earth_from_Space_Lake_Trasimeno","🛰️",t("vidSpaceT"),t("vidSpaceD"),"ESA / Copernicus"],["https://www.youtube.com/watch?v=T4Dgc4Zao2U&cc_load_policy=1&cc_lang_pref=it&hl=it","⚔️",t("vidBattleT"),t("vidBattleD"),"YouTube"]].map(v=>(
                       <a key={v[0]} href={v[0]} target="_blank" rel="noopener noreferrer" style={{display:"block",textDecoration:"none",background:"#f5f9fb",border:"1px solid #cfe3ec",borderRadius:14,padding:14,marginBottom:10}}>
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
                           <div style={{fontSize:30}}>{v[1]}</div>
@@ -3955,28 +3955,15 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
                   </div>
                 </div>
               )}
-              <button onClick={()=>setShowVideos(true)} style={{width:"100%",background:"rgba(255,255,255,0.92)",border:"1px solid #219EBC",borderRadius:14,padding:"8px 16px",color:C.deepBlue,fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                {t("videosBtn")}
-              </button>
-              <a href="https://www.instagram.com/pedalagilla" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,width:"100%",boxSizing:"border-box",background:"linear-gradient(90deg,#833AB4,#E1306C,#F77737)",borderRadius:14,padding:"8px 16px",color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none",marginBottom:8}}>
-                {t("igBtn")}
-              </a>
               <button onClick={()=>startQRScanner(false)} style={{width:"100%",background:`linear-gradient(90deg,${C.blueGreen},${C.deepBlue})`,border:"none",borderRadius:14,padding:"11px 16px",color:C.white,fontSize:13,...ds,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                 {t('scanQR')}
               </button>
-              <div style={{background:"rgba(2,48,71,0.88)",borderRadius:16,padding:"8px 14px",backdropFilter:"blur(8px)"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <p style={{color:"rgba(255,255,255,0.7)",fontSize:10,...ds,margin:0}}>{t('tapBike')}</p>
-                  <div style={{display:"flex",gap:6}}>
-                    {[[C.blueGreen,"≥80%"],[C.sunYellow,"50%"],[C.warmOrange,"<50%"]].map(([c,l])=>(
-                      <div key={l} style={{display:"flex",alignItems:"center",gap:3}}>
-                        <div style={{width:7,height:7,borderRadius:4,background:c}}/>
-                        <span style={{color:"rgba(255,255,255,0.6)",fontSize:9,...ds}}>{l}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <button onClick={()=>setShowVideos(true)} style={{width:"100%",background:"rgba(255,255,255,0.92)",border:"1px solid #219EBC",borderRadius:14,padding:"8px 16px",color:C.deepBlue,fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                {t("videosBtn")}
+              </button>
+              <a href="https://www.instagram.com/pedalagilla" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,width:"100%",boxSizing:"border-box",background:"linear-gradient(90deg,#833AB4,#E1306C,#F77737)",borderRadius:14,padding:"8px 16px",color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none",marginBottom:0}}>
+                {t("igBtn")}
+              </a>
             </div>
           </div>
         )}
