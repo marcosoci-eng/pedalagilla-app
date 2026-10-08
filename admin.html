@@ -931,6 +931,11 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
   const shapesRef = React.useRef([]);
   const markersRef = React.useRef([]);
   const nameMarkersRef = React.useRef([]);
+  const clickLsnrRef = React.useRef(null);
+  const dblLsnrRef = React.useRef(null);
+  const tempPolyRef = React.useRef(null);
+  const tempMarkersRef = React.useRef([]);
+  const tempPathRef = React.useRef([]);
   const zonesRef = React.useRef(zones);
   const zoneColors = { operativa:"#00C853", sosta:"#2196F3", lenta:"#FFB703", fuori:"#FB8500" };
   const zoneIcons = { sosta:"🅿️", lenta:"🐢", fuori:"⛔" };
@@ -1007,28 +1012,6 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
       });
       mapInstanceRef.current = map;
       zonesRef.current = zones;
-      // La libreria "drawing" di Google è deprecata/in rimozione: creala solo se ancora disponibile,
-      // così la mappa e le zone esistenti si caricano comunque e la tab non si blocca più.
-      if (window.google.maps.drawing) {
-        const dm = new window.google.maps.drawing.DrawingManager({ drawingMode:null, drawingControl:false, circleOptions:{fillColor:"#219EBC",fillOpacity:0.2,strokeColor:"#219EBC",strokeWeight:2,editable:false}, polygonOptions:{fillColor:"#219EBC",fillOpacity:0.2,strokeColor:"#219EBC",strokeWeight:2,editable:false} });
-        dm.setMap(map);
-        drawingManagerRef.current = dm;
-        window.google.maps.event.addListener(dm,"circlecomplete",circle=>{
-          dm.setDrawingMode(null);
-          const zt=zoneTypeRef.current; const zn=zoneNameRef.current; const color=zoneColors[zt]||"#219EBC";
-          circle.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.2});
-          onZoneSaved({name:zn||"Nuova zona",type:zt,shape:"circle",color,center:{lat:circle.getCenter().lat(),lng:circle.getCenter().lng()},radius:circle.getRadius()});
-          circle.setMap(null);
-        });
-        window.google.maps.event.addListener(dm,"polygoncomplete",polygon=>{
-          dm.setDrawingMode(null);
-          const zt=zoneTypeRef.current; const zn=zoneNameRef.current; const color=zoneColors[zt]||"#219EBC";
-          polygon.setOptions({fillColor:color,strokeColor:color,fillOpacity:0.2});
-          const path=polygon.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
-          onZoneSaved({name:zn||"Nuova zona",type:zt,shape:"polygon",color,path});
-          polygon.setMap(null);
-        });
-      }
       drawZones(zones, map);
       // Esponi il ref delle zone per il salvataggio
       window._zoneEditorRef = zonesRef;
@@ -1038,14 +1021,49 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
     tryInit();
   }, []);
 
+  // Disegno di NUOVE zone con l'API base di Google (la libreria "drawing" è stata ritirata).
+  // Cerchio: un tocco = centro (poi la trascini/ridimensioni). Poligono: un tocco per vertice, doppio tocco per chiudere.
   React.useEffect(() => {
-    const activate = () => {
-      if (!window.google || !window.google.maps.drawing) return; // libreria drawing non disponibile: nessun disegno, nessun ciclo infinito
-      if (!drawingManagerRef.current) { if (drawingActive) setTimeout(activate,300); return; }
-      drawingManagerRef.current.setDrawingMode(drawingActive?(drawingMode==="circle"?window.google.maps.drawing.OverlayType.CIRCLE:window.google.maps.drawing.OverlayType.POLYGON):null);
-      if (mapInstanceRef.current) mapInstanceRef.current.setOptions({gestureHandling:drawingActive?"none":"cooperative"});
+    const map = mapInstanceRef.current;
+    if (!map || !window.google) return;
+    const g = window.google.maps;
+    const cleanup = () => {
+      if (clickLsnrRef.current) { g.event.removeListener(clickLsnrRef.current); clickLsnrRef.current=null; }
+      if (dblLsnrRef.current) { g.event.removeListener(dblLsnrRef.current); dblLsnrRef.current=null; }
+      tempMarkersRef.current.forEach(m=>{ if(m) m.setMap(null); }); tempMarkersRef.current=[];
+      if (tempPolyRef.current) { tempPolyRef.current.setMap(null); tempPolyRef.current=null; }
+      tempPathRef.current=[];
+      try{ map.setOptions({ disableDoubleClickZoom:false }); }catch(e){}
     };
-    activate();
+    if (!drawingActive) { cleanup(); return; }
+    tempPathRef.current=[];
+    try{ map.setOptions({ disableDoubleClickZoom:true }); }catch(e){}
+    const color = zoneColors[zoneTypeRef.current] || "#219EBC";
+    if (drawingMode === "circle") {
+      clickLsnrRef.current = map.addListener("click", (e)=>{
+        if (clickLsnrRef.current) { g.event.removeListener(clickLsnrRef.current); clickLsnrRef.current=null; }
+        const defR = ({operativa:8000, sosta:300, lenta:150, fuori:300})[zoneTypeRef.current] || 300;
+        onZoneSaved({ name: zoneNameRef.current||"Nuova zona", type: zoneTypeRef.current, shape:"circle", color, center:{lat:e.latLng.lat(), lng:e.latLng.lng()}, radius: defR });
+      });
+    } else {
+      const redraw = ()=>{
+        if (tempPolyRef.current) tempPolyRef.current.setMap(null);
+        tempPolyRef.current = new g.Polyline({ map, path: tempPathRef.current.slice(), strokeColor: color, strokeOpacity:0.9, strokeWeight:2 });
+      };
+      clickLsnrRef.current = map.addListener("click", (e)=>{
+        const pt = {lat:e.latLng.lat(), lng:e.latLng.lng()};
+        tempPathRef.current.push(pt);
+        tempMarkersRef.current.push(new g.Marker({ position:pt, map, icon:{path:g.SymbolPath.CIRCLE,scale:5,fillColor:color,fillOpacity:1,strokeColor:"#fff",strokeWeight:1.5}, zIndex:20 }));
+        redraw();
+      });
+      dblLsnrRef.current = map.addListener("dblclick", ()=>{
+        const path = tempPathRef.current;
+        while (path.length>=2){ const a=path[path.length-1], b=path[path.length-2]; if (Math.abs(a.lat-b.lat)<1e-5 && Math.abs(a.lng-b.lng)<1e-5) path.pop(); else break; }
+        if (path.length>=3){ onZoneSaved({ name: zoneNameRef.current||"Nuova zona", type: zoneTypeRef.current, shape:"polygon", color, path: path.slice() }); }
+        else { alert("Servono almeno 3 punti per chiudere il poligono."); }
+      });
+    }
+    return cleanup;
   }, [drawingActive, drawingMode]);
 
   return <div ref={mapRef} style={{width:"100%",height:"100%"}}/>;
@@ -2530,11 +2548,23 @@ function AdminApp({ user, onLogout, t }) {
                 } catch(e){ alert("Errore: "+e.message); }
               }} style={{width:"100%",background:"none",border:`1.5px solid #E5393580`,borderRadius:12,padding:"10px",color:"#E53935",fontSize:12,...ds,fontWeight:700,cursor:"pointer",marginTop:8}}>🗑️ Azzera tutte le zone (riparti da zero)</button>
             </div>
-            {/* Editor mappa disattivato: Google ha ritirato la libreria "drawing" e la mappa restava blu/disorientante. Messaggio chiaro al posto della mappa, così la schermata resta dentro l'app col menù visibile. Le zone salvate restano attive per l'app cliente. Ripristino con la migrazione a Terra Draw. */}
-            <div style={{borderRadius:16,marginBottom:12,boxShadow:"0 2px 12px rgba(2,48,71,0.10)",background:"#f5f9fb",border:"1px dashed #b6cfda",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"22px 18px"}}>
-              <div style={{fontSize:34,marginBottom:8}}>🗺️</div>
-              <p style={{color:C.deepBlue,fontSize:14,fontWeight:700,margin:"0 0 6px",...ds}}>Editor mappa in aggiornamento</p>
-              <p style={{color:"#667",fontSize:12,margin:0,...ds,lineHeight:1.45}}>Google ha ritirato lo strumento di disegno delle aree. Le tue <b>zone attuali restano attive</b> per i clienti; la modifica delle zone tornerà con il prossimo aggiornamento.</p>
+            {/* Editor mappa ripristinato con l'API base di Google (niente libreria "drawing", ritirata). */}
+            <div style={{position:"relative",borderRadius:16,marginBottom:12,overflow:"hidden",boxShadow:"0 2px 12px rgba(2,48,71,0.10)",height:420}}>
+              <ZoneMapEditor
+                zones={savedZones}
+                zoneType={zoneType}
+                drawingMode={drawingMode}
+                drawingActive={drawingActive}
+                zoneName={zoneName}
+                onZoneSaved={(zone)=>{ zonesDirtyRef.current=true; setSavedZones(prev=>[...prev,{...zone,id:'z'+Math.random().toString(36).slice(2,9)}]); setDrawingActive(false); }}
+                onZoneUpdated={()=>{}}
+              />
+              {drawingActive&&(
+                <div style={{position:"absolute",top:8,left:8,right:8,background:"rgba(2,48,71,0.92)",borderRadius:10,padding:"8px 10px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,zIndex:5}}>
+                  <span style={{color:"#fff",fontSize:11,...ds,lineHeight:1.3}}>{drawingMode==="circle"?"Tocca la mappa per posizionare il cerchio, poi trascinalo o ridimensionalo.":"Tocca ogni vertice; doppio tocco per chiudere il poligono."}</span>
+                  <button onClick={()=>setDrawingActive(false)} style={{background:"#fff",border:"none",borderRadius:8,padding:"6px 12px",color:C.deepBlue,fontSize:11,...ds,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>Annulla</button>
+                </div>
+              )}
             </div>
             <p style={{color:C.deepBlue,fontSize:11,letterSpacing:1.5,textTransform:"uppercase",margin:"0 0 8px",...ds,opacity:0.5}}>Zone ({savedZones.length})</p>
             <input placeholder="🔍 Cerca zona..." onChange={e=>{const v=e.target.value.toLowerCase(); const els=document.querySelectorAll('.zone-item'); els.forEach(el=>{el.style.display=el.dataset.name.toLowerCase().includes(v)?'block':'none';});}} style={{width:"100%",padding:"8px 12px",borderRadius:10,border:`1.5px solid ${C.skyBlue}50`,fontSize:12,fontFamily:"'DM Sans'",color:C.deepBlue,background:C.white,marginBottom:10}}/>
