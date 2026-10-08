@@ -901,6 +901,57 @@ const POIS = [
   {e:"⚔️",c:"Battaglia del Trasimeno",n:"Colonna romana",lat:43.1870,lng:12.0870,addr:"Colonna romana, Via del Porto, Tuoro sul Trasimeno",url:""},
   {e:"🍸",c:"Beach & Gin",n:"Euphoria Beach & Gin",lat:43.1845,lng:12.1265,addr:"Euphoria Beach & Gin, Via Lungolago Giappesi, Passignano sul Trasimeno",url:"https://www.mondobalneare.com/stabilimenti/euphoria-beach",desc:{it:"In questo stabilimento balneare puoi assaggiare un gin artigianale speciale, realizzato apposta per l'Euphoria.",en:"At this beach club you can taste a special craft gin, made exclusively for Euphoria.",de:"In diesem Strandbad können Sie einen besonderen handwerklichen Gin verkosten, eigens für Euphoria hergestellt.",fr:"Dans cet établissement balnéaire, vous pouvez déguster un gin artisanal spécial, créé spécialement pour l'Euphoria.",es:"En este balneario puedes degustar una ginebra artesanal especial, elaborada expresamente para Euphoria.",nl:"Bij deze strandclub kun je een speciale ambachtelijke gin proeven, speciaal gemaakt voor Euphoria.",cs:"V tomto plážovém baru můžete ochutnat speciální řemeslný gin, vyrobený přímo pro Euphoria."},url2:"https://ginshop.it/prodotto/gin/gin-italiani/euphoria-gin",url2label:"🍸 Gin"},
 ];
+// --- POI: geocoding Google (coordinate reali dagli indirizzi) con cache sul dispositivo + ripiego sulle coordinate stimate ---
+const _poiCoordCache = (()=>{ try{ return JSON.parse(localStorage.getItem('poiCoords')||'{}'); }catch(e){ return {}; } })();
+const _poiInflight = {};
+let _poiGeocoder = null, _poiBounds = null;
+function geocodePOI(p, cb){
+  const key = p.addr || p.n;
+  if(_poiCoordCache[key]){ cb(_poiCoordCache[key]); return; }
+  if(_poiInflight[key]){ _poiInflight[key].push(cb); return; }
+  _poiInflight[key] = [cb];
+  const done = (c)=>{ const cbs=_poiInflight[key]||[]; delete _poiInflight[key]; cbs.forEach(f=>{ try{f(c);}catch(e){} }); };
+  try{
+    if(!(window.google && window.google.maps && window.google.maps.Geocoder)){ done(null); return; }
+    if(!_poiGeocoder) _poiGeocoder = new window.google.maps.Geocoder();
+    if(!_poiBounds) _poiBounds = new window.google.maps.LatLngBounds({lat:42.95,lng:11.95},{lat:43.25,lng:12.30});
+    _poiGeocoder.geocode({ address:p.addr, region:'it', bounds:_poiBounds, componentRestrictions:{country:'it'} }, (res,status)=>{
+      if(status==='OK' && res && res[0] && res[0].geometry && res[0].geometry.location){
+        const loc=res[0].geometry.location; const c={lat:loc.lat(), lng:loc.lng()};
+        _poiCoordCache[key]=c; try{ localStorage.setItem('poiCoords', JSON.stringify(_poiCoordCache)); }catch(e){}
+        done(c);
+      } else { done(null); }
+    });
+  }catch(e){ done(null); }
+}
+function poiInfoHTML(p, lang){
+  const nav = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.addr||p.n)}`;
+  const descTxt = p.desc ? (typeof p.desc==='string' ? p.desc : (p.desc[lang]||p.desc.it||p.desc.en||'')) : '';
+  const descHtml = descTxt ? `<p style="color:#555;font-size:12px;line-height:1.4;margin:7px 0 0">${descTxt}</p>` : '';
+  const btn = 'flex:1;min-width:80px;text-align:center;border-radius:8px;padding:7px 8px;font-size:12px;font-weight:700;text-decoration:none';
+  const sito = p.url ? `<a href="${p.url}" target="_blank" rel="noopener" style="${btn};background:#eef4f7;color:#023047">🌐 Sito</a>` : '';
+  const sito2 = p.url2 ? `<a href="${p.url2}" target="_blank" rel="noopener" style="${btn};background:#eef4f7;color:#023047">${p.url2label||'🌐 Altro'}</a>` : '';
+  return `<div style="font-family:'DM Sans',sans-serif;padding:6px;min-width:170px;max-width:240px"><b style="color:#023047;font-size:14px">${p.e} ${p.n}</b><br/><span style="color:#888;font-size:11px">${p.c}</span>${descHtml}<div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap"><a href="${nav}" target="_blank" rel="noopener" style="${btn};min-width:90px;background:#219EBC;color:#fff">🧭 Naviga</a>${sito}${sito2}</div></div>`;
+}
+// Disegna i segnalini POI su una mappa Google qualsiasi. isCurrent() evita pin orfani se il lotto è stato superato.
+function addPoiMarkers(map, pois, lang, getIW, markersArr, isCurrent){
+  (pois||[]).forEach(p=>{
+    geocodePOI(p, (coord)=>{
+      if(typeof isCurrent==='function' && !isCurrent()) return;
+      if(!map || !window.google) return;
+      const pos = coord || ((typeof p.lat==='number' && typeof p.lng==='number') ? {lat:p.lat,lng:p.lng} : null);
+      if(!pos) return;
+      const marker = new window.google.maps.Marker({
+        position:pos, map, title:p.n,
+        label:{ text:p.e, fontSize:"22px" },
+        icon:{ path:window.google.maps.SymbolPath.CIRCLE, scale:0, fillOpacity:0, strokeOpacity:0 },
+        zIndex:4
+      });
+      marker.addListener("click", ()=>{ const iw=getIW(); if(!iw) return; iw.setContent(poiInfoHTML(p,lang)); iw.open(map, marker); });
+      if(markersArr) markersArr.push(marker);
+    });
+  });
+}
 const getBattColor = (b) => b>=80 ? C.blueGreen : b>=50 ? C.sunYellow : C.warmOrange;
 const getStatusColor = (s) => s==="Disponibile" ? C.blueGreen : C.warmOrange;
 const getRange = (battery) => Math.round((battery/100)*80);
@@ -920,6 +971,7 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
   const markersRef = React.useRef([]);
   const poiMarkersRef = React.useRef([]);
   const poiIWRef = React.useRef(null);
+  const poiGenRef = React.useRef(0);
   const userMarkerRef = React.useRef(null);
   const calcDist = (lat1, lng1, lat2, lng2) => {
     const R = 6371000;
@@ -961,31 +1013,15 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
     });
   }, [zones, mapInstanceRef.current]);
 
-  // Punti di interesse turistici (frantoi, cantine, musei, ...). Segnalino emoji; click -> popup con Naviga (indirizzo esatto) + Sito.
+  // Punti di interesse turistici (frantoi, cantine, musei, ...). Posizione reale da Google (geocoding con cache); click -> popup con Naviga + Sito.
   React.useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
+    poiGenRef.current++;
+    const myGen = poiGenRef.current;
     poiMarkersRef.current.forEach(m => m?.setMap(null));
     poiMarkersRef.current = [];
-    if (!poiIWRef.current) poiIWRef.current = new window.google.maps.InfoWindow();
-    pois.forEach(p => {
-      if (typeof p.lat !== "number" || typeof p.lng !== "number") return;
-      const marker = new window.google.maps.Marker({
-        position: { lat: p.lat, lng: p.lng }, map: mapInstanceRef.current, title: p.n,
-        label: { text: p.e, fontSize: "22px" },
-        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
-        zIndex: 4
-      });
-      marker.addListener("click", () => {
-        const nav = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.addr||p.n)}`;
-        const descTxt = p.desc ? (typeof p.desc === "string" ? p.desc : (p.desc[lang] || p.desc.it || p.desc.en || "")) : "";
-        const descHtml = descTxt ? `<p style="color:#555;font-size:12px;line-height:1.4;margin:7px 0 0">${descTxt}</p>` : "";
-        const sito = p.url ? `<a href="${p.url}" target="_blank" rel="noopener" style="flex:1;text-align:center;background:#eef4f7;color:#023047;border-radius:8px;padding:7px 8px;font-size:12px;font-weight:700;text-decoration:none">🌐 Sito</a>` : "";
-        const sito2 = p.url2 ? `<a href="${p.url2}" target="_blank" rel="noopener" style="flex:1;text-align:center;background:#eef4f7;color:#023047;border-radius:8px;padding:7px 8px;font-size:12px;font-weight:700;text-decoration:none">${p.url2label||"🌐 Altro"}</a>` : "";
-        poiIWRef.current.setContent(`<div style="font-family:'DM Sans',sans-serif;padding:6px;min-width:170px;max-width:240px"><b style="color:#023047;font-size:14px">${p.e} ${p.n}</b><br/><span style="color:#888;font-size:11px">${p.c}</span>${descHtml}<div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap"><a href="${nav}" target="_blank" rel="noopener" style="flex:1;min-width:90px;text-align:center;background:#219EBC;color:#fff;border-radius:8px;padding:7px 8px;font-size:12px;font-weight:700;text-decoration:none">🧭 Naviga</a>${sito}${sito2}</div></div>`);
-        poiIWRef.current.open(mapInstanceRef.current, marker);
-      });
-      poiMarkersRef.current.push(marker);
-    });
+    const getIW = () => { if (!poiIWRef.current) poiIWRef.current = new window.google.maps.InfoWindow(); return poiIWRef.current; };
+    addPoiMarkers(mapInstanceRef.current, pois, lang, getIW, poiMarkersRef.current, () => poiGenRef.current === myGen);
   }, [pois, lang, mapInstanceRef.current]);
   React.useEffect(() => {
     if (!mapInstanceRef.current || !userPos) return;
@@ -1653,7 +1689,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 // ═══════════════════════════════════════════════════════
 // RIDETIMER — singola bici (invariato)
 // ═══════════════════════════════════════════════════════
-function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=null, t, userPos, availableBikes=[], isFree=false, fixedCost=null, bonusRide=false }) {
+function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=null, t, userPos, availableBikes=[], isFree=false, fixedCost=null, bonusRide=false, lang="it" }) {
   const computedStart = rideStartTime || Date.now();
   const [seconds, setSeconds] = React.useState(() => Math.floor((Date.now() - computedStart) / 1000));
   const [paused, setPaused] = React.useState(false);
@@ -2163,6 +2199,11 @@ function RideTimer({ bike, plan, user, rideId, rideStartTime=0, onEnd, onSwap=nu
         rideZonesDrawn.current = true;
       };
       drawParkingZones();
+      // POI turistici anche durante la corsa (posizione reale da Google, come sulla home)
+      try {
+        const rideIW = new window.google.maps.InfoWindow();
+        addPoiMarkers(map, POIS, lang, () => rideIW, null, () => rideMapInstance.current === map);
+      } catch(e) { console.error('POI mappa corsa:', e); }
     };
     tryInit();
   }, [showEndFlow, swapPicking]);
@@ -3692,7 +3733,7 @@ function ClienteApp({ user, onLogout, lang, setLang, t }) {
         {/* Timer corsa */}
         {riding&&confirmed&&confirmed.length>0&&(
           groupStartRef.current.bikes.length<=1
-            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} onSwap={handleSwapBike} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike} bonusRide={bonusRide}/>
+            ?<RideTimer bike={confirmed[0]} plan={plan} user={user} rideId={currentRideIds[0]?.rideId} rideStartTime={restoredElapsed} onEnd={(s,c)=>handleEndRide(s,c,confirmed[0].id)} onSwap={handleSwapBike} t={t} userPos={userPos} availableBikes={bikes} isFree={isFree} fixedCost={hotelPerBike} bonusRide={bonusRide} lang={lang}/>
             :<MultiRideTimer bikes={groupStartRef.current.bikes} plan={plan} user={user} rideIds={groupStartRef.current.rideIds} rideStartTime={restoredElapsed} onEnd={handleEndRide} t={t} isFree={isFree} fixedCost={hotelPerBike}/>
         )}
 
