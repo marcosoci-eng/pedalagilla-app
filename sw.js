@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pedalagilla-v30';
+const CACHE_NAME = 'pedalagilla-v34';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
