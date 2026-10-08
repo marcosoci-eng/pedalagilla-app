@@ -924,6 +924,27 @@ function MapView({ bikes, onBikeClick, height=300, fullscreen=false, tracks=[], 
   return <div ref={mapRef} style={style} />;
 }
 
+// Punti di interesse (frantoi, cantine, musei, ...) come riferimento visivo per disegnare le zone. Coordinate reali da Google.
+const POIS = [
+  {e:"🍷",n:"Duca della Corgna",lat:43.1177380,lng:12.0389872},
+  {e:"🍷",n:"Di Colle in Colle",lat:43.1843136,lng:12.1694811},
+  {e:"🍷",n:"Montemelino",lat:43.1999662,lng:12.0470947},
+  {e:"🍷",n:"Poggio Santa Maria",lat:43.0742086,lng:11.9759472},
+  {e:"🍷",n:"Madrevite",lat:43.0515167,lng:12.0026168},
+  {e:"🫒",n:"Oleificio Pozzuolese",lat:43.1202697,lng:11.9818201},
+  {e:"🫒",n:"Fattoria Palombaro",lat:43.1450181,lng:12.1615149},
+  {e:"🏰",n:"Palazzo della Corgna",lat:43.1273481,lng:12.0537283},
+  {e:"🏰",n:"Rocca del Leone",lat:43.1277865,lng:12.0563113},
+  {e:"🏰",n:"Castello di Magione",lat:43.1390723,lng:12.2063498},
+  {e:"🏛️",n:"Museo di Annibale",lat:43.2087811,lng:12.0724730},
+  {e:"🏛️",n:"Museo del Tulle",lat:43.0287232,lng:12.0971549},
+  {e:"🏛️",n:"Museo delle Barche",lat:43.1839986,lng:12.1380760},
+  {e:"🏛️",n:"Museo della Pesca",lat:43.1190050,lng:12.1655358},
+  {e:"🎨",n:"Campo del Sole",lat:43.1924269,lng:12.0779631},
+  {e:"⚔️",n:"Malpasso (panoramica)",lat:43.1897287,lng:12.0398636},
+  {e:"⚔️",n:"Colonna romana",lat:43.2062091,lng:12.0703861},
+  {e:"🍸",n:"Euphoria Beach & Gin",lat:43.1836603,lng:12.1464541},
+];
 function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, onZoneSaved, onZoneUpdated }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
@@ -1016,6 +1037,15 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
       mapInstanceRef.current = map;
       zonesRef.current = zones;
       drawZones(zones, map);
+      // Punti di interesse come riferimento (segnalino emoji + nome al tocco). clickable:true solo per mostrare il nome; non interferiscono col disegno perché tocchi la mappa vuota per piazzare i cerchi.
+      try {
+        const poiIW = new window.google.maps.InfoWindow();
+        POIS.forEach(p=>{
+          if(typeof p.lat!=="number"||typeof p.lng!=="number") return;
+          const mk = new window.google.maps.Marker({ position:{lat:p.lat,lng:p.lng}, map, title:p.n, label:{text:p.e,fontSize:"20px"}, icon:{path:window.google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}, zIndex:3 });
+          mk.addListener("click",()=>{ poiIW.setContent("<div style=\"font-family:'DM Sans',sans-serif;padding:4px 6px;font-size:13px;color:#023047\"><b>"+p.e+" "+p.n+"</b></div>"); poiIW.open(map,mk); });
+        });
+      } catch(e){ console.error('POI admin:', e); }
       // Esponi il ref delle zone per il salvataggio
       window._zoneEditorRef = zonesRef;
       // Forza il ridisegno delle mattonelle quando il riquadro è pronto (evita la mappa "tutta blu")
