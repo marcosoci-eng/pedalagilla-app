@@ -904,12 +904,14 @@ const POIS = [
 // --- POI: coordinate reali prese da Google Places e fissate nel codice (lat/lng in POIS). addr = usato per la navigazione (esatta). ---
 function poiInfoHTML(p, lang){
   const nav = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.addr||p.n)}`;
+  const _L = {it:{nav:"🧭 Naviga",sito:"🌐 Sito"},en:{nav:"🧭 Directions",sito:"🌐 Website"},de:{nav:"🧭 Route",sito:"🌐 Website"},fr:{nav:"🧭 Itinéraire",sito:"🌐 Site"},es:{nav:"🧭 Cómo llegar",sito:"🌐 Sitio"},nl:{nav:"🧭 Route",sito:"🌐 Website"},cs:{nav:"🧭 Trasa",sito:"🌐 Web"}};
+  const lx = _L[lang] || _L.it;
   const descTxt = p.desc ? (typeof p.desc==='string' ? p.desc : (p.desc[lang]||p.desc.it||p.desc.en||'')) : '';
   const descHtml = descTxt ? `<p style="color:#555;font-size:12px;line-height:1.4;margin:7px 0 0">${descTxt}</p>` : '';
   const btn = 'flex:1;min-width:80px;text-align:center;border-radius:8px;padding:7px 8px;font-size:12px;font-weight:700;text-decoration:none';
-  const sito = p.url ? `<a href="${p.url}" target="_blank" rel="noopener" style="${btn};background:#eef4f7;color:#023047">🌐 Sito</a>` : '';
+  const sito = p.url ? `<a href="${p.url}" target="_blank" rel="noopener" style="${btn};background:#eef4f7;color:#023047">${lx.sito}</a>` : '';
   const sito2 = p.url2 ? `<a href="${p.url2}" target="_blank" rel="noopener" style="${btn};background:#eef4f7;color:#023047">${p.url2label||'🌐 Altro'}</a>` : '';
-  return `<div style="font-family:'DM Sans',sans-serif;padding:6px;min-width:170px;max-width:240px"><b style="color:#023047;font-size:14px">${p.e} ${p.n}</b><br/><span style="color:#888;font-size:11px">${p.c}</span>${descHtml}<div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap"><a href="${nav}" target="_blank" rel="noopener" style="${btn};min-width:90px;background:#219EBC;color:#fff">🧭 Naviga</a>${sito}${sito2}</div></div>`;
+  return `<div style="font-family:'DM Sans',sans-serif;padding:6px;min-width:170px;max-width:240px"><b style="color:#023047;font-size:14px">${p.e} ${p.n}</b><br/><span style="color:#888;font-size:11px">${p.c}</span>${descHtml}<div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap"><a href="${nav}" target="_blank" rel="noopener" style="${btn};min-width:90px;background:#219EBC;color:#fff">${lx.nav}</a>${sito}${sito2}</div></div>`;
 }
 // Disegna i segnalini POI su una mappa Google qualsiasi (posizione fissa da POIS). Click -> popup con Naviga + Sito.
 function addPoiMarkers(map, pois, lang, getIW, markersArr){
