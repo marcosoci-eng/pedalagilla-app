@@ -1008,6 +1008,9 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
       const map = new window.google.maps.Map(mapRef.current, {
         center:{lat:43.1500,lng:12.0800}, zoom:11, mapTypeId:"roadmap",
         gestureHandling:"cooperative",
+        mapTypeControl:false, streetViewControl:false,
+        zoomControl:true, zoomControlOptions:{ position: window.google.maps.ControlPosition.RIGHT_BOTTOM },
+        fullscreenControl:true, fullscreenControlOptions:{ position: window.google.maps.ControlPosition.RIGHT_BOTTOM },
         styles:[{featureType:"water",elementType:"geometry",stylers:[{color:"#8ECAE6"}]},{featureType:"landscape",elementType:"geometry",stylers:[{color:"#e8f4f8"}]},{featureType:"road",elementType:"geometry",stylers:[{color:"#ffffff"}]},{featureType:"poi",stylers:[{visibility:"off"}]}]
       });
       mapInstanceRef.current = map;
@@ -1038,30 +1041,31 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
     if (!drawingActive) { cleanup(); return; }
     tempPathRef.current=[];
     try{ map.setOptions({ disableDoubleClickZoom:true }); }catch(e){}
-    const color = zoneColors[zoneTypeRef.current] || "#219EBC";
+    // Colore calcolato AL MOMENTO del disegno dal tipo attuale (così il colore combacia sempre con sosta/operativa/ecc.)
+    const curColor = ()=> zoneColors[zoneTypeRef.current] || "#219EBC";
     if (drawingMode === "circle") {
       clickLsnrRef.current = map.addListener("click", (e)=>{
         if (clickLsnrRef.current) { g.event.removeListener(clickLsnrRef.current); clickLsnrRef.current=null; }
         const defR = ({operativa:8000, sosta:300, lenta:150, fuori:300})[zoneTypeRef.current] || 300;
         // Avvicina la mappa sul punto così il nuovo cerchio è ben visibile (a zoom 11 un raggio di 300 m è quasi invisibile)
         try{ map.panTo(e.latLng); const targetZ = zoneTypeRef.current==="operativa"?12:15; if (map.getZoom() < targetZ) map.setZoom(targetZ); }catch(_e){}
-        onZoneSaved({ name: zoneNameRef.current||"Nuova zona", type: zoneTypeRef.current, shape:"circle", color, center:{lat:e.latLng.lat(), lng:e.latLng.lng()}, radius: defR });
+        onZoneSaved({ name: zoneNameRef.current||"Nuova zona", type: zoneTypeRef.current, shape:"circle", color: curColor(), center:{lat:e.latLng.lat(), lng:e.latLng.lng()}, radius: defR });
       });
     } else {
       const redraw = ()=>{
         if (tempPolyRef.current) tempPolyRef.current.setMap(null);
-        tempPolyRef.current = new g.Polyline({ map, path: tempPathRef.current.slice(), strokeColor: color, strokeOpacity:0.9, strokeWeight:2 });
+        tempPolyRef.current = new g.Polyline({ map, path: tempPathRef.current.slice(), strokeColor: curColor(), strokeOpacity:0.9, strokeWeight:2 });
       };
       clickLsnrRef.current = map.addListener("click", (e)=>{
         const pt = {lat:e.latLng.lat(), lng:e.latLng.lng()};
         tempPathRef.current.push(pt);
-        tempMarkersRef.current.push(new g.Marker({ position:pt, map, icon:{path:g.SymbolPath.CIRCLE,scale:5,fillColor:color,fillOpacity:1,strokeColor:"#fff",strokeWeight:1.5}, zIndex:20 }));
+        tempMarkersRef.current.push(new g.Marker({ position:pt, map, icon:{path:g.SymbolPath.CIRCLE,scale:5,fillColor:curColor(),fillOpacity:1,strokeColor:"#fff",strokeWeight:1.5}, zIndex:20 }));
         redraw();
       });
       dblLsnrRef.current = map.addListener("dblclick", ()=>{
         const path = tempPathRef.current;
         while (path.length>=2){ const a=path[path.length-1], b=path[path.length-2]; if (Math.abs(a.lat-b.lat)<1e-5 && Math.abs(a.lng-b.lng)<1e-5) path.pop(); else break; }
-        if (path.length>=3){ onZoneSaved({ name: zoneNameRef.current||"Nuova zona", type: zoneTypeRef.current, shape:"polygon", color, path: path.slice() }); }
+        if (path.length>=3){ onZoneSaved({ name: zoneNameRef.current||"Nuova zona", type: zoneTypeRef.current, shape:"polygon", color: curColor(), path: path.slice() }); }
         else { alert("Servono almeno 3 punti per chiudere il poligono."); }
       });
     }
