@@ -1066,6 +1066,7 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
       tempMarkersRef.current.forEach(m=>{ if(m) m.setMap(null); }); tempMarkersRef.current=[];
       if (tempPolyRef.current) { tempPolyRef.current.setMap(null); tempPolyRef.current=null; }
       tempPathRef.current=[];
+      window._zoneFinishPoly=null;
       try{ map.setOptions({ disableDoubleClickZoom:false }); }catch(e){}
     };
     if (!drawingActive) { cleanup(); return; }
@@ -1092,12 +1093,15 @@ function ZoneMapEditor({ zones, zoneType, drawingMode, drawingActive, zoneName, 
         tempMarkersRef.current.push(new g.Marker({ position:pt, map, icon:{path:g.SymbolPath.CIRCLE,scale:5,fillColor:curColor(),fillOpacity:1,strokeColor:"#fff",strokeWeight:1.5}, zIndex:20 }));
         redraw();
       });
-      dblLsnrRef.current = map.addListener("dblclick", ()=>{
+      // Chiusura del poligono: pulsante "✓ Chiudi" (affidabile su touch) + doppio tocco come alternativa.
+      const finishPoly = ()=>{
         const path = tempPathRef.current;
         while (path.length>=2){ const a=path[path.length-1], b=path[path.length-2]; if (Math.abs(a.lat-b.lat)<1e-5 && Math.abs(a.lng-b.lng)<1e-5) path.pop(); else break; }
         if (path.length>=3){ onZoneSaved({ name: zoneNameRef.current||"Nuova zona", type: zoneTypeRef.current, shape:"polygon", color: curColor(), path: path.slice() }); }
-        else { alert("Servono almeno 3 punti per chiudere il poligono."); }
-      });
+        else { alert("Tocca almeno 3 punti sulla mappa, poi premi ✓ Chiudi."); }
+      };
+      window._zoneFinishPoly = finishPoly;
+      dblLsnrRef.current = map.addListener("dblclick", finishPoly);
     }
     return cleanup;
   }, [drawingActive, drawingMode]);
@@ -2597,8 +2601,11 @@ function AdminApp({ user, onLogout, t }) {
               />
               {drawingActive&&(
                 <div style={{position:"absolute",top:8,left:8,right:8,background:"rgba(2,48,71,0.92)",borderRadius:10,padding:"8px 10px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,zIndex:5,pointerEvents:"none"}}>
-                  <span style={{color:"#fff",fontSize:11,...ds,lineHeight:1.3}}>{drawingMode==="circle"?"Tocca la mappa per posizionare il cerchio, poi trascinalo o ridimensionalo.":"Tocca ogni vertice; doppio tocco per chiudere il poligono."}</span>
-                  <button onClick={()=>setDrawingActive(false)} style={{background:"#fff",border:"none",borderRadius:8,padding:"6px 12px",color:C.deepBlue,fontSize:11,...ds,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",pointerEvents:"auto"}}>Annulla</button>
+                  <span style={{color:"#fff",fontSize:11,...ds,lineHeight:1.3}}>{drawingMode==="circle"?"Tocca la mappa per posizionare il cerchio, poi trascinalo o ridimensionalo.":"Tocca ogni vertice (min. 3), poi premi ✓ Chiudi."}</span>
+                  <div style={{display:"flex",gap:6,pointerEvents:"auto"}}>
+                    {drawingMode==="polygon"&&<button onClick={()=>{ try{ window._zoneFinishPoly&&window._zoneFinishPoly(); }catch(e){} }} style={{background:"#00C853",border:"none",borderRadius:8,padding:"6px 12px",color:"#fff",fontSize:11,...ds,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>✓ Chiudi</button>}
+                    <button onClick={()=>setDrawingActive(false)} style={{background:"#fff",border:"none",borderRadius:8,padding:"6px 12px",color:C.deepBlue,fontSize:11,...ds,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>Annulla</button>
+                  </div>
                 </div>
               )}
             </div>
